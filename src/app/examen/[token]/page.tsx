@@ -536,6 +536,26 @@ export default function ExamenClientPage() {
             </>
           )}
         </button>
+
+        {/* Partenaire PrepCivique */}
+        <div className="mt-8 p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200 text-center">
+          <p className="text-sm text-slate-600 mb-4">
+            En vous inscrivant chez notre partenaire, obtenez des <strong className="text-blue-700">promotions</strong> et
+            accédez à l&apos;un des <strong className="text-blue-700">meilleurs entraînements</strong> pour votre examen&nbsp;:
+          </p>
+          <a
+            href="https://prepcivique.fr"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block hover:opacity-80 transition-opacity"
+          >
+            <img
+              src="/prepcivique-logo.png"
+              alt="PrepCivique"
+              className="h-10 mx-auto"
+            />
+          </a>
+        </div>
       </div>
     </div>
   );
