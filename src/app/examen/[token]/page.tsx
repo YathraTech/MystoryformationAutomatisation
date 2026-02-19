@@ -276,15 +276,17 @@ export default function ExamenClientPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-6 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-10">
-          <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-6">
-            <GraduationCap className="h-10 w-10 text-blue-600" />
+        <div className="text-center mb-5">
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+              <GraduationCap className="h-5 w-5 text-blue-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900">Choisissez votre examen</h1>
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-3">Choisissez votre examen</h1>
-          <p className="text-lg text-slate-500">
+          <p className="text-sm text-slate-500">
             Bonjour{' '}
             <span className="font-semibold text-slate-700">
               {examen?.prenom} {examen?.nom}
@@ -293,8 +295,8 @@ export default function ExamenClientPage() {
         </div>
 
         {/* Étape 1 : Sélection du type d'examen */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-slate-700 mb-4">1. Choisissez le type d&apos;examen</h2>
+        <div className="mb-4">
+          <h2 className="text-sm font-semibold text-slate-700 mb-2">1. Choisissez le type d&apos;examen</h2>
           <div className={`grid grid-cols-1 ${examTypes.length === 2 ? 'md:grid-cols-2' : examTypes.length >= 3 ? 'md:grid-cols-3' : ''} gap-4`}>
             {examTypes.map((exam) => {
               const isSelected = selectedExamType?.id === exam.id;
@@ -306,7 +308,7 @@ export default function ExamenClientPage() {
                   key={exam.code}
                   type="button"
                   onClick={() => handleSelectExamType(exam)}
-                  className={`relative flex flex-col items-center p-6 rounded-2xl border-2 transition-all duration-200 shadow-sm hover:shadow-lg ${
+                  className={`relative flex flex-col items-center p-4 rounded-xl border-2 transition-all duration-200 shadow-sm hover:shadow-lg ${
                     isSelected
                       ? colorClasses.selected
                       : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
@@ -321,16 +323,16 @@ export default function ExamenClientPage() {
 
                   {/* Icon */}
                   <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 ${
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 ${
                       isSelected ? colorClasses.icon : 'bg-slate-100 text-slate-500'
                     }`}
                   >
-                    <Icon className="h-6 w-6" />
+                    <Icon className="h-5 w-5" />
                   </div>
 
                   {/* Label */}
                   <h3
-                    className={`text-lg font-bold mb-1 ${
+                    className={`text-sm font-bold mb-0.5 ${
                       isSelected ? colorClasses.text : 'text-slate-800'
                     }`}
                   >
@@ -361,8 +363,8 @@ export default function ExamenClientPage() {
 
         {/* Étape 2 : Sélection de l'option d'examen */}
         {selectedExamType && (
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-slate-700 mb-4">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-slate-700 mb-2">
               2. Choisissez votre niveau visé / mention visée
               <span className="text-sm font-normal text-slate-500 ml-2">
                 ({selectedExamType.label})
@@ -427,13 +429,13 @@ export default function ExamenClientPage() {
 
         {/* Étape 3 : Motivation */}
         {selectedExamType && (examOptions.length === 0 || selectedOption) && (
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-slate-700 mb-4">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-slate-700 mb-2">
               3. Quelle est votre motivation ?
               <span className="text-red-500 ml-1">*</span>
             </h2>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
               {MOTIVATION_OPTIONS.map((option) => {
                 const isSelected = selectedMotivation === option.value;
                 const colorClasses = getColorClasses(selectedExamType?.color || 'blue');
@@ -443,7 +445,7 @@ export default function ExamenClientPage() {
                     key={option.value}
                     type="button"
                     onClick={() => setSelectedMotivation(option.value)}
-                    className={`relative flex items-center justify-center p-4 rounded-xl border-2 transition-all duration-200 ${
+                    className={`relative flex items-center justify-center p-3 rounded-lg border-2 transition-all duration-200 ${
                       isSelected
                         ? colorClasses.selected
                         : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
@@ -487,7 +489,7 @@ export default function ExamenClientPage() {
 
         {/* Récapitulatif */}
         {selectedExamType && (examOptions.length === 0 || selectedOption) && selectedMotivation && (
-          <div className="p-5 rounded-2xl bg-blue-50 border border-blue-200 mb-6">
+          <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 mb-3">
             <p className="text-sm text-blue-800 text-center font-medium">
               Votre sélection : <strong>{selectedExamType.label}</strong>
               {selectedOption && (
@@ -505,8 +507,8 @@ export default function ExamenClientPage() {
         )}
 
         {/* Info box */}
-        <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200 mb-6">
-          <p className="text-sm text-amber-800 text-center">
+        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 mb-3">
+          <p className="text-xs text-amber-800 text-center">
             <strong>Important :</strong> Votre choix sera définitif et servira de preuve pour votre inscription.
           </p>
         </div>
@@ -522,7 +524,7 @@ export default function ExamenClientPage() {
             (selectedMotivation === 'autre' && !motivationAutre.trim()) ||
             submitting
           }
-          className="w-full flex items-center justify-center gap-3 px-8 py-5 rounded-2xl bg-blue-600 text-white text-lg font-bold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+          className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-blue-600 text-white text-base font-bold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
         >
           {submitting ? (
             <>
@@ -538,23 +540,23 @@ export default function ExamenClientPage() {
         </button>
 
         {/* Partenaire PrepCivique */}
-        <div className="mt-8 p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200 text-center">
-          <p className="text-sm text-slate-600 mb-4">
-            En vous inscrivant chez notre partenaire, obtenez des <strong className="text-blue-700">promotions</strong> et
-            accédez à l&apos;un des <strong className="text-blue-700">meilleurs entraînements</strong> pour votre examen&nbsp;:
-          </p>
+        <div className="mt-4 p-3 rounded-xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200 flex items-center gap-4">
           <a
             href="https://prepcivique.fr"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block hover:opacity-80 transition-opacity"
+            className="shrink-0 hover:opacity-80 transition-opacity"
           >
             <img
               src="/prepcivique-logo.png"
               alt="PrepCivique"
-              className="h-10 mx-auto"
+              className="h-8"
             />
           </a>
+          <p className="text-xs text-slate-600">
+            En vous inscrivant chez notre partenaire, obtenez des <strong className="text-blue-700">promotions</strong> et
+            accédez à l&apos;un des <strong className="text-blue-700">meilleurs entraînements</strong> pour votre examen.
+          </p>
         </div>
       </div>
     </div>
