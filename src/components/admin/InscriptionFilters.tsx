@@ -24,7 +24,7 @@ export default function InscriptionFilters({
       <div className="flex items-center gap-2 text-sm text-slate-600">
         <Filter className="h-4 w-4" />
         <span>
-          {filteredCount} / {totalCount} inscription(s)
+          {filteredCount} / {totalCount} client(s)
         </span>
       </div>
 

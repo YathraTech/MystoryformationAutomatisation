@@ -62,10 +62,12 @@ export default function ArchivesPage() {
     setDeleting(confirmDelete);
     try {
       const res = await fetch(`/api/admin/archives/${confirmDelete}`, { method: 'DELETE' });
+      const data = await res.json();
+
       if (res.ok) {
-        setInscriptions((prev) => prev.filter((i) => i.rowIndex !== confirmDelete));
+        // Rafraîchir depuis le serveur pour confirmer la suppression
+        await fetchArchives();
       } else {
-        const data = await res.json();
         alert(data.error || 'Erreur lors de la suppression');
       }
     } catch {

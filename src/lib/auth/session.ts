@@ -20,5 +20,6 @@ export async function getSessionUser() {
     nom: profile.nom,
     prenom: profile.prenom,
     role: profile.role as 'admin' | 'staff' | 'commercial',
+    lieu: (profile.lieu as 'Gagny' | 'Sarcelles') || null,
   };
 }

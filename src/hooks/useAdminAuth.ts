@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation';
 
 interface AuthState {
   authenticated: boolean;
+  id: string | null;
   email: string | null;
   role: string | null;
+  lieu: string | null;
   nom: string | null;
   prenom: string | null;
   loading: boolean;
@@ -16,8 +18,10 @@ export function useAdminAuth() {
   const router = useRouter();
   const [auth, setAuth] = useState<AuthState>({
     authenticated: false,
+    id: null,
     email: null,
     role: null,
+    lieu: null,
     nom: null,
     prenom: null,
     loading: true,
@@ -30,17 +34,19 @@ export function useAdminAuth() {
         const data = await res.json();
         setAuth({
           authenticated: true,
+          id: data.id || null,
           email: data.email,
           role: data.role,
+          lieu: data.lieu || null,
           nom: data.nom,
           prenom: data.prenom,
           loading: false,
         });
       } else {
-        setAuth({ authenticated: false, email: null, role: null, nom: null, prenom: null, loading: false });
+        setAuth({ authenticated: false, id: null, email: null, role: null, lieu: null, nom: null, prenom: null, loading: false });
       }
     } catch {
-      setAuth({ authenticated: false, email: null, role: null, nom: null, prenom: null, loading: false });
+      setAuth({ authenticated: false, id: null, email: null, role: null, lieu: null, nom: null, prenom: null, loading: false });
     }
   }, []);
 
@@ -50,7 +56,7 @@ export function useAdminAuth() {
 
   const logout = useCallback(async () => {
     await fetch('/api/admin/auth/logout', { method: 'POST' });
-    setAuth({ authenticated: false, email: null, role: null, nom: null, prenom: null, loading: false });
+    setAuth({ authenticated: false, id: null, email: null, role: null, lieu: null, nom: null, prenom: null, loading: false });
     router.push('/login');
   }, [router]);
 

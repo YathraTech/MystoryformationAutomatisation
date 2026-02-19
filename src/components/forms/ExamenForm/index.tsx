@@ -20,17 +20,39 @@ const STORAGE_KEY = 'cpf-examen-form';
 const phoneRegex = /^(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}$/;
 const postalCodeRegex = /^\d{5}$/;
 
+// Sources de connaissance
+export const SOURCES_CONNAISSANCE = [
+  { value: 'google', label: 'Google' },
+  { value: 'bouche_a_oreille', label: 'Bouche-à-oreille' },
+  { value: 'reseaux_sociaux', label: 'Réseaux sociaux' },
+  { value: 'autre', label: 'Autre' },
+];
+
+// Agences
+export const AGENCES = [
+  { value: 'Gagny', label: 'Gagny' },
+  { value: 'Sarcelles', label: 'Sarcelles' },
+];
+
 // Schéma de validation pour l'étape 1 (informations personnelles)
 const step1Schema = z.object({
   civilite: z.enum(['M.', 'Mme', 'Autre'], { message: 'Veuillez sélectionner une civilité' }),
   nom: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
   prenom: z.string().min(2, 'Le prénom doit contenir au moins 2 caractères'),
   email: z.string().min(1, "L'email est requis").email('Email invalide'),
-  telephone: z.string().min(1, 'Le téléphone est requis').regex(phoneRegex, 'Numéro invalide'),
-  dateNaissance: z.string().min(1, 'La date de naissance est requise'),
+  telephone: z.string().min(1, 'Le téléphone est requis').regex(phoneRegex, 'Numéro invalide (format: 06 12 34 56 78 ou +33 6 12 34 56 78)'),
   adresse: z.string().min(5, 'Adresse requise'),
   codePostal: z.string().regex(postalCodeRegex, 'Code postal invalide (5 chiffres)'),
   ville: z.string().min(2, 'Ville requise'),
+  nationalite: z.string().min(2, 'Nationalité requise'),
+  lieuNaissance: z.string().min(2, 'Pays de naissance requis'),
+  dateNaissance: z.string().min(1, 'La date de naissance est requise'),
+  langueMaternelle: z.string().min(2, 'Langue maternelle requise'),
+  agence: z.string().min(1, 'Agence souhaitée requise'),
+  sourceConnaissance: z.string().optional(),
+  pieceIdentite: z.string().optional(),
+  numeroPasseport: z.string().optional(),
+  numeroCni: z.string().optional(),
 });
 
 // Schéma complet (étape 2 = récap, pas de champs supplémentaires)
@@ -51,10 +73,18 @@ const defaultValues: ExamenFormData = {
   prenom: '',
   email: '',
   telephone: '',
-  dateNaissance: '',
   adresse: '',
   codePostal: '',
   ville: '',
+  nationalite: '',
+  lieuNaissance: '',
+  dateNaissance: '',
+  langueMaternelle: '',
+  agence: '',
+  sourceConnaissance: '',
+  pieceIdentite: '',
+  numeroPasseport: '',
+  numeroCni: '',
 };
 
 interface SubmissionResult {

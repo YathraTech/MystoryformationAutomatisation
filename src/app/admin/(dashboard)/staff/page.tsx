@@ -6,15 +6,17 @@ import {
   Trash2,
   AlertCircle,
   Shield,
-  User,
   Briefcase,
   Mail,
   Check,
   Lock,
+  Pencil,
+  X,
+  Target,
 } from 'lucide-react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 
-type UserRole = 'admin' | 'staff' | 'commercial';
+type UserRole = 'admin' | 'commercial';
 
 interface StaffUser {
   id: string;
@@ -23,13 +25,13 @@ interface StaffUser {
   prenom: string;
   role: UserRole;
   lieu: string;
+  objectifCa: number | null;
   createdAt: string;
 }
 
 const ROLES: { value: UserRole; label: string; icon: typeof Shield; color: string }[] = [
   { value: 'admin', label: 'Administrateur', icon: Shield, color: 'bg-purple-50 text-purple-700' },
   { value: 'commercial', label: 'Commercial', icon: Briefcase, color: 'bg-green-50 text-green-700' },
-  { value: 'staff', label: 'Staff', icon: User, color: 'bg-blue-50 text-blue-700' },
 ];
 
 const LIEUX = [
@@ -40,7 +42,7 @@ const LIEUX = [
 type UserLieu = typeof LIEUX[number]['value'];
 
 function getRoleConfig(role: UserRole) {
-  return ROLES.find((r) => r.value === role) || ROLES[2];
+  return ROLES.find((r) => r.value === role) || ROLES[1];
 }
 
 export default function StaffPage() {
@@ -54,13 +56,16 @@ export default function StaffPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [sendingReset, setSendingReset] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState<string | null>(null);
+  const [editingObjectifId, setEditingObjectifId] = useState<string | null>(null);
+  const [editingObjectifValue, setEditingObjectifValue] = useState('');
+  const [savingObjectif, setSavingObjectif] = useState(false);
 
   const [form, setForm] = useState({
     email: '',
     password: '',
     nom: '',
     prenom: '',
-    role: 'staff' as UserRole,
+    role: 'commercial' as UserRole,
     lieu: 'Gagny' as UserLieu,
     definePassword: false,
   });
@@ -105,7 +110,7 @@ export default function StaffPage() {
       });
 
       if (res.ok) {
-        setForm({ email: '', password: '', nom: '', prenom: '', role: 'staff', lieu: 'Gagny', definePassword: false });
+        setForm({ email: '', password: '', nom: '', prenom: '', role: 'commercial', lieu: 'Gagny', definePassword: false });
         setShowForm(false);
         await fetchUsers();
       } else {
@@ -161,6 +166,29 @@ export default function StaffPage() {
       alert('Erreur réseau');
     } finally {
       setSendingReset(null);
+    }
+  };
+
+  const handleUpdateObjectif = async (userId: string) => {
+    setSavingObjectif(true);
+    try {
+      const value = editingObjectifValue.trim() === '' ? null : parseFloat(editingObjectifValue);
+      const res = await fetch(`/api/admin/staff/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ objectifCa: value }),
+      });
+      if (res.ok) {
+        await fetchUsers();
+        setEditingObjectifId(null);
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Erreur');
+      }
+    } catch {
+      alert('Erreur réseau');
+    } finally {
+      setSavingObjectif(false);
     }
   };
 
@@ -321,7 +349,6 @@ export default function StaffPage() {
               <p className="mt-2 text-xs text-slate-500">
                 {form.role === 'admin' && 'Accès complet à toutes les fonctionnalités'}
                 {form.role === 'commercial' && 'Gestion des inscriptions et des relances'}
-                {form.role === 'staff' && 'Accès en lecture et gestion basique'}
               </p>
             </div>
 
@@ -398,6 +425,9 @@ export default function StaffPage() {
                   Lieu
                 </th>
                 <th className="text-left px-5 py-3 font-semibold text-slate-600">
+                  Objectif CA
+                </th>
+                <th className="text-left px-5 py-3 font-semibold text-slate-600">
                   Créé le
                 </th>
                 <th className="text-right px-5 py-3 font-semibold text-slate-600">
@@ -430,6 +460,61 @@ export default function StaffPage() {
                     </td>
                     <td className="px-5 py-3.5 text-slate-600">
                       {user.lieu || '-'}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {user.role === 'commercial' ? (
+                        editingObjectifId === user.id ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              step="100"
+                              min="0"
+                              value={editingObjectifValue}
+                              onChange={(e) => setEditingObjectifValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleUpdateObjectif(user.id);
+                                if (e.key === 'Escape') setEditingObjectifId(null);
+                              }}
+                              className="w-24 rounded-lg border border-blue-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+                              autoFocus
+                              disabled={savingObjectif}
+                            />
+                            <button
+                              onClick={() => handleUpdateObjectif(user.id)}
+                              disabled={savingObjectif}
+                              className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setEditingObjectifId(null)}
+                              className="p-1 text-slate-400 hover:bg-slate-50 rounded"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div
+                            className="flex items-center gap-1.5 group cursor-pointer"
+                            onClick={() => {
+                              setEditingObjectifId(user.id);
+                              setEditingObjectifValue(user.objectifCa?.toString() || '');
+                            }}
+                          >
+                            {user.objectifCa ? (
+                              <span className="flex items-center gap-1 text-sm text-slate-700">
+                                <Target className="h-3.5 w-3.5 text-blue-500" />
+                                {user.objectifCa.toLocaleString('fr-FR')} €
+                              </span>
+                            ) : (
+                              <span className="text-xs text-slate-400 italic">Non défini</span>
+                            )}
+                            <Pencil className="h-3 w-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        )
+                      ) : (
+                        <span className="text-slate-300">-</span>
+                      )}
                     </td>
                     <td className="px-5 py-3.5 text-slate-500">
                       {new Date(user.createdAt).toLocaleDateString('fr-FR')}
@@ -479,7 +564,7 @@ export default function StaffPage() {
               })}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-slate-400">
+                  <td colSpan={7} className="px-5 py-8 text-center text-slate-400">
                     Aucun membre
                   </td>
                 </tr>

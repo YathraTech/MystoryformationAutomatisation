@@ -11,6 +11,7 @@ export interface SafeUser {
   prenom: string;
   role: UserRole;
   lieu: UserLieu | null;
+  objectifCa: number | null;
   createdAt: string;
 }
 
@@ -30,6 +31,7 @@ export async function getSafeUsers(): Promise<SafeUser[]> {
     prenom: p.prenom,
     role: p.role as UserRole,
     lieu: p.lieu as UserLieu | null,
+    objectifCa: p.objectif_ca ?? null,
     createdAt: p.created_at,
   }));
 }
@@ -51,6 +53,7 @@ export async function getUserByEmail(email: string): Promise<SafeUser | null> {
     prenom: data.prenom,
     role: data.role as UserRole,
     lieu: data.lieu as UserLieu | null,
+    objectifCa: data.objectif_ca ?? null,
     createdAt: data.created_at,
   };
 }
@@ -72,6 +75,7 @@ export async function getUserById(id: string): Promise<SafeUser | null> {
     prenom: data.prenom,
     role: data.role as UserRole,
     lieu: data.lieu as UserLieu | null,
+    objectifCa: data.objectif_ca ?? null,
     createdAt: data.created_at,
   };
 }
@@ -112,6 +116,7 @@ export async function createUser(data: {
       prenom: data.prenom,
       role: data.role,
       lieu: data.lieu || null,
+      objectifCa: null,
       createdAt: authData.user.created_at,
     };
   } else {
@@ -143,6 +148,7 @@ export async function createUser(data: {
       prenom: data.prenom,
       role: data.role,
       lieu: data.lieu || null,
+      objectifCa: null,
       createdAt: authData.user.created_at,
     };
   }

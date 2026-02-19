@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { Upload, CheckCircle, AlertCircle, Info, X } from 'lucide-react';
 import { useInscriptions } from '@/hooks/useInscriptions';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import InscriptionFilters from '@/components/admin/InscriptionFilters';
 import InscriptionsTable from '@/components/admin/InscriptionsTable';
 
@@ -20,6 +21,8 @@ interface ImportResult {
 }
 
 export default function InscriptionsPage() {
+  const { role } = useAdminAuth();
+  const isAdmin = role === 'admin';
   const {
     inscriptions,
     allCount,
@@ -125,7 +128,7 @@ export default function InscriptionsPage() {
             ) : (
               <Upload className="h-4 w-4" />
             )}
-            {importing ? 'Import en cours...' : 'Importer des inscrits'}
+            {importing ? 'Import en cours...' : 'Importer des clients'}
           </button>
         </div>
       </div>
@@ -211,6 +214,7 @@ export default function InscriptionsPage() {
         totalPages={totalPages}
         onPageChange={setPage}
         onUpdated={refetch}
+        showLieu={isAdmin}
       />
     </div>
   );

@@ -55,6 +55,8 @@ function parseRow(headers: string[], row: string[], rowIndex: number): Inscripti
     joursDisponibles: obj.joursDisponibles || '',
     creneauxHoraires: obj.creneauxHoraires || '',
     dateDebutSouhaitee: obj.dateDebutSouhaitee || '',
+    dateFormation: null,
+    heureFormation: null,
     commentaires: obj.commentaires || '',
     statut: (obj.statut as InscriptionStatus) || 'En attente',
     relanceDate: obj.relanceDate || '',
@@ -62,6 +64,7 @@ function parseRow(headers: string[], row: string[], rowIndex: number): Inscripti
     badgeContacte: (obj.badgeContacte as BadgeColor) || 'orange',
     badgePaye: (obj.badgePaye as BadgeColor) || 'red',
     badgeDossier: (obj.badgeDossier as BadgeColor) || 'red',
+    lieu: obj.lieu || null,
   };
 }
 

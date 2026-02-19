@@ -10,9 +10,11 @@ export async function GET() {
 
   return NextResponse.json({
     authenticated: true,
+    id: user.id,
     email: user.email,
     role: user.role,
     nom: user.nom,
     prenom: user.prenom,
+    lieu: user.lieu,
   });
 }

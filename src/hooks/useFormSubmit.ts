@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import type { InscriptionCompleteData } from '@/types';
 
 interface UseFormSubmitReturn {
-  submit: (data: InscriptionCompleteData) => Promise<void>;
+  submit: (data: InscriptionCompleteData, lieu?: string) => Promise<void>;
   isSubmitting: boolean;
   isSuccess: boolean;
   isError: boolean;
@@ -18,16 +18,17 @@ export function useFormSubmit(): UseFormSubmitReturn {
   const [isError, setIsError] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const submit = useCallback(async (data: InscriptionCompleteData) => {
+  const submit = useCallback(async (data: InscriptionCompleteData, lieu?: string) => {
     setIsSubmitting(true);
     setIsError(false);
     setError(null);
 
     try {
+      const payload = lieu ? { ...data, lieu } : data;
       const response = await fetch('/api/inscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();

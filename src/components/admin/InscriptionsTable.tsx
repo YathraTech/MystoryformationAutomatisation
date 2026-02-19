@@ -12,6 +12,7 @@ interface InscriptionsTableProps {
   totalPages: number;
   onPageChange: (page: number) => void;
   onUpdated: () => void;
+  showLieu?: boolean;
 }
 
 const BADGE_COLORS: Record<BadgeColor, { bg: string; text: string; ring: string }> = {
@@ -82,12 +83,13 @@ export default function InscriptionsTable({
   totalPages,
   onPageChange,
   onUpdated,
+  showLieu = false,
 }: InscriptionsTableProps) {
   const router = useRouter();
   const [archiving, setArchiving] = useState<number | null>(null);
 
   const handleRowClick = (rowIndex: number) => {
-    router.push(`/admin/inscriptions/${rowIndex}`);
+    router.push(`/admin/clients/${rowIndex}`);
   };
 
   const handleArchive = async (e: React.MouseEvent, rowIndex: number) => {
@@ -128,6 +130,11 @@ export default function InscriptionsTable({
               <th className="text-left px-4 py-3 font-medium text-slate-600">
                 Date
               </th>
+              {showLieu && (
+                <th className="text-left px-4 py-3 font-medium text-slate-600">
+                  Centre
+                </th>
+              )}
               <th className="text-left px-4 py-3 font-medium text-slate-600">
                 Statut
               </th>
@@ -161,6 +168,17 @@ export default function InscriptionsTable({
                 <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
                   {ins.timestamp}
                 </td>
+                {showLieu && (
+                  <td className="px-4 py-3">
+                    {ins.lieu ? (
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${ins.lieu === 'Gagny' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+                        {ins.lieu}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-300">—</span>
+                    )}
+                  </td>
+                )}
                 <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {BADGE_DEFINITIONS.map((def) => (
@@ -194,10 +212,10 @@ export default function InscriptionsTable({
             {inscriptions.length === 0 && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={showLieu ? 7 : 6}
                   className="px-4 py-12 text-center text-slate-400"
                 >
-                  Aucune inscription trouvée
+                  Aucun client trouvé
                 </td>
               </tr>
             )}
@@ -251,12 +269,17 @@ export default function InscriptionsTable({
             </div>
             <div className="flex items-center justify-between pt-0.5">
               <span className="text-xs text-slate-400">{ins.timestamp}</span>
+              {showLieu && ins.lieu && (
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${ins.lieu === 'Gagny' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+                  {ins.lieu}
+                </span>
+              )}
             </div>
           </div>
         ))}
         {inscriptions.length === 0 && (
           <div className="p-8 text-center text-slate-400">
-            Aucune inscription trouvée
+            Aucun client trouvé
           </div>
         )}
       </div>

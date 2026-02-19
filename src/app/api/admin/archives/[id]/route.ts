@@ -45,15 +45,18 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
     const inscriptionId = parseInt(id, 10);
+    console.log('[Archives DELETE] Tentative de suppression inscription #', inscriptionId);
 
     if (isNaN(inscriptionId)) {
       return NextResponse.json({ error: 'ID invalide' }, { status: 400 });
     }
 
     await deleteInscriptionPermanently(inscriptionId);
+    console.log('[Archives DELETE] Suppression réussie pour inscription #', inscriptionId);
     return NextResponse.json({ success: true, message: 'Inscription supprimée définitivement' });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur serveur';
+    console.error('[Archives DELETE] Erreur:', message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Menu, User, FilePlus } from 'lucide-react';
+import { Menu, User, FilePlus, MapPin } from 'lucide-react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 
 interface AdminHeaderProps {
@@ -9,7 +9,7 @@ interface AdminHeaderProps {
 }
 
 export default function AdminHeader({ onMenuToggle }: AdminHeaderProps) {
-  const { prenom, nom } = useAdminAuth();
+  const { prenom, nom, lieu } = useAdminAuth();
 
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 py-3">
@@ -30,9 +30,17 @@ export default function AdminHeader({ onMenuToggle }: AdminHeaderProps) {
           </Link>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <User className="h-4 w-4" />
-          <span>{prenom} {nom}</span>
+        <div className="flex items-center gap-3 text-sm text-slate-600">
+          {lieu && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+              <MapPin className="h-3 w-3" />
+              {lieu}
+            </span>
+          )}
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            <span>{prenom} {nom}</span>
+          </div>
         </div>
       </div>
     </header>

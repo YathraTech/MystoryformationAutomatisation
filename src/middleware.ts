@@ -30,10 +30,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Admin routes require admin role (from user_metadata set at creation)
+  // Admin routes require admin, staff or commercial role
   if (isAdminPath(pathname)) {
     const role = user.user_metadata?.role;
-    if (role !== 'admin') {
+    const allowedRoles = ['admin', 'staff', 'commercial'];
+    if (!role || !allowedRoles.includes(role)) {
       return NextResponse.redirect(new URL('/', request.url));
     }
   }

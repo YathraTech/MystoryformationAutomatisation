@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
@@ -63,6 +63,19 @@ export function InscriptionForm() {
 
   const { submit, isSubmitting, isError, error } = useFormSubmit();
 
+  // Détection admin pour sélecteur de centre
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [selectedLieu, setSelectedLieu] = useState<string>('');
+
+  useEffect(() => {
+    fetch('/api/admin/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.role === 'admin') setIsAdmin(true);
+      })
+      .catch(() => {});
+  }, []);
+
   const methods = useForm<InscriptionCompleteData>({
     resolver: zodResolver(inscriptionCompleteSchema),
     defaultValues,
@@ -116,7 +129,7 @@ export function InscriptionForm() {
   };
 
   const onSubmit = async (data: InscriptionCompleteData) => {
-    await submit(data);
+    await submit(data, isAdmin && selectedLieu ? selectedLieu : undefined);
     clearSavedData();
     router.push(
       `/inscription/confirmation?nom=${encodeURIComponent(data.nom)}&prenom=${encodeURIComponent(data.prenom)}&email=${encodeURIComponent(data.email)}&formation=${encodeURIComponent(data.formationId)}`
@@ -147,6 +160,24 @@ export function InscriptionForm() {
         )}
 
         <form onSubmit={handleSubmit(onSubmit)}>
+          {/* Sélecteur de centre pour les admins */}
+          {isAdmin && (
+            <div className="mb-4 rounded-xl border border-violet-200 bg-violet-50 p-4">
+              <label className="block text-sm font-semibold text-violet-800 mb-2">
+                Attribuer à un centre de formation
+              </label>
+              <select
+                value={selectedLieu}
+                onChange={(e) => setSelectedLieu(e.target.value)}
+                className="w-full rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+              >
+                <option value="">— Aucun centre (non attribué) —</option>
+                <option value="Gagny">Centre de Gagny</option>
+                <option value="Sarcelles">Centre de Sarcelles</option>
+              </select>
+            </div>
+          )}
+
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/40 sm:p-8">
             {currentStep === 1 && <StepPersonalInfo />}
             {currentStep === 2 && <StepCPFInfo />}
@@ -160,6 +191,7 @@ export function InscriptionForm() {
               isFirstStep={isFirstStep}
               isLastStep={isLastStep}
               isSubmitting={isSubmitting}
+              isDisabled={currentStep === 3}
             />
           </div>
         </form>

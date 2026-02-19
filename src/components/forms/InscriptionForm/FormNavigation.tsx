@@ -9,6 +9,7 @@ interface FormNavigationProps {
   isFirstStep: boolean;
   isLastStep: boolean;
   isSubmitting: boolean;
+  isDisabled?: boolean;
 }
 
 export function FormNavigation({
@@ -17,6 +18,7 @@ export function FormNavigation({
   isFirstStep,
   isLastStep,
   isSubmitting,
+  isDisabled = false,
 }: FormNavigationProps) {
   return (
     <div className="flex items-center justify-between pt-6 border-t border-slate-100">
@@ -33,7 +35,9 @@ export function FormNavigation({
         <div />
       )}
 
-      {isLastStep ? (
+      {isDisabled ? (
+        <div />
+      ) : isLastStep ? (
         <Button
           type="submit"
           isLoading={isSubmitting}

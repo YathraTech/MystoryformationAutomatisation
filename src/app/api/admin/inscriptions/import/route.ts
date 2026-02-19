@@ -258,7 +258,10 @@ export async function POST(request: Request) {
           joursDisponibles: data.joursDisponibles,
           creneauxHoraires: data.creneauxHoraires,
           dateDebutSouhaitee: data.dateDebutSouhaitee,
+          dateFormation: null,
+          heureFormation: null,
           commentaires: data.commentaires,
+          lieu: null,
         });
 
         imported++;

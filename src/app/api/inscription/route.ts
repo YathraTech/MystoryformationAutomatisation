@@ -3,6 +3,7 @@ import { inscriptionCompleteSchema } from '@/lib/validations/inscription.schema'
 import { getFormationById } from '@/lib/data/formations';
 import { addInscription } from '@/lib/data/inscriptions';
 import { createClient } from '@/lib/supabase/server';
+import { getSessionUser } from '@/lib/auth/session';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +25,20 @@ export async function POST(request: NextRequest) {
     const data = validation.data;
 
     const formation = await getFormationById(data.formationId);
+
+    // Récupérer le lieu de l'utilisateur connecté (si connecté)
+    let userLieu: string | null = null;
+    try {
+      const sessionUser = await getSessionUser();
+      if (sessionUser?.role === 'admin' && body.lieu) {
+        // Admin peut choisir le centre manuellement
+        userLieu = body.lieu;
+      } else if (sessionUser?.lieu) {
+        userLieu = sessionUser.lieu;
+      }
+    } catch {
+      // Pas d'utilisateur connecté (formulaire public) - lieu reste null
+    }
 
     // Trouver ou créer le client
     const supabase = await createClient();
@@ -71,7 +86,10 @@ export async function POST(request: NextRequest) {
       joursDisponibles: data.joursDisponibles.join(', '),
       creneauxHoraires: data.creneauxHoraires.join(', '),
       dateDebutSouhaitee: data.dateDebutSouhaitee,
+      dateFormation: null,
+      heureFormation: null,
       commentaires: data.commentaires || '',
+      lieu: userLieu,
     });
 
     // Also send to Make webhook if configured
