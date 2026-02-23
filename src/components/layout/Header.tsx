@@ -50,13 +50,15 @@ export function Header() {
               <Lock className="h-3.5 w-3.5" />
             </Link>
           )}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-red-50 hover:border-red-200 hover:text-red-600"
-          >
-            {userName && <span>{userName}</span>}
-            <LogOut className="h-3.5 w-3.5" />
-          </button>
+          {role && (
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-red-50 hover:border-red-200 hover:text-red-600"
+            >
+              {userName && <span>{userName}</span>}
+              <LogOut className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
     </nav>
