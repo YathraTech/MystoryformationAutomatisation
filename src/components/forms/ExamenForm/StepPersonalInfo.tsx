@@ -372,24 +372,62 @@ export function StepPersonalInfo({ hideAgence }: { hideAgence?: boolean }) {
         {/* Séparateur */}
         <div className="border-t border-slate-200 pt-6 mt-6">
           <h3 className="text-base font-semibold text-slate-800 mb-4">
-            Pièces d&apos;identité
+            Pièce d&apos;identité <span className="text-red-500">*</span>
           </h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Choix du type de pièce */}
+        <div className="flex gap-3 mb-4">
+          <button
+            type="button"
+            onClick={() => {
+              setValue('typePieceIdentite', 'passeport', { shouldValidate: true });
+              setValue('numeroCni', '', { shouldValidate: false });
+            }}
+            className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 text-sm font-semibold transition-all ${
+              watch('typePieceIdentite') === 'passeport'
+                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+            }`}
+          >
+            Passeport
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setValue('typePieceIdentite', 'cni', { shouldValidate: true });
+              setValue('numeroPasseport', '', { shouldValidate: false });
+            }}
+            className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 text-sm font-semibold transition-all ${
+              watch('typePieceIdentite') === 'cni'
+                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+            }`}
+          >
+            Carte d&apos;identité
+          </button>
+        </div>
+        {errors.typePieceIdentite?.message && (
+          <p className="text-xs text-red-600 -mt-2 mb-3">{errors.typePieceIdentite.message}</p>
+        )}
+
+        {/* Champ conditionnel selon le choix */}
+        {watch('typePieceIdentite') === 'passeport' && (
           <Input
             label="Numéro de passeport"
             placeholder="Ex: 12AB34567"
             error={errors.numeroPasseport?.message}
             {...register('numeroPasseport')}
           />
+        )}
+        {watch('typePieceIdentite') === 'cni' && (
           <Input
             label="Numéro de carte d'identité"
             placeholder="Ex: 123456789012"
             error={errors.numeroCni?.message}
             {...register('numeroCni')}
           />
-        </div>
+        )}
 
         {/* Séparateur */}
         <div className="border-t border-slate-200 pt-6 mt-6">

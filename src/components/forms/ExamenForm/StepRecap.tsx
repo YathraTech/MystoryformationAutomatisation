@@ -129,11 +129,25 @@ export function StepRecap({ data }: StepRecapProps) {
                 {getLabel(AGENCES, data.agence)}
               </span>
             </div>
+            {data.typePieceIdentite === 'passeport' && data.numeroPasseport && (
+              <div className="flex items-center gap-2">
+                <FileText className="h-3.5 w-3.5 text-slate-400" />
+                <span className="text-slate-500">N° Passeport :</span>{' '}
+                <span className="font-medium text-slate-800">{data.numeroPasseport}</span>
+              </div>
+            )}
+            {data.typePieceIdentite === 'cni' && data.numeroCni && (
+              <div className="flex items-center gap-2">
+                <FileText className="h-3.5 w-3.5 text-slate-400" />
+                <span className="text-slate-500">N° Carte d&apos;identité :</span>{' '}
+                <span className="font-medium text-slate-800">{data.numeroCni}</span>
+              </div>
+            )}
             {data.pieceIdentite && (
               <div className="flex items-center gap-2">
                 <FileText className="h-3.5 w-3.5 text-slate-400" />
-                <span className="text-slate-500">Pièce d&apos;identité :</span>{' '}
-                <span className="font-medium text-green-600">Fournie</span>
+                <span className="text-slate-500">Fichier pièce d&apos;identité :</span>{' '}
+                <span className="font-medium text-green-600">Fourni</span>
               </div>
             )}
             {data.sourceConnaissance && (

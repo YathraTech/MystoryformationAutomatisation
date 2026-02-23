@@ -23,6 +23,7 @@ const examenSchema = z.object({
   agence: z.string().min(1),
   sourceConnaissance: z.string().optional(),
   pieceIdentite: z.string().optional(),
+  typePieceIdentite: z.enum(['passeport', 'cni']),
   numeroPasseport: z.string().optional(),
   numeroCni: z.string().optional(),
 });

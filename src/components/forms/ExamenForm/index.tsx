@@ -52,6 +52,7 @@ const step1Schema = z.object({
   agence: z.string().min(1, 'Agence souhaitée requise'),
   sourceConnaissance: z.string().optional(),
   pieceIdentite: z.string().optional(),
+  typePieceIdentite: z.enum(['passeport', 'cni'], { message: 'Veuillez choisir un type de pièce d\'identité' }),
   numeroPasseport: z.string().optional(),
   numeroCni: z.string().optional(),
 });
@@ -85,6 +86,7 @@ const defaultValues: ExamenFormData = {
   agence: '',
   sourceConnaissance: '',
   pieceIdentite: '',
+  typePieceIdentite: '' as ExamenFormData['typePieceIdentite'],
   numeroPasseport: '',
   numeroCni: '',
 };
@@ -126,7 +128,7 @@ export function ExamenForm({ forcedAgence }: ExamenFormProps = {}) {
     mode: 'onTouched',
   });
 
-  const { handleSubmit, trigger, reset, watch, getValues } = methods;
+  const { handleSubmit, trigger, reset, watch, getValues, setError, clearErrors } = methods;
 
   // Restore saved data once on initial load
   const hasRestored = useRef(false);
@@ -152,8 +154,23 @@ export function ExamenForm({ forcedAgence }: ExamenFormProps = {}) {
     if (!schema) return true;
     const fields = Object.keys(schema.shape) as Array<keyof ExamenFormData>;
     const result = await trigger(fields);
-    return result;
-  }, [currentStep, trigger]);
+    if (!result) return false;
+
+    // Validation conditionnelle : numéro de pièce d'identité obligatoire
+    if (currentStep === 1) {
+      const values = getValues();
+      if (values.typePieceIdentite === 'passeport' && (!values.numeroPasseport || values.numeroPasseport.length < 2)) {
+        setError('numeroPasseport', { message: 'Le numéro de passeport est requis' });
+        return false;
+      }
+      if (values.typePieceIdentite === 'cni' && (!values.numeroCni || values.numeroCni.length < 2)) {
+        setError('numeroCni', { message: 'Le numéro de carte d\'identité est requis' });
+        return false;
+      }
+    }
+
+    return true;
+  }, [currentStep, trigger, getValues, setError]);
 
   const handleNext = async () => {
     const isValid = await validateCurrentStep();
