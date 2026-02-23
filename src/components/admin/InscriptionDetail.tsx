@@ -346,6 +346,8 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
     dateExamen: '',
     heureExamen: '',
     remises: '',
+    remiseType: 'euro' as 'euro' | 'pourcentage',
+    remiseValeur: '',
     distanciel: false,
     datePaiement: '',
     lieuConfiguration: '',
@@ -624,6 +626,8 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
       dateExamen: examen.dateExamen || '',
       heureExamen: derivedHeure,
       remises: examen.remises || '',
+      remiseType: 'euro',
+      remiseValeur: '',
       distanciel: examen.distanciel || false,
       datePaiement: examen.datePaiement || '',
       lieuConfiguration: examen.lieuConfiguration || '',
@@ -643,6 +647,8 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
       dateExamen: '',
       heureExamen: '',
       remises: '',
+      remiseType: 'euro',
+      remiseValeur: '',
       distanciel: false,
       datePaiement: '',
       lieuConfiguration: '',
@@ -654,11 +660,30 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
 
     setSavingExamen(true);
     try {
+      // Calcul du prix final avec remise
+      let prixFinal = examenForm.prix ? parseFloat(examenForm.prix) : null;
+      if (prixFinal && examenForm.remiseValeur && parseFloat(examenForm.remiseValeur) > 0) {
+        const remise = parseFloat(examenForm.remiseValeur);
+        prixFinal = examenForm.remiseType === 'euro'
+          ? prixFinal - remise
+          : prixFinal - (prixFinal * remise / 100);
+        prixFinal = Math.max(0, Math.round(prixFinal * 100) / 100);
+      }
+
+      // Construire la note de remise
+      let remisesNote = examenForm.remises || '';
+      if (examenForm.remiseValeur && parseFloat(examenForm.remiseValeur) > 0) {
+        const remiseInfo = examenForm.remiseType === 'euro'
+          ? `Remise: -${parseFloat(examenForm.remiseValeur).toFixed(2)}€`
+          : `Remise: -${examenForm.remiseValeur}%`;
+        remisesNote = remisesNote ? `${remiseInfo} | ${remisesNote}` : remiseInfo;
+      }
+
       const res = await fetch(`/api/admin/examens/${examenId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prix: examenForm.prix ? parseFloat(examenForm.prix) : null,
+          prix: prixFinal,
           moyenPaiement: examenForm.moyenPaiement || null,
           formateurId: examenForm.formateurId || null,
           commercialId: examenForm.commercialId || null,
@@ -666,7 +691,7 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
           lieu: examenForm.lieu || null,
           dateExamen: examenForm.dateExamen || null,
           heureExamen: examenForm.heureExamen || null,
-          remises: examenForm.remises || null,
+          remises: remisesNote || null,
           distanciel: examenForm.distanciel,
           datePaiement: examenForm.datePaiement || null,
           lieuConfiguration: examenForm.lieuConfiguration || null,
@@ -1363,6 +1388,80 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                               <option value="Sarcelles">Sarcelles</option>
                             </select>
                           </div>
+
+                          {/* Remise calculée */}
+                          <div className="col-span-2">
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Remise</label>
+                            <div className="flex items-center gap-2">
+                              <div className="inline-flex rounded-lg border border-slate-300 overflow-hidden">
+                                <button
+                                  type="button"
+                                  onClick={() => setExamenForm({ ...examenForm, remiseType: 'euro' })}
+                                  className={`px-3 py-2 text-xs font-semibold transition-colors ${
+                                    examenForm.remiseType === 'euro'
+                                      ? 'bg-blue-600 text-white'
+                                      : 'bg-white text-slate-600 hover:bg-slate-50'
+                                  }`}
+                                >
+                                  €
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setExamenForm({ ...examenForm, remiseType: 'pourcentage' })}
+                                  className={`px-3 py-2 text-xs font-semibold transition-colors ${
+                                    examenForm.remiseType === 'pourcentage'
+                                      ? 'bg-blue-600 text-white'
+                                      : 'bg-white text-slate-600 hover:bg-slate-50'
+                                  }`}
+                                >
+                                  %
+                                </button>
+                              </div>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={examenForm.remiseValeur}
+                                onChange={(e) => setExamenForm({ ...examenForm, remiseValeur: e.target.value })}
+                                placeholder={examenForm.remiseType === 'euro' ? 'Montant en €' : 'Pourcentage'}
+                                className="flex-1 text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Prix final calculé */}
+                          {examenForm.prix && parseFloat(examenForm.prix) > 0 && examenForm.remiseValeur && parseFloat(examenForm.remiseValeur) > 0 && (
+                            <div className="col-span-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+                              <div className="flex items-center justify-between text-sm">
+                                <div className="space-y-1">
+                                  <p className="text-slate-500">
+                                    Prix initial : <span className="font-medium text-slate-700">{parseFloat(examenForm.prix).toFixed(2)} €</span>
+                                  </p>
+                                  <p className="text-slate-500">
+                                    Remise : <span className="font-medium text-red-600">
+                                      -{examenForm.remiseType === 'euro'
+                                        ? `${parseFloat(examenForm.remiseValeur).toFixed(2)} €`
+                                        : `${examenForm.remiseValeur}% (${(parseFloat(examenForm.prix) * parseFloat(examenForm.remiseValeur) / 100).toFixed(2)} €)`
+                                      }
+                                    </span>
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs text-emerald-600 font-medium">Prix final</p>
+                                  <p className="text-xl font-bold text-emerald-700">
+                                    {(() => {
+                                      const prix = parseFloat(examenForm.prix);
+                                      const remise = parseFloat(examenForm.remiseValeur);
+                                      const final_ = examenForm.remiseType === 'euro'
+                                        ? prix - remise
+                                        : prix - (prix * remise / 100);
+                                      return Math.max(0, final_).toFixed(2);
+                                    })()} €
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
 
                           {/* Remises (note interne) */}
                           <div className="col-span-2">
