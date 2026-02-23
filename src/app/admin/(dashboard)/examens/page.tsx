@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, Calendar } from 'lucide-react';
+import { AlertCircle, Calendar, Send, Loader2, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import type { Examen, ExamenResultat } from '@/lib/data/examens';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
@@ -45,6 +45,8 @@ export default function ExamensPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<FilterType>('tous');
+  const [sendingRelance, setSendingRelance] = useState(false);
+  const [relanceResult, setRelanceResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const fetchExamens = useCallback(async () => {
     try {
@@ -117,6 +119,48 @@ export default function ExamensPage() {
     }).length;
   }, [examens]);
 
+  // Candidats éligibles à la relance : réussi ou échoué
+  const candidatsRelance = useMemo(() => {
+    return examens.filter((e) => e.resultat === 'reussi' || e.resultat === 'echoue');
+  }, [examens]);
+
+  const handleRelance = async () => {
+    if (candidatsRelance.length === 0) return;
+
+    const confirmMsg = `Envoyer un email de relance partenaire à ${candidatsRelance.length} candidat(s) ayant terminé leur examen (réussi ou échoué) ?\n\nCet email leur proposera de rejoindre notre plateforme partenaire PrepCivique.`;
+    if (!confirm(confirmMsg)) return;
+
+    setSendingRelance(true);
+    setRelanceResult(null);
+
+    try {
+      const res = await fetch('/api/admin/examens/relance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          candidats: candidatsRelance.map((e) => ({
+            email: e.email,
+            prenom: e.prenom,
+            nom: e.nom,
+            resultat: e.resultat,
+          })),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setRelanceResult({ success: true, message: data.message });
+      } else {
+        setRelanceResult({ success: false, message: data.error || 'Erreur lors de l\'envoi' });
+      }
+    } catch {
+      setRelanceResult({ success: false, message: 'Erreur réseau' });
+    } finally {
+      setSendingRelance(false);
+      setTimeout(() => setRelanceResult(null), 5000);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -128,7 +172,7 @@ export default function ExamensPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Examens</h1>
+        <h1 className="text-2xl font-bold text-slate-800">Candidats d&apos;examens</h1>
         <Link
           href="/admin/planning"
           className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
@@ -145,8 +189,19 @@ export default function ExamensPage() {
         </div>
       )}
 
-      {/* Filtres */}
-      <div className="flex flex-wrap gap-2">
+      {relanceResult && (
+        <div className={`flex items-center gap-2 rounded-lg p-3 text-sm ${
+          relanceResult.success
+            ? 'bg-green-50 border border-green-200 text-green-700'
+            : 'bg-red-50 border border-red-200 text-red-700'
+        }`}>
+          {relanceResult.success ? <CheckCircle className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
+          {relanceResult.message}
+        </div>
+      )}
+
+      {/* Filtres + Bouton relance */}
+      <div className="flex flex-wrap items-center gap-2">
         {FILTER_TABS.map((tab) => {
           const count = getFilterCount(tab.value);
           const isActive = filter === tab.value;
@@ -167,6 +222,28 @@ export default function ExamensPage() {
             </button>
           );
         })}
+
+        {/* Séparateur + Bouton relance */}
+        {isAdmin && candidatsRelance.length > 0 && (
+          <>
+            <div className="h-6 w-px bg-slate-200 mx-1" />
+            <button
+              onClick={handleRelance}
+              disabled={sendingRelance}
+              className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-50"
+            >
+              {sendingRelance ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              Relance partenaire
+              <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">
+                {candidatsRelance.length}
+              </span>
+            </button>
+          </>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
