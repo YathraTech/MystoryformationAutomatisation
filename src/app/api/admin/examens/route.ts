@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getAllExamens } from '@/lib/data/examens';
+import { getAllExamens, autoArchiveOldExamens } from '@/lib/data/examens';
 import { getAllInscriptions } from '@/lib/data/inscriptions';
 
 export async function GET() {
   try {
+    // Archiver automatiquement les examens réussis de plus de 3 mois
+    await autoArchiveOldExamens();
+
     const [examens, inscriptions] = await Promise.all([
       getAllExamens(),
       getAllInscriptions(),

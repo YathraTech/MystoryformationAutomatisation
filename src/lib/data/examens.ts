@@ -137,6 +137,7 @@ export async function getAllExamens(): Promise<Examen[]> {
   const { data, error } = await supabase
     .from('examens')
     .select('*')
+    .neq('statut', 'Archivee')
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -256,6 +257,39 @@ export async function deleteExamen(id: number): Promise<void> {
     .eq('id', id);
 
   if (error) throw new Error(error.message);
+}
+
+/**
+ * Archive automatiquement les examens réussis dont la date d'examen
+ * est passée depuis plus de 3 mois.
+ */
+export async function autoArchiveOldExamens(): Promise<number> {
+  const supabase = await createClient();
+
+  // Date limite : 3 mois dans le passé
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  const cutoffDate = threeMonthsAgo.toISOString().split('T')[0];
+
+  const { data, error } = await supabase
+    .from('examens')
+    .update({ statut: 'Archivee' })
+    .eq('resultat', 'reussi')
+    .not('date_examen', 'is', null)
+    .lte('date_examen', cutoffDate)
+    .neq('statut', 'Archivee')
+    .select('id');
+
+  if (error) {
+    console.error('[autoArchiveOldExamens] Erreur:', error.message);
+    return 0;
+  }
+
+  const count = data?.length || 0;
+  if (count > 0) {
+    console.log(`[autoArchiveOldExamens] ${count} examen(s) archivé(s) automatiquement`);
+  }
+  return count;
 }
 
 export async function getExamensForPlanning(startDate: string, endDate: string): Promise<Examen[]> {
