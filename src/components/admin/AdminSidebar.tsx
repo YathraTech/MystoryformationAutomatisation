@@ -21,7 +21,7 @@ const mainNavItems = [
   { href: '/admin', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/admin/clients', label: 'Clients', icon: Users },
   { href: '/admin/formations', label: 'Formations', icon: BookOpen, disabled: true },
-  { href: '/admin/examens', label: 'Examens', icon: ClipboardCheck },
+  { href: '/admin/examens', label: 'Candidats d\'examens', icon: ClipboardCheck },
   { href: '/admin/planning', label: 'Planning', icon: Calendar },
 ];
 
