@@ -258,6 +258,16 @@ export function StepPersonalInfo({ hideAgence }: { hideAgence?: boolean }) {
             maxDate={new Date().toISOString().split('T')[0]}
             {...register('dateNaissance')}
           />
+          <Input
+            label="Ville de naissance"
+            placeholder="Ex: Paris, Alger, Casablanca..."
+            leftIcon={<MapPin className="h-4 w-4" />}
+            error={errors.villeNaissance?.message}
+            {...register('villeNaissance')}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Pays de naissance avec autocomplétion */}
           <div className="relative" ref={paysSuggestionsRef}>
             <Input

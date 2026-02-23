@@ -64,7 +64,11 @@ export function StepRecap({ data }: StepRecapProps) {
               </span>
             </div>
             <div>
-              <span className="text-slate-500">Lieu de naissance :</span>{' '}
+              <span className="text-slate-500">Ville de naissance :</span>{' '}
+              <span className="font-medium text-slate-800">{data.villeNaissance || '-'}</span>
+            </div>
+            <div>
+              <span className="text-slate-500">Pays de naissance :</span>{' '}
               <span className="font-medium text-slate-800">{data.lieuNaissance || '-'}</span>
             </div>
             <div>

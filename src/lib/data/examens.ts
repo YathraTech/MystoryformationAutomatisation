@@ -18,6 +18,7 @@ export interface Examen {
   codePostal: string;
   ville: string;
   nationalite: string | null;
+  villeNaissance: string | null;
   lieuNaissance: string | null;
   langueMaternelle: string | null;
   objectifAdministratif: string | null;
@@ -59,6 +60,7 @@ interface DbExamen {
   code_postal: string;
   ville: string;
   nationalite: string | null;
+  ville_naissance: string | null;
   lieu_naissance: string | null;
   langue_maternelle: string | null;
   objectif_administratif: string | null;
@@ -101,6 +103,7 @@ function dbToExamen(row: DbExamen): Examen {
     codePostal: row.code_postal || '',
     ville: row.ville || '',
     nationalite: row.nationalite,
+    villeNaissance: row.ville_naissance,
     lieuNaissance: row.lieu_naissance,
     langueMaternelle: row.langue_maternelle,
     objectifAdministratif: row.objectif_administratif,

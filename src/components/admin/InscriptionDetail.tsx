@@ -928,6 +928,15 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                   </div>
                 </div>
               )}
+              {examens[0].villeNaissance && (
+                <div className="flex items-start gap-3 py-2">
+                  <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-slate-500">Ville de naissance</p>
+                    <p className="text-sm text-slate-800">{examens[0].villeNaissance}</p>
+                  </div>
+                </div>
+              )}
               {examens[0].lieuNaissance && (
                 <div className="flex items-start gap-3 py-2">
                   <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />

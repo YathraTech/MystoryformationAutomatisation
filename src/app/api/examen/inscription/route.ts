@@ -16,6 +16,7 @@ const examenSchema = z.object({
   codePostal: z.string().regex(postalCodeRegex),
   ville: z.string().min(2),
   nationalite: z.string().min(2),
+  villeNaissance: z.string().min(2),
   lieuNaissance: z.string().min(2),
   dateNaissance: z.string().min(1),
   langueMaternelle: z.string().min(2),
@@ -126,6 +127,7 @@ export async function POST(request: Request) {
         code_postal: data.codePostal,
         ville: data.ville,
         nationalite: data.nationalite,
+        ville_naissance: data.villeNaissance,
         lieu_naissance: data.lieuNaissance,
         langue_maternelle: data.langueMaternelle,
         lieu: data.agence, // L'agence devient le lieu par défaut

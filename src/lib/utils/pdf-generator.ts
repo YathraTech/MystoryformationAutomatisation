@@ -459,6 +459,10 @@ export async function generateFicheInscription(
 
   drawFieldRow([
     { label: 'Date de naissance', value: inscription.dateNaissance ? formatDateSlash(inscription.dateNaissance) : '' },
+    { label: 'Ville de naissance', value: examen.villeNaissance || '' },
+  ]);
+
+  drawFieldRow([
     { label: 'Pays de naissance', value: examen.lieuNaissance || '' },
   ]);
 
