@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
-const PUBLIC_PATHS = ['/login', '/admin/login', '/api/admin/auth', '/api/public', '/examen', '/api/examen', '/api/inscription', '/inscription-gagny'];
+const PUBLIC_PATHS = ['/login', '/admin/login', '/api/admin/auth', '/api/public', '/examen', '/api/examen', '/api/inscription', '/inscription-gagny', '/inscription-sarcelles'];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(
