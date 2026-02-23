@@ -768,6 +768,8 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
       examen.heureExamen !== null &&
       examen.lieu !== null &&
       examen.formateurId !== null &&
+      examen.commercialId !== null &&
+      examen.datePaiement !== null &&
       examen.lieuConfiguration !== null;
   };
 
@@ -779,7 +781,23 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
       examenForm.heureExamen !== '' &&
       examenForm.lieu !== '' &&
       examenForm.formateurId !== '' &&
+      examenForm.commercialId !== '' &&
+      examenForm.datePaiement !== '' &&
       examenForm.lieuConfiguration !== '';
+  };
+
+  // Obtenir les champs manquants pour l'affichage
+  const getMissingFields = () => {
+    const missing: string[] = [];
+    if (!examenForm.formateurId) missing.push('Formateur');
+    if (!examenForm.commercialId) missing.push('Commercial');
+    if (!examenForm.dateExamen) missing.push('Date d\'examen');
+    if (!examenForm.lieu) missing.push('Lieu');
+    if (!examenForm.prix) missing.push('Prix');
+    if (!examenForm.moyenPaiement) missing.push('Moyen de paiement');
+    if (!examenForm.datePaiement) missing.push('Date de paiement');
+    if (!examenForm.lieuConfiguration) missing.push('Fait à (configuration)');
+    return missing;
   };
 
   // Vérifier si un examen a une configuration partielle (brouillon)
@@ -1479,35 +1497,36 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                           </div>
                         </div>
 
+                        {/* Champs manquants */}
+                        {!isExamenFormComplete() && (
+                          <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
+                            <p className="text-xs font-medium text-amber-700 mb-1">
+                              Champs obligatoires manquants :
+                            </p>
+                            <p className="text-xs text-amber-600">
+                              {getMissingFields().join(' • ')}
+                            </p>
+                          </div>
+                        )}
+
                         {/* Boutons */}
                         <div className="flex items-center gap-2 pt-2">
-                          {isExamenFormComplete() ? (
-                            <button
-                              onClick={() => saveExamen(examen.id)}
-                              disabled={savingExamen}
-                              className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
-                            >
-                              {savingExamen ? (
-                                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <Check className="h-3.5 w-3.5" />
-                              )}
-                              Enregistrer la configuration
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => saveExamen(examen.id)}
-                              disabled={savingExamen}
-                              className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-amber-500 rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50"
-                            >
-                              {savingExamen ? (
-                                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <Save className="h-3.5 w-3.5" />
-                              )}
-                              Enregistrer brouillon
-                            </button>
-                          )}
+                          <button
+                            onClick={() => saveExamen(examen.id)}
+                            disabled={savingExamen || !isExamenFormComplete()}
+                            className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                              isExamenFormComplete()
+                                ? 'bg-emerald-600 hover:bg-emerald-700'
+                                : 'bg-slate-400'
+                            }`}
+                          >
+                            {savingExamen ? (
+                              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Check className="h-3.5 w-3.5" />
+                            )}
+                            Enregistrer la configuration
+                          </button>
                           <button
                             onClick={cancelEditExamen}
                             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-200 rounded-lg hover:bg-slate-300 transition-colors"
