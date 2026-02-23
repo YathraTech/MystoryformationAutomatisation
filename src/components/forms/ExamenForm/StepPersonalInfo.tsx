@@ -36,7 +36,7 @@ const LANGUES = [
   'Tamoul', 'Roumain', 'Polonais', 'Russe', 'Ukrainien', 'Autre'
 ].map(l => ({ value: l, label: l }));
 
-export function StepPersonalInfo() {
+export function StepPersonalInfo({ hideAgence }: { hideAgence?: boolean }) {
   const {
     register,
     setValue,
@@ -388,13 +388,15 @@ export function StepPersonalInfo() {
           </h3>
         </div>
 
-        <Select
-          label="Agence souhaitée"
-          placeholder="Sélectionnez..."
-          options={AGENCES}
-          error={errors.agence?.message}
-          {...register('agence')}
-        />
+        {!hideAgence && (
+          <Select
+            label="Agence souhaitée"
+            placeholder="Sélectionnez..."
+            options={AGENCES}
+            error={errors.agence?.message}
+            {...register('agence')}
+          />
+        )}
 
         {/* Pièce d'identité (optionnel) */}
         <div>

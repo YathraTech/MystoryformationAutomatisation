@@ -94,7 +94,11 @@ interface SubmissionResult {
   data: ExamenFormData; // Données soumises pour le récap
 }
 
-export function ExamenForm() {
+interface ExamenFormProps {
+  forcedAgence?: string;
+}
+
+export function ExamenForm({ forcedAgence }: ExamenFormProps = {}) {
   const { currentStep, totalSteps, isFirstStep, isLastStep, nextStep, prevStep, reset: resetStep } =
     useMultiStepForm({ totalSteps: 2 }); // 2 étapes : Infos, Récap
 
@@ -110,9 +114,13 @@ export function ExamenForm() {
   const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const formDefaults = forcedAgence
+    ? { ...defaultValues, agence: forcedAgence }
+    : defaultValues;
+
   const methods = useForm<ExamenFormData>({
     resolver: zodResolver(examenCompleteSchema),
-    defaultValues,
+    defaultValues: formDefaults,
     mode: 'onTouched',
   });
 
@@ -345,7 +353,7 @@ export function ExamenForm() {
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/40 sm:p-8">
-            {currentStep === 1 && <StepPersonalInfo />}
+            {currentStep === 1 && <StepPersonalInfo hideAgence={!!forcedAgence} />}
             {currentStep === 2 && <StepRecap data={getValues()} />}
 
             <div className="mt-6">
