@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 
 export type ExamenResultat = 'a_venir' | 'reussi' | 'echoue';
-export type MoyenPaiement = 'carte_bancaire' | 'especes' | 'autre';
+export type MoyenPaiement = 'carte_bancaire' | 'lien_paiement' | 'especes' | 'autre';
 export type TypeExamen = 'TEF IRN' | 'Civique' | 'PrepMyFuture';
 
 export interface Examen {

@@ -95,6 +95,7 @@ const RESULTAT_CONFIG: Record<ExamenResultat, { label: string; bg: string; text:
 // Options pour les moyens de paiement
 const MOYENS_PAIEMENT: { value: MoyenPaiement; label: string }[] = [
   { value: 'carte_bancaire', label: 'Carte bancaire' },
+  { value: 'lien_paiement', label: 'Lien de paiement' },
   { value: 'especes', label: 'Espèces' },
   { value: 'autre', label: 'Autre' },
 ];
