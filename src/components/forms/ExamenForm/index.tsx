@@ -331,6 +331,26 @@ export function ExamenForm({ forcedAgence }: ExamenFormProps = {}) {
               Nouvelle inscription
             </button>
           </div>
+
+          {/* Partenaire PrepCivique */}
+          <div className="p-3 rounded-xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200 flex items-center gap-4">
+            <a
+              href="https://prepcivique.fr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 hover:opacity-80 transition-opacity"
+            >
+              <img
+                src="/prepcivique-logo.png"
+                alt="PrepCivique"
+                className="h-8"
+              />
+            </a>
+            <p className="text-xs text-slate-600">
+              En vous inscrivant chez notre partenaire, obtenez des <strong className="text-blue-700">promotions</strong> et
+              accédez à l&apos;un des <strong className="text-blue-700">meilleurs entraînements</strong> pour votre examen.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -367,7 +387,32 @@ export function ExamenForm({ forcedAgence }: ExamenFormProps = {}) {
             </div>
           </div>
         </form>
+
+        <PrepCiviqueBanner />
       </div>
     </FormProvider>
+  );
+}
+
+function PrepCiviqueBanner() {
+  return (
+    <div className="p-3 rounded-xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200 flex items-center gap-4">
+      <a
+        href="https://prepcivique.fr"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="shrink-0 hover:opacity-80 transition-opacity"
+      >
+        <img
+          src="/prepcivique-logo.png"
+          alt="PrepCivique"
+          className="h-8"
+        />
+      </a>
+      <p className="text-xs text-slate-600">
+        En vous inscrivant chez notre partenaire, obtenez des <strong className="text-blue-700">promotions</strong> et
+        accédez à l&apos;un des <strong className="text-blue-700">meilleurs entraînements</strong> pour votre examen.
+      </p>
+    </div>
   );
 }
