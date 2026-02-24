@@ -19,8 +19,10 @@ import {
   ChevronDown,
   ChevronRight,
   GripVertical,
+  Target,
+  AlertTriangle,
 } from 'lucide-react';
-import type { ExamTimeSlot, ExamOption, ExamType } from '@/types/admin';
+import type { ExamTimeSlot, ExamOption, ExamType, ExamObjectif } from '@/types/admin';
 
 // Icônes disponibles pour les types d'examens
 const ICONS: { value: string; label: string; icon: React.ElementType }[] = [
@@ -79,6 +81,12 @@ export default function ParametresExamensPage() {
   const [expandedTypes, setExpandedTypes] = useState<Set<number>>(new Set());
   const [draggingOption, setDraggingOption] = useState<ExamOption | null>(null);
 
+  // Objectifs
+  const [objectifs, setObjectifs] = useState<ExamObjectif[]>([]);
+  const [showObjectifForm, setShowObjectifForm] = useState(false);
+  const [editingObjectif, setEditingObjectif] = useState<ExamObjectif | null>(null);
+  const [objectifForm, setObjectifForm] = useState({ code: '', label: '', ordre: 0, visible: true });
+
   // Sections collapsibles
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
 
@@ -119,10 +127,11 @@ export default function ParametresExamensPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [slotsRes, optionsRes, examTypesRes] = await Promise.all([
+      const [slotsRes, optionsRes, examTypesRes, objectifsRes] = await Promise.all([
         fetch('/api/admin/exam-time-slots'),
         fetch('/api/admin/exam-options'),
         fetch('/api/admin/exam-types'),
+        fetch('/api/admin/exam-objectifs'),
       ]);
 
       if (slotsRes.ok) {
@@ -156,6 +165,11 @@ export default function ParametresExamensPage() {
           })
         );
         setExamTypeOptions(optionsMap);
+      }
+
+      if (objectifsRes.ok) {
+        const data = await objectifsRes.json();
+        setObjectifs(data.objectifs || []);
       }
     } catch {
       setError('Erreur lors du chargement');
@@ -523,6 +537,73 @@ export default function ParametresExamensPage() {
     } catch {
       setError('Erreur lors de la suppression');
     }
+  };
+
+  // Objectif CRUD
+  const handleSaveObjectif = async () => {
+    try {
+      const url = editingObjectif
+        ? `/api/admin/exam-objectifs/${editingObjectif.id}`
+        : '/api/admin/exam-objectifs';
+      const method = editingObjectif ? 'PATCH' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(objectifForm),
+      });
+
+      if (res.ok) {
+        await fetchData();
+        resetObjectifForm();
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Erreur lors de la sauvegarde');
+        setTimeout(() => setError(''), 5000);
+      }
+    } catch {
+      setError('Erreur lors de la sauvegarde');
+    }
+  };
+
+  const handleDeleteObjectif = async (objectif: ExamObjectif) => {
+    if (objectif.usageCount && objectif.usageCount > 0) {
+      setError(`Impossible de supprimer : cet objectif est utilisé par ${objectif.usageCount} examen(s)`);
+      setTimeout(() => setError(''), 5000);
+      return;
+    }
+
+    if (!confirm(`Supprimer l'objectif "${objectif.label}" ?`)) return;
+
+    try {
+      const res = await fetch(`/api/admin/exam-objectifs/${objectif.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        await fetchData();
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Erreur lors de la suppression');
+        setTimeout(() => setError(''), 5000);
+      }
+    } catch {
+      setError('Erreur lors de la suppression');
+    }
+  };
+
+  const startEditObjectif = (objectif: ExamObjectif) => {
+    setEditingObjectif(objectif);
+    setObjectifForm({
+      code: objectif.code,
+      label: objectif.label,
+      ordre: objectif.ordre,
+      visible: objectif.visible,
+    });
+    setShowObjectifForm(true);
+  };
+
+  const resetObjectifForm = () => {
+    setShowObjectifForm(false);
+    setEditingObjectif(null);
+    setObjectifForm({ code: '', label: '', ordre: 0, visible: true });
   };
 
   if (loading) {
@@ -1575,6 +1656,223 @@ export default function ParametresExamensPage() {
             </div>
           )}
         </div>
+          </>
+        )}
+      </section>
+
+      {/* Section: Objectifs / Motivations */}
+      <section className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div
+          className="px-5 py-4 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+          onClick={() => toggleSection('objectifs')}
+        >
+          <div className="flex items-center gap-2">
+            {isSectionCollapsed('objectifs') ? (
+              <ChevronRight className="h-5 w-5 text-slate-400" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-slate-400" />
+            )}
+            <Target className="h-5 w-5 text-slate-500" />
+            <h2 className="font-semibold text-slate-800">Objectifs / Motivations</h2>
+            <span className="text-xs text-slate-400">({objectifs.length})</span>
+            <span className="text-xs text-slate-400 ml-2">
+              (Affiché dans le formulaire d&apos;inscription)
+            </span>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowObjectifForm(true);
+            }}
+            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Ajouter
+          </button>
+        </div>
+
+        {!isSectionCollapsed('objectifs') && (
+          <>
+            {/* Formulaire pour NOUVEL objectif uniquement */}
+            {showObjectifForm && !editingObjectif && (
+              <div className="px-5 py-4 bg-slate-50 border-b border-slate-200">
+                <div className="grid grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">
+                      Code <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={objectifForm.code}
+                      onChange={(e) => setObjectifForm({ ...objectifForm, code: e.target.value })}
+                      placeholder="Ex: nationalite_francaise"
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">
+                      Label <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={objectifForm.label}
+                      onChange={(e) => setObjectifForm({ ...objectifForm, label: e.target.value })}
+                      placeholder="Ex: Accès à la nationalité française"
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Ordre</label>
+                    <input
+                      type="number"
+                      value={objectifForm.ordre}
+                      onChange={(e) => setObjectifForm({ ...objectifForm, ordre: parseInt(e.target.value, 10) || 0 })}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={objectifForm.visible}
+                        onChange={(e) => setObjectifForm({ ...objectifForm, visible: e.target.checked })}
+                        className="rounded border-slate-300"
+                      />
+                      <span className="text-sm text-slate-600">Visible</span>
+                    </label>
+                    <div className="flex-1" />
+                    <button
+                      onClick={resetObjectifForm}
+                      className="rounded-lg border border-slate-300 p-2 text-slate-500 hover:bg-slate-100"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={handleSaveObjectif}
+                      disabled={!objectifForm.code.trim() || !objectifForm.label.trim()}
+                      className="rounded-lg bg-blue-600 p-2 text-white hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Objectifs List */}
+            <div className="divide-y divide-slate-100">
+              {objectifs.map((objectif) => (
+                <div key={objectif.id}>
+                  {/* Formulaire d'édition inline */}
+                  {editingObjectif?.id === objectif.id ? (
+                    <div className="px-5 py-4 bg-blue-50 border-b border-blue-200">
+                      <div className="grid grid-cols-4 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Code</label>
+                          <input
+                            type="text"
+                            value={objectifForm.code}
+                            onChange={(e) => setObjectifForm({ ...objectifForm, code: e.target.value })}
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Label</label>
+                          <input
+                            type="text"
+                            value={objectifForm.label}
+                            onChange={(e) => setObjectifForm({ ...objectifForm, label: e.target.value })}
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Ordre</label>
+                          <input
+                            type="number"
+                            value={objectifForm.ordre}
+                            onChange={(e) => setObjectifForm({ ...objectifForm, ordre: parseInt(e.target.value, 10) || 0 })}
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+                          />
+                        </div>
+                        <div className="flex items-end gap-2">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={objectifForm.visible}
+                              onChange={(e) => setObjectifForm({ ...objectifForm, visible: e.target.checked })}
+                              className="rounded border-slate-300"
+                            />
+                            <span className="text-sm text-slate-600">Visible</span>
+                          </label>
+                          <div className="flex-1" />
+                          <button
+                            onClick={resetObjectifForm}
+                            className="rounded-lg border border-slate-300 p-2 text-slate-500 hover:bg-slate-100 bg-white"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={handleSaveObjectif}
+                            disabled={!objectifForm.code.trim() || !objectifForm.label.trim()}
+                            className="rounded-lg bg-blue-600 p-2 text-white hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            <Check className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="px-5 py-3 flex items-center justify-between hover:bg-slate-50">
+                      <div className="flex items-center gap-4">
+                        <span className="font-medium text-slate-800">{objectif.label}</span>
+                        <span className="text-xs text-slate-400 font-mono">{objectif.code}</span>
+                        {!objectif.visible && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                            <EyeOff className="h-3 w-3" />
+                            Masqué
+                          </span>
+                        )}
+                        {objectif.usageCount && objectif.usageCount > 0 ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-600">
+                            {objectif.usageCount} utilisé(s)
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => startEditObjectif(objectif)}
+                          className="rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        {objectif.usageCount && objectif.usageCount > 0 ? (
+                          <button
+                            disabled
+                            className="rounded p-1.5 text-slate-200 cursor-not-allowed"
+                            title={`Utilisé par ${objectif.usageCount} examen(s) — suppression impossible`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleDeleteObjectif(objectif)}
+                            className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {objectifs.length === 0 && (
+                <div className="px-5 py-8 text-center text-slate-400">
+                  Aucun objectif configuré
+                </div>
+              )}
+            </div>
           </>
         )}
       </section>

@@ -335,6 +335,9 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
   // Options d'examen dynamiques (pour les labels)
   const [examOptions, setExamOptions] = useState<ExamOption[]>([]);
 
+  // Objectifs/motivations dynamiques
+  const [examObjectifs, setExamObjectifs] = useState<{ value: string; label: string }[]>([]);
+
   // Edition d'examen
   const [editingExamenId, setEditingExamenId] = useState<number | null>(null);
   const [examenForm, setExamenForm] = useState({
@@ -432,6 +435,18 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
     }
   }, []);
 
+  const fetchExamObjectifs = useCallback(async () => {
+    try {
+      const res = await fetch('/api/public/exam-objectifs');
+      if (res.ok) {
+        const data = await res.json();
+        setExamObjectifs(data.objectifs || []);
+      }
+    } catch {
+      console.error('Erreur chargement objectifs examens');
+    }
+  }, []);
+
   const fetchFormations = useCallback(async () => {
     setLoadingFormations(true);
     try {
@@ -494,6 +509,7 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
     fetchStaff();
     fetchExamenSlots();
     fetchExamOptions();
+    fetchExamObjectifs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -1210,12 +1226,7 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                             <span className="font-medium">Motivation :</span>{' '}
                             {examen.motivation === 'autre' && examen.motivationAutre
                               ? examen.motivationAutre
-                              : {
-                                  'nationalite_francaise': 'Accès à la nationalité française',
-                                  'carte_resident': 'Demande de carte de résident',
-                                  'titre_sejour': 'Demande de titre de séjour',
-                                  'autre': 'Autre(s)',
-                                }[examen.motivation] || examen.motivation}
+                              : examObjectifs.find(o => o.value === examen.motivation)?.label || examen.motivation}
                           </p>
                         )}
                         <p className="text-xs text-slate-500 mt-1">
@@ -1583,7 +1594,8 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                 if (!inscription) return;
                                 const formateur = staffMembers.find(s => s.id === examen.formateurId);
                                 const formateurNom = formateur ? `${formateur.prenom} ${formateur.nom}` : undefined;
-                                await generateFicheInscription(inscription, examen, formateurNom);
+                                const motLabels = Object.fromEntries(examObjectifs.map(o => [o.value, o.label]));
+                                await generateFicheInscription(inscription, examen, formateurNom, motLabels);
                               }}
                               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                             >

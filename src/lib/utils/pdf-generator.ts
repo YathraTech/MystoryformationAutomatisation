@@ -347,7 +347,8 @@ export async function generateAttestationPaiement(
 export async function generateFicheInscription(
   inscription: Inscription,
   examen: Examen,
-  formateurNom?: string
+  formateurNom?: string,
+  motivationLabels?: Record<string, string>
 ): Promise<void> {
   const doc = new jsPDF('p', 'mm', 'a4'); // Explicit A4
   const pageWidth = 210; // A4 width in mm
@@ -563,15 +564,16 @@ export async function generateFicheInscription(
   ]);
 
   // Motivation du candidat
-  const motivationLabels: Record<string, string> = {
+  const defaultMotivationLabels: Record<string, string> = {
     'nationalite_francaise': 'Accès à la nationalité française',
     'carte_resident': 'Demande de carte de résident',
     'titre_sejour': 'Demande de titre de séjour',
     'autre': 'Autre(s)',
   };
+  const labels = motivationLabels || defaultMotivationLabels;
   const motivationValue = examen.motivation === 'autre' && examen.motivationAutre
     ? examen.motivationAutre
-    : motivationLabels[examen.motivation || ''] || examen.motivation || '';
+    : labels[examen.motivation || ''] || examen.motivation || '';
   drawField('Motivation', motivationValue, margin, contentWidth);
   y += 10;
 

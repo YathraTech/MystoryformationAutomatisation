@@ -170,3 +170,14 @@ export interface ExamType {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface ExamObjectif {
+  id: number;
+  code: string;
+  label: string;
+  ordre: number;
+  visible: boolean;
+  usageCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}

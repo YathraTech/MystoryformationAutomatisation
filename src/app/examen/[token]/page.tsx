@@ -39,13 +39,10 @@ const ICON_MAP: Record<string, ElementType> = {
   Award,
 };
 
-// Options de motivation
-const MOTIVATION_OPTIONS = [
-  { value: 'nationalite_francaise', label: 'Accès à la nationalité française' },
-  { value: 'carte_resident', label: 'Demande de carte de résident' },
-  { value: 'titre_sejour', label: 'Demande de titre de séjour' },
-  { value: 'autre', label: 'Autre(s)' },
-];
+interface MotivationOption {
+  value: string;
+  label: string;
+}
 
 export default function ExamenClientPage() {
   const params = useParams();
@@ -62,16 +59,18 @@ export default function ExamenClientPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [savedSelection, setSavedSelection] = useState<{ type: string; option: string } | null>(null);
+  const [motivationOptions, setMotivationOptions] = useState<MotivationOption[]>([]);
   const [selectedMotivation, setSelectedMotivation] = useState<string>('');
   const [motivationAutre, setMotivationAutre] = useState<string>('');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch both examen data and exam types
-        const [examenRes, typesRes] = await Promise.all([
+        // Fetch examen data, exam types, and objectifs
+        const [examenRes, typesRes, objectifsRes] = await Promise.all([
           fetch(`/api/examen/${token}`),
           fetch('/api/public/exam-types'),
+          fetch('/api/public/exam-objectifs'),
         ]);
 
         if (!examenRes.ok) {
@@ -89,6 +88,11 @@ export default function ExamenClientPage() {
         if (typesRes.ok) {
           const typesData = await typesRes.json();
           setExamTypes(typesData.types || []);
+        }
+
+        if (objectifsRes.ok) {
+          const objectifsData = await objectifsRes.json();
+          setMotivationOptions(objectifsData.objectifs || []);
         }
 
         if (examenData.diplome) {
@@ -436,7 +440,7 @@ export default function ExamenClientPage() {
             </h2>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
-              {MOTIVATION_OPTIONS.map((option) => {
+              {motivationOptions.map((option) => {
                 const isSelected = selectedMotivation === option.value;
                 const colorClasses = getColorClasses(selectedExamType?.color || 'blue');
 
@@ -500,7 +504,7 @@ export default function ExamenClientPage() {
               Motivation : <strong>
                 {selectedMotivation === 'autre'
                   ? motivationAutre || 'Autre'
-                  : MOTIVATION_OPTIONS.find(m => m.value === selectedMotivation)?.label}
+                  : motivationOptions.find(m => m.value === selectedMotivation)?.label}
               </strong>
             </p>
           </div>
