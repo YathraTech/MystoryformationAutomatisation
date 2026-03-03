@@ -128,7 +128,6 @@ export async function POST(request: Request) {
         langue_maternelle: data.langueMaternelle,
         lieu: data.agence, // L'agence devient le lieu par défaut
         source_connaissance: data.sourceConnaissance || null,
-        piece_identite: data.pieceIdentite || null,
         numero_passeport: data.numeroPasseport || null,
         numero_cni: data.numeroCni || null,
       })

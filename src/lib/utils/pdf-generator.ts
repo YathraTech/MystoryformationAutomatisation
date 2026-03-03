@@ -474,10 +474,10 @@ export async function generateFicheInscription(
   doc.setFontSize(8);
   doc.setTextColor(...lightText);
   doc.setFont('helvetica', 'normal');
-  doc.text('Date:', margin + 4, headerY + 6);
+  doc.text('Date de l\'examen :', margin + 4, headerY + 6);
   doc.setTextColor(...darkText);
   doc.setFont('helvetica', 'bold');
-  doc.text(examen.dateExamen ? formatDateSlash(examen.dateExamen) : '__/__/____', margin + 14, headerY + 6);
+  doc.text(examen.dateExamen ? formatDateSlash(examen.dateExamen) : '__/__/____', margin + 38, headerY + 6);
 
   let y = headerY + 16;
 

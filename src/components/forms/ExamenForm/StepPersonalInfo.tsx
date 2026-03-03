@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
-import { Mail, Phone, Loader2, MapPin, Upload, X } from 'lucide-react';
+import { Mail, Phone, Loader2, MapPin, Upload, X, FileText } from 'lucide-react';
 import { Input, Select, DatePicker } from '@/components/ui';
 import { CIVILITES } from '@/lib/utils/constants';
 import type { ExamenFormData } from './index';
@@ -36,11 +36,18 @@ const LANGUES = [
   'Tamoul', 'Roumain', 'Polonais', 'Russe', 'Ukrainien', 'Autre'
 ].map(l => ({ value: l, label: l }));
 
-export function StepPersonalInfo({ hideAgence }: { hideAgence?: boolean }) {
+interface StepPersonalInfoProps {
+  hideAgence?: boolean;
+  pendingFiles: File[];
+  onFilesChange: (files: File[]) => void;
+}
+
+export function StepPersonalInfo({ hideAgence, pendingFiles, onFilesChange }: StepPersonalInfoProps) {
   const {
     register,
     setValue,
     watch,
+    clearErrors,
     formState: { errors },
   } = useFormContext<ExamenFormData>();
 
@@ -48,11 +55,10 @@ export function StepPersonalInfo({ hideAgence }: { hideAgence?: boolean }) {
   const [loadingVille, setLoadingVille] = useState(false);
   const prevCodePostal = useRef('');
 
-  // Upload de fichier
-  const [uploadingFile, setUploadingFile] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const pieceIdentite = watch('pieceIdentite');
+  // Multi-file upload
+  const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Autocomplétion adresse
   const [adresseInput, setAdresseInput] = useState('');
@@ -178,6 +184,37 @@ export function StepPersonalInfo({ hideAgence }: { hideAgence?: boolean }) {
     setSuggestions([]);
     setShowSuggestions(false);
   };
+
+  // Handle adding files with validation
+  const handleAddFiles = useCallback((newFiles: File[]) => {
+    setFileError(null);
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    const maxSize = 10 * 1024 * 1024; // 10 Mo
+    const maxFiles = 5;
+
+    const validFiles: File[] = [];
+    for (const file of newFiles) {
+      if (!allowedTypes.includes(file.type)) {
+        setFileError(`"${file.name}" : format non autorisé. Formats acceptés : PDF, JPG, PNG`);
+        return;
+      }
+      if (file.size > maxSize) {
+        setFileError(`"${file.name}" : le fichier dépasse 10 Mo`);
+        return;
+      }
+      validFiles.push(file);
+    }
+
+    const total = pendingFiles.length + validFiles.length;
+    if (total > maxFiles) {
+      setFileError(`Maximum ${maxFiles} fichiers autorisés (${pendingFiles.length} déjà ajouté(s))`);
+      return;
+    }
+
+    const updated = [...pendingFiles, ...validFiles];
+    onFilesChange(updated);
+    clearErrors('pieceIdentite');
+  }, [pendingFiles, onFilesChange, clearErrors]);
 
   // Auto-complétion ville par code postal
   useEffect(() => {
@@ -446,79 +483,94 @@ export function StepPersonalInfo({ hideAgence }: { hideAgence?: boolean }) {
           />
         )}
 
-        {/* Pièce d'identité (optionnel) */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Pièce d&apos;identité <span className="text-slate-400 font-normal">(optionnel)</span>
-          </label>
-          <div className="relative">
-            {pieceIdentite ? (
-              <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex-1 truncate text-sm text-green-700">
-                  Fichier téléchargé
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setValue('pieceIdentite', '')}
-                  className="p-1 hover:bg-green-100 rounded transition-colors"
-                >
-                  <X className="h-4 w-4 text-green-600" />
-                </button>
-              </div>
-            ) : (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
-              >
-                {uploadingFile ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-                ) : (
-                  <>
-                    <Upload className="h-5 w-5 text-slate-400" />
-                    <span className="text-sm text-slate-500">
-                      Cliquez pour télécharger (PDF, JPG, PNG - max 10 Mo)
-                    </span>
-                  </>
-                )}
+        {/* Pièce d'identité (recto/verso) — obligatoire */}
+        {watch('typePieceIdentite') && (
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Pièce d&apos;identité (recto/verso) <span className="text-red-500">*</span>
+            </label>
+            <p className="text-xs text-slate-500 mb-2">
+              Veuillez fournir une photo recto et verso de votre pièce d&apos;identité
+            </p>
+
+            {/* File list */}
+            {pendingFiles.length > 0 && (
+              <div className="space-y-2 mb-3">
+                {pendingFiles.map((file, index) => (
+                  <div key={`${file.name}-${index}`} className="flex items-center gap-3 p-2.5 bg-green-50 border border-green-200 rounded-lg">
+                    <FileText className="h-4 w-4 text-green-600 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-green-700 truncate">{file.name}</p>
+                      <p className="text-xs text-green-500">{(file.size / 1024 / 1024).toFixed(2)} Mo</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = pendingFiles.filter((_, i) => i !== index);
+                        onFilesChange(updated);
+                        if (updated.length > 0) {
+                          clearErrors('pieceIdentite');
+                        }
+                      }}
+                      className="p-1 hover:bg-green-100 rounded transition-colors"
+                    >
+                      <X className="h-4 w-4 text-green-600" />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
+
+            {/* Drop zone */}
+            {pendingFiles.length < 5 && (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  const droppedFiles = Array.from(e.dataTransfer.files);
+                  handleAddFiles(droppedFiles);
+                }}
+                className={`flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                  isDragging
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-slate-300 hover:border-blue-400 hover:bg-blue-50/50'
+                }`}
+              >
+                <Upload className="h-5 w-5 text-slate-400" />
+                <span className="text-sm text-slate-500 text-center">
+                  Cliquez ou glissez-déposez vos fichiers ici
+                </span>
+                <span className="text-xs text-slate-400">
+                  PDF, JPG, PNG — max 10 Mo par fichier, max 5 fichiers
+                </span>
+              </div>
+            )}
+
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
+              multiple
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
               className="hidden"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-
-                // Vérifier la taille (10 Mo max)
-                if (file.size > 10 * 1024 * 1024) {
-                  setUploadError('Le fichier ne doit pas dépasser 10 Mo');
-                  return;
-                }
-
-                setUploadingFile(true);
-                setUploadError(null);
-
-                try {
-                  // Pour l'instant, on stocke juste le nom du fichier
-                  // L'upload réel vers Supabase Storage peut être implémenté plus tard
-                  setValue('pieceIdentite', file.name);
-                } catch {
-                  setUploadError('Erreur lors du téléchargement');
-                } finally {
-                  setUploadingFile(false);
+              onChange={(e) => {
+                if (e.target.files) {
+                  handleAddFiles(Array.from(e.target.files));
+                  e.target.value = '';
                 }
               }}
             />
+
+            {fileError && (
+              <p className="mt-1 text-xs text-red-600">{fileError}</p>
+            )}
+            {errors.pieceIdentite?.message && (
+              <p className="mt-1 text-xs text-red-600">{errors.pieceIdentite.message}</p>
+            )}
           </div>
-          {uploadError && (
-            <p className="mt-1 text-xs text-red-600">{uploadError}</p>
-          )}
-          <p className="mt-1 text-xs text-slate-400">
-            Demandable plus tard si non fourni maintenant
-          </p>
-        </div>
+        )}
 
         {/* Comment nous avez-vous connu (optionnel) */}
         <Select

@@ -6,6 +6,7 @@ import { SOURCES_CONNAISSANCE, AGENCES } from './index';
 
 interface StepRecapProps {
   data: ExamenFormData;
+  pendingFiles?: File[];
 }
 
 const CIVILITE_LABELS: Record<string, string> = {
@@ -18,7 +19,7 @@ function getLabel(options: { value: string; label: string }[], value: string): s
   return options.find(o => o.value === value)?.label || value || '-';
 }
 
-export function StepRecap({ data }: StepRecapProps) {
+export function StepRecap({ data, pendingFiles }: StepRecapProps) {
   return (
     <div className="space-y-6">
       {/* Header avec icône d'alerte */}
@@ -143,11 +144,13 @@ export function StepRecap({ data }: StepRecapProps) {
                 <span className="font-medium text-slate-800">{data.numeroCni}</span>
               </div>
             )}
-            {data.pieceIdentite && (
+            {pendingFiles && pendingFiles.length > 0 && (
               <div className="flex items-center gap-2">
                 <FileText className="h-3.5 w-3.5 text-slate-400" />
-                <span className="text-slate-500">Fichier pièce d&apos;identité :</span>{' '}
-                <span className="font-medium text-green-600">Fourni</span>
+                <span className="text-slate-500">Pièce(s) d&apos;identité :</span>{' '}
+                <span className="font-medium text-green-600">
+                  {pendingFiles.length} fichier(s) — {pendingFiles.map(f => f.name).join(', ')}
+                </span>
               </div>
             )}
             {data.sourceConnaissance && (

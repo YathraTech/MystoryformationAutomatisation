@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getExamenById, updateExamenFields, archiveExamen, deleteExamen } from '@/lib/data/examens';
 import { recalculateCaAfterExamenChange } from '@/lib/data/ca-mensuel';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function GET(
   request: NextRequest,
@@ -38,11 +39,44 @@ export async function PATCH(
       return NextResponse.json({ success: true, message: 'Examen archivé' });
     }
 
-    // Capturer l'état avant mise à jour (pour recalcul CA)
+    // Champs de configuration dont le changement invalide les PDF
+    const CONFIG_FIELDS = [
+      'prix', 'dateExamen', 'heureExamen', 'lieu', 'moyenPaiement',
+      'lieuConfiguration', 'commercialId', 'remises', 'distanciel', 'datePaiement',
+    ] as const;
+
+    const configFieldsChanging = CONFIG_FIELDS.some((f) => body[f] !== undefined);
     const caFieldsChanging = body.prix !== undefined || body.commercialId !== undefined;
-    const beforeExamen = caFieldsChanging
+
+    // Capturer l'état avant mise à jour (pour recalcul CA + reset PDF)
+    const beforeExamen = (caFieldsChanging || configFieldsChanging)
       ? await getExamenById(parseInt(id, 10))
       : null;
+
+    // Si des champs de configuration changent, supprimer les anciens PDF du Storage
+    let pdfResetFields: Record<string, null> = {};
+    if (configFieldsChanging && beforeExamen) {
+      const pdfPaths = [
+        beforeExamen.pdfAttestationPaiement,
+        beforeExamen.pdfFicheInscription,
+        beforeExamen.pdfConvocation,
+      ].filter((p): p is string => !!p);
+
+      if (pdfPaths.length > 0) {
+        try {
+          const supabase = createAdminClient();
+          await supabase.storage.from('documents').remove(pdfPaths);
+        } catch (storageError) {
+          console.error('[PDF Storage Cleanup Error]', storageError);
+        }
+      }
+
+      pdfResetFields = {
+        pdfAttestationPaiement: null,
+        pdfFicheInscription: null,
+        pdfConvocation: null,
+      };
+    }
 
     // Mise à jour normale des champs
     await updateExamenFields(parseInt(id, 10), {
@@ -61,6 +95,7 @@ export async function PATCH(
       pdfAttestationPaiement: body.pdfAttestationPaiement,
       pdfFicheInscription: body.pdfFicheInscription,
       pdfConvocation: body.pdfConvocation,
+      ...pdfResetFields,
     });
 
     // Recalculer le CA mensuel si prix ou commercialId a changé

@@ -117,6 +117,8 @@ export function ExamenForm({ forcedAgence }: ExamenFormProps = {}) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
 
   const formDefaults = forcedAgence
     ? { ...defaultValues, agence: forcedAgence }
@@ -167,10 +169,14 @@ export function ExamenForm({ forcedAgence }: ExamenFormProps = {}) {
         setError('numeroCni', { message: 'Le numéro de carte d\'identité est requis' });
         return false;
       }
+      if (values.typePieceIdentite && pendingFiles.length === 0) {
+        setError('pieceIdentite', { message: 'Veuillez fournir une photo de votre pièce d\'identité' });
+        return false;
+      }
     }
 
     return true;
-  }, [currentStep, trigger, getValues, setError]);
+  }, [currentStep, trigger, getValues, setError, pendingFiles]);
 
   const handleNext = async () => {
     const isValid = await validateCurrentStep();
@@ -188,6 +194,7 @@ export function ExamenForm({ forcedAgence }: ExamenFormProps = {}) {
   const onSubmit = async (data: ExamenFormData) => {
     setIsSubmitting(true);
     setSubmitError(null);
+    setUploadProgress(null);
 
     try {
       const res = await fetch('/api/examen/inscription', {
@@ -202,10 +209,53 @@ export function ExamenForm({ forcedAgence }: ExamenFormProps = {}) {
       }
 
       const result = await res.json();
+
+      // Upload pending files if any
+      if (pendingFiles.length > 0) {
+        for (let i = 0; i < pendingFiles.length; i++) {
+          const file = pendingFiles[i];
+          setUploadProgress(`Upload ${i + 1}/${pendingFiles.length} fichier(s)...`);
+
+          // Get signed upload URL
+          const uploadRes = await fetch(`/api/examen/${result.token}/upload-piece-identite`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fileName: file.name,
+              contentType: file.type,
+            }),
+          });
+
+          if (!uploadRes.ok) {
+            const uploadError = await uploadRes.json();
+            throw new Error(uploadError.error || `Erreur upload fichier ${file.name}`);
+          }
+
+          const { signedUrl } = await uploadRes.json();
+
+          // Upload file to Storage
+          const putRes = await fetch(signedUrl, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': file.type,
+              'x-upsert': 'true',
+            },
+            body: file,
+          });
+
+          if (!putRes.ok) {
+            throw new Error(`Erreur lors de l'envoi du fichier ${file.name}`);
+          }
+        }
+        setUploadProgress(null);
+      }
+
       setSubmissionResult({ ...result, data }); // Inclure les données pour le récap
+      setPendingFiles([]);
       clearSavedData();
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Erreur inconnue');
+      setUploadProgress(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -342,6 +392,7 @@ export function ExamenForm({ forcedAgence }: ExamenFormProps = {}) {
               type="button"
               onClick={() => {
                 setSubmissionResult(null);
+                setPendingFiles([]);
                 reset(defaultValues);
                 resetStep(); // Retour à l'étape 1
               }}
@@ -390,10 +441,23 @@ export function ExamenForm({ forcedAgence }: ExamenFormProps = {}) {
           </Alert>
         )}
 
+        {uploadProgress && (
+          <div className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+            {uploadProgress}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/40 sm:p-8">
-            {currentStep === 1 && <StepPersonalInfo hideAgence={!!forcedAgence} />}
-            {currentStep === 2 && <StepRecap data={getValues()} />}
+            {currentStep === 1 && (
+              <StepPersonalInfo
+                hideAgence={!!forcedAgence}
+                pendingFiles={pendingFiles}
+                onFilesChange={setPendingFiles}
+              />
+            )}
+            {currentStep === 2 && <StepRecap data={getValues()} pendingFiles={pendingFiles} />}
 
             <div className="mt-6">
               <FormNavigation
