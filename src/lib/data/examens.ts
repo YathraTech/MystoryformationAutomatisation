@@ -337,6 +337,32 @@ export async function markResultatEmailSent(ids: number[]): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+export async function getExamensByDate(dateExamen: string): Promise<Examen[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('examens')
+    .select('*')
+    .eq('date_examen', dateExamen)
+    .neq('statut', 'Archivee')
+    .order('nom', { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data || []).map((row: DbExamen) => dbToExamen(row));
+}
+
+export async function archiveExamensByDate(dateExamen: string): Promise<number> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('examens')
+    .update({ statut: 'Archivee' })
+    .eq('date_examen', dateExamen)
+    .neq('statut', 'Archivee')
+    .select('id');
+
+  if (error) throw new Error(error.message);
+  return data?.length || 0;
+}
+
 export async function getExamensForPlanning(startDate: string, endDate: string): Promise<Examen[]> {
   const supabase = await createClient();
   const { data, error } = await supabase

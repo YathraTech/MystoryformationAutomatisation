@@ -118,6 +118,15 @@ export interface FeuilleAppelData {
   dateExamen: string;     // Date de l'examen concerné
 }
 
+export interface FeuilleAppelSummary {
+  dateExamen: string;
+  totalCandidats: number;
+  reussi: number;
+  echoue: number;
+  absent: number;
+  aVenir: number;
+}
+
 export interface DashboardStats {
   totalInscriptions: number;
   totalExamens: number;

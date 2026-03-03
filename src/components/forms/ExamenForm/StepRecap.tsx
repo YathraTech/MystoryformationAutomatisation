@@ -115,21 +115,14 @@ export function StepRecap({ data, pendingFiles }: StepRecapProps) {
           </div>
         </div>
 
-        {/* Informations complémentaires */}
+        {/* Identification */}
         <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
           <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-            <Globe className="h-4 w-4 text-blue-600" />
-            Informations complémentaires
+            <FileText className="h-4 w-4 text-blue-600" />
+            Identification
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            <div className="flex items-center gap-2">
-              <Building2 className="h-3.5 w-3.5 text-slate-400" />
-              <span className="text-slate-500">Agence :</span>{' '}
-              <span className="font-medium text-slate-800">
-                {getLabel(AGENCES, data.agence)}
-              </span>
-            </div>
             {data.typePieceIdentite === 'passeport' && data.numeroPasseport && (
               <div className="flex items-center gap-2">
                 <FileText className="h-3.5 w-3.5 text-slate-400" />
@@ -147,12 +140,32 @@ export function StepRecap({ data, pendingFiles }: StepRecapProps) {
             {pendingFiles && pendingFiles.length > 0 && (
               <div className="flex items-center gap-2">
                 <FileText className="h-3.5 w-3.5 text-slate-400" />
-                <span className="text-slate-500">Pièce(s) d&apos;identité :</span>{' '}
+                <span className="text-slate-500">
+                  {data.typePieceIdentite === 'passeport' ? 'Passeport :' : 'Carte d\'identité :'}
+                </span>{' '}
                 <span className="font-medium text-green-600">
                   {pendingFiles.length} fichier(s) — {pendingFiles.map(f => f.name).join(', ')}
                 </span>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Informations complémentaires */}
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+          <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+            <Globe className="h-4 w-4 text-blue-600" />
+            Informations complémentaires
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-3.5 w-3.5 text-slate-400" />
+              <span className="text-slate-500">Agence :</span>{' '}
+              <span className="font-medium text-slate-800">
+                {getLabel(AGENCES, data.agence)}
+              </span>
+            </div>
             {data.sourceConnaissance && (
               <div>
                 <span className="text-slate-500">Source :</span>{' '}

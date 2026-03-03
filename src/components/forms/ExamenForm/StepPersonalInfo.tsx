@@ -409,7 +409,7 @@ export function StepPersonalInfo({ hideAgence, pendingFiles, onFilesChange }: St
         {/* Séparateur */}
         <div className="border-t border-slate-200 pt-6 mt-6">
           <h3 className="text-base font-semibold text-slate-800 mb-4">
-            Pièce d&apos;identité <span className="text-red-500">*</span>
+            Identification <span className="text-red-500">*</span>
           </h3>
         </div>
 
@@ -466,120 +466,128 @@ export function StepPersonalInfo({ hideAgence, pendingFiles, onFilesChange }: St
           />
         )}
 
-        {/* Séparateur */}
-        <div className="border-t border-slate-200 pt-6 mt-6">
-          <h3 className="text-base font-semibold text-slate-800 mb-4">
-            Informations complémentaires
-          </h3>
-        </div>
-
-        {!hideAgence && (
-          <Select
-            label="Agence souhaitée"
-            placeholder="Sélectionnez..."
-            options={AGENCES}
-            error={errors.agence?.message}
-            {...register('agence')}
-          />
-        )}
-
-        {/* Pièce d'identité (recto/verso) — obligatoire */}
+        {/* Informations complémentaires — visible uniquement après sélection du type de pièce */}
         {watch('typePieceIdentite') && (
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Pièce d&apos;identité (recto/verso) <span className="text-red-500">*</span>
-            </label>
-            <p className="text-xs text-slate-500 mb-2">
-              Veuillez fournir une photo recto et verso de votre pièce d&apos;identité
-            </p>
+          <>
+            <div className="border-t border-slate-200 pt-6 mt-6">
+              <h3 className="text-base font-semibold text-slate-800 mb-4">
+                Informations complémentaires
+              </h3>
+            </div>
 
-            {/* File list */}
-            {pendingFiles.length > 0 && (
-              <div className="space-y-2 mb-3">
-                {pendingFiles.map((file, index) => (
-                  <div key={`${file.name}-${index}`} className="flex items-center gap-3 p-2.5 bg-green-50 border border-green-200 rounded-lg">
-                    <FileText className="h-4 w-4 text-green-600 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-green-700 truncate">{file.name}</p>
-                      <p className="text-xs text-green-500">{(file.size / 1024 / 1024).toFixed(2)} Mo</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const updated = pendingFiles.filter((_, i) => i !== index);
-                        onFilesChange(updated);
-                        if (updated.length > 0) {
-                          clearErrors('pieceIdentite');
-                        }
-                      }}
-                      className="p-1 hover:bg-green-100 rounded transition-colors"
-                    >
-                      <X className="h-4 w-4 text-green-600" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+            {!hideAgence && (
+              <Select
+                label="Agence souhaitée"
+                placeholder="Sélectionnez..."
+                options={AGENCES}
+                error={errors.agence?.message}
+                {...register('agence')}
+              />
             )}
 
-            {/* Drop zone */}
-            {pendingFiles.length < 5 && (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setIsDragging(false);
-                  const droppedFiles = Array.from(e.dataTransfer.files);
-                  handleAddFiles(droppedFiles);
-                }}
-                className={`flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
-                  isDragging
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-slate-300 hover:border-blue-400 hover:bg-blue-50/50'
-                }`}
-              >
-                <Upload className="h-5 w-5 text-slate-400" />
-                <span className="text-sm text-slate-500 text-center">
-                  Cliquez ou glissez-déposez vos fichiers ici
-                </span>
-                <span className="text-xs text-slate-400">
-                  PDF, JPG, PNG — max 10 Mo par fichier, max 5 fichiers
-                </span>
-              </div>
-            )}
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept=".pdf,.jpg,.jpeg,.png,.webp"
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files) {
-                  handleAddFiles(Array.from(e.target.files));
-                  e.target.value = '';
+            {/* Téléversement du document d'identité */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                {watch('typePieceIdentite') === 'passeport'
+                  ? 'Passeport (page d\'identité)'
+                  : 'Carte d\'identité (recto/verso)'
+                } <span className="text-red-500">*</span>
+              </label>
+              <p className="text-xs text-slate-500 mb-2">
+                {watch('typePieceIdentite') === 'passeport'
+                  ? 'Veuillez fournir une photo de la page d\'identité de votre passeport'
+                  : 'Veuillez fournir une photo recto et verso de votre carte d\'identité'
                 }
-              }}
+              </p>
+
+              {/* File list */}
+              {pendingFiles.length > 0 && (
+                <div className="space-y-2 mb-3">
+                  {pendingFiles.map((file, index) => (
+                    <div key={`${file.name}-${index}`} className="flex items-center gap-3 p-2.5 bg-green-50 border border-green-200 rounded-lg">
+                      <FileText className="h-4 w-4 text-green-600 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-green-700 truncate">{file.name}</p>
+                        <p className="text-xs text-green-500">{(file.size / 1024 / 1024).toFixed(2)} Mo</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = pendingFiles.filter((_, i) => i !== index);
+                          onFilesChange(updated);
+                          if (updated.length > 0) {
+                            clearErrors('pieceIdentite');
+                          }
+                        }}
+                        className="p-1 hover:bg-green-100 rounded transition-colors"
+                      >
+                        <X className="h-4 w-4 text-green-600" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Drop zone */}
+              {pendingFiles.length < 5 && (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    const droppedFiles = Array.from(e.dataTransfer.files);
+                    handleAddFiles(droppedFiles);
+                  }}
+                  className={`flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                    isDragging
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-slate-300 hover:border-blue-400 hover:bg-blue-50/50'
+                  }`}
+                >
+                  <Upload className="h-5 w-5 text-slate-400" />
+                  <span className="text-sm text-slate-500 text-center">
+                    Cliquez ou glissez-déposez vos fichiers ici
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    PDF, JPG, PNG — max 10 Mo par fichier, max 5 fichiers
+                  </span>
+                </div>
+              )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files) {
+                    handleAddFiles(Array.from(e.target.files));
+                    e.target.value = '';
+                  }
+                }}
+              />
+
+              {fileError && (
+                <p className="mt-1 text-xs text-red-600">{fileError}</p>
+              )}
+              {errors.pieceIdentite?.message && (
+                <p className="mt-1 text-xs text-red-600">{errors.pieceIdentite.message}</p>
+              )}
+            </div>
+
+            {/* Comment nous avez-vous connu (optionnel) */}
+            <Select
+              label="Comment nous avez-vous connu ?"
+              placeholder="Sélectionnez... (optionnel)"
+              options={SOURCES_CONNAISSANCE}
+              error={errors.sourceConnaissance?.message}
+              {...register('sourceConnaissance')}
             />
-
-            {fileError && (
-              <p className="mt-1 text-xs text-red-600">{fileError}</p>
-            )}
-            {errors.pieceIdentite?.message && (
-              <p className="mt-1 text-xs text-red-600">{errors.pieceIdentite.message}</p>
-            )}
-          </div>
+          </>
         )}
-
-        {/* Comment nous avez-vous connu (optionnel) */}
-        <Select
-          label="Comment nous avez-vous connu ?"
-          placeholder="Sélectionnez... (optionnel)"
-          options={SOURCES_CONNAISSANCE}
-          error={errors.sourceConnaissance?.message}
-          {...register('sourceConnaissance')}
-        />
       </div>
     </div>
   );
