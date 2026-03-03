@@ -39,11 +39,6 @@ const ICON_MAP: Record<string, ElementType> = {
   Award,
 };
 
-interface MotivationOption {
-  value: string;
-  label: string;
-}
-
 export default function ExamenClientPage() {
   const params = useParams();
   const token = params.token as string;
@@ -59,18 +54,14 @@ export default function ExamenClientPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [savedSelection, setSavedSelection] = useState<{ type: string; option: string } | null>(null);
-  const [motivationOptions, setMotivationOptions] = useState<MotivationOption[]>([]);
-  const [selectedMotivation, setSelectedMotivation] = useState<string>('');
-  const [motivationAutre, setMotivationAutre] = useState<string>('');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch examen data, exam types, and objectifs
-        const [examenRes, typesRes, objectifsRes] = await Promise.all([
+        // Fetch examen data and exam types
+        const [examenRes, typesRes] = await Promise.all([
           fetch(`/api/examen/${token}`),
           fetch('/api/public/exam-types'),
-          fetch('/api/public/exam-objectifs'),
         ]);
 
         if (!examenRes.ok) {
@@ -88,11 +79,6 @@ export default function ExamenClientPage() {
         if (typesRes.ok) {
           const typesData = await typesRes.json();
           setExamTypes(typesData.types || []);
-        }
-
-        if (objectifsRes.ok) {
-          const objectifsData = await objectifsRes.json();
-          setMotivationOptions(objectifsData.objectifs || []);
         }
 
         if (examenData.diplome) {
@@ -141,12 +127,6 @@ export default function ExamenClientPage() {
     // Si des options sont disponibles, une doit être sélectionnée
     if (examOptions.length > 0 && !selectedOption) return;
 
-    // Motivation obligatoire
-    if (!selectedMotivation) return;
-
-    // Si "autre" sélectionné, le texte est obligatoire
-    if (selectedMotivation === 'autre' && !motivationAutre.trim()) return;
-
     setSubmitting(true);
     try {
       // Format: "TYPE_CODE:OPTION_CODE" ou juste "TYPE_CODE" si pas d'options
@@ -159,8 +139,6 @@ export default function ExamenClientPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           diplome,
-          motivation: selectedMotivation,
-          motivationAutre: selectedMotivation === 'autre' ? motivationAutre.trim() : null,
         }),
       });
 
@@ -431,81 +409,14 @@ export default function ExamenClientPage() {
           </div>
         )}
 
-        {/* Étape 3 : Motivation */}
-        {selectedExamType && (examOptions.length === 0 || selectedOption) && (
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-slate-700 mb-2">
-              3. Quelle est votre motivation ?
-              <span className="text-red-500 ml-1">*</span>
-            </h2>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
-              {motivationOptions.map((option) => {
-                const isSelected = selectedMotivation === option.value;
-                const colorClasses = getColorClasses(selectedExamType?.color || 'blue');
-
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setSelectedMotivation(option.value)}
-                    className={`relative flex items-center justify-center p-3 rounded-lg border-2 transition-all duration-200 ${
-                      isSelected
-                        ? colorClasses.selected
-                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
-                    }`}
-                  >
-                    {isSelected && (
-                      <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-white shadow flex items-center justify-center">
-                        <Check className={`h-3 w-3 ${colorClasses.text}`} />
-                      </div>
-                    )}
-                    <span
-                      className={`text-sm font-semibold ${
-                        isSelected ? colorClasses.text : 'text-slate-700'
-                      }`}
-                    >
-                      {option.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Zone de texte si "Autre" sélectionné */}
-            {selectedMotivation === 'autre' && (
-              <div className="mt-4">
-                <label htmlFor="motivationAutre" className="block text-sm font-medium text-slate-700 mb-2">
-                  Précisez votre motivation <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  id="motivationAutre"
-                  value={motivationAutre}
-                  onChange={(e) => setMotivationAutre(e.target.value)}
-                  placeholder="Décrivez votre motivation..."
-                  rows={3}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-none text-slate-700"
-                />
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Récapitulatif */}
-        {selectedExamType && (examOptions.length === 0 || selectedOption) && selectedMotivation && (
+        {selectedExamType && (examOptions.length === 0 || selectedOption) && (
           <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 mb-3">
             <p className="text-sm text-blue-800 text-center font-medium">
               Votre sélection : <strong>{selectedExamType.label}</strong>
               {selectedOption && (
                 <> - <strong>{selectedOption.label}</strong></>
               )}
-            </p>
-            <p className="text-xs text-blue-600 text-center mt-2">
-              Motivation : <strong>
-                {selectedMotivation === 'autre'
-                  ? motivationAutre || 'Autre'
-                  : motivationOptions.find(m => m.value === selectedMotivation)?.label}
-              </strong>
             </p>
           </div>
         )}
@@ -524,8 +435,6 @@ export default function ExamenClientPage() {
           disabled={
             !selectedExamType ||
             (examOptions.length > 0 && !selectedOption) ||
-            !selectedMotivation ||
-            (selectedMotivation === 'autre' && !motivationAutre.trim()) ||
             submitting
           }
           className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-blue-600 text-white text-base font-bold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"

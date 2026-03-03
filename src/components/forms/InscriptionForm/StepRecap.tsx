@@ -10,8 +10,6 @@ import {
   LANGUES,
   NIVEAUX,
   OBJECTIFS,
-  JOURS_SEMAINE,
-  CRENEAUX_HORAIRES,
 } from '@/lib/utils/constants';
 import { formatPrice, formatDate } from '@/lib/utils/format';
 import type { InscriptionCompleteData } from '@/types';
@@ -142,33 +140,11 @@ export function StepRecap({ onGoToStep }: StepRecapProps) {
           )}
         </RecapSection>
 
-        <RecapSection title="Disponibilités" step={4} onEdit={onGoToStep}>
-          <RecapRow
-            label="Jours"
-            value={
-              data.joursDisponibles
-                ?.map((j: string) => getLabel(JOURS_SEMAINE, j))
-                .join(', ') || ''
-            }
-          />
-          <RecapRow
-            label="Créneaux"
-            value={
-              data.creneauxHoraires
-                ?.map((c: string) => getLabel(CRENEAUX_HORAIRES, c))
-                .join(', ') || ''
-            }
-          />
-          <RecapRow
-            label="Début souhaité"
-            value={
-              data.dateDebutSouhaitee ? formatDate(data.dateDebutSouhaitee) : ''
-            }
-          />
-          {data.commentaires && (
+        {data.commentaires && (
+          <RecapSection title="Commentaires" step={3} onEdit={onGoToStep}>
             <RecapRow label="Commentaires" value={data.commentaires} />
-          )}
-        </RecapSection>
+          </RecapSection>
+        )}
       </div>
 
       {/* Consentements */}

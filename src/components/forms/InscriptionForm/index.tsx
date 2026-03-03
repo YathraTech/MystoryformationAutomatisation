@@ -18,7 +18,6 @@ import type { InscriptionCompleteData } from '@/types';
 import { StepPersonalInfo } from './StepPersonalInfo';
 import { StepCPFInfo } from './StepCPFInfo';
 import { StepFormationChoice } from './StepFormationChoice';
-import { StepDisponibilites } from './StepDisponibilites';
 import { StepRecap } from './StepRecap';
 import { FormNavigation } from './FormNavigation';
 
@@ -52,7 +51,7 @@ const defaultValues: InscriptionCompleteData = {
 export function InscriptionForm() {
   const router = useRouter();
   const { currentStep, totalSteps, isFirstStep, isLastStep, nextStep, prevStep, goToStep } =
-    useMultiStepForm({ totalSteps: 5 });
+    useMultiStepForm({ totalSteps: 4 });
 
   const {
     value: savedData,
@@ -182,8 +181,7 @@ export function InscriptionForm() {
             {currentStep === 1 && <StepPersonalInfo />}
             {currentStep === 2 && <StepCPFInfo />}
             {currentStep === 3 && <StepFormationChoice />}
-            {currentStep === 4 && <StepDisponibilites />}
-            {currentStep === 5 && <StepRecap onGoToStep={handleGoToStep} />}
+            {currentStep === 4 && <StepRecap onGoToStep={handleGoToStep} />}
 
             <FormNavigation
               onPrev={handlePrev}

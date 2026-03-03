@@ -96,23 +96,11 @@ export const formationChoiceSchema = z.object({
     .min(1, 'Veuillez sélectionner une formation'),
 });
 
-// === ÉTAPE 4 : Disponibilités ===
-export const disponibilitesSchema = z.object({
-  joursDisponibles: z
-    .array(z.string())
-    .min(1, 'Veuillez sélectionner au moins un jour'),
-  creneauxHoraires: z
-    .array(z.string())
-    .min(1, 'Veuillez sélectionner au moins un créneau horaire'),
-  dateDebutSouhaitee: z
-    .string()
-    .min(1, 'Veuillez sélectionner une date')
-    .refine((date) => {
-      const selected = new Date(date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return selected > today;
-    }, 'La date doit être dans le futur'),
+// === ÉTAPE 4 : Commentaires (optionnel) ===
+export const commentairesSchema = z.object({
+  joursDisponibles: z.array(z.string()),
+  creneauxHoraires: z.array(z.string()),
+  dateDebutSouhaitee: z.string(),
   commentaires: z
     .string()
     .max(500, 'Les commentaires ne peuvent pas dépasser 500 caractères')
@@ -134,14 +122,14 @@ export const consentementSchema = z.object({
 export const inscriptionCompleteSchema = personalInfoSchema
   .merge(cpfInfoSchema)
   .merge(formationChoiceSchema)
-  .merge(disponibilitesSchema)
+  .merge(commentairesSchema)
   .merge(consentementSchema);
 
 // === TYPES EXPORTÉS ===
 export type PersonalInfoData = z.infer<typeof personalInfoSchema>;
 export type CPFInfoData = z.infer<typeof cpfInfoSchema>;
 export type FormationChoiceData = z.infer<typeof formationChoiceSchema>;
-export type DisponibilitesData = z.infer<typeof disponibilitesSchema>;
+export type DisponibilitesData = z.infer<typeof commentairesSchema>;
 export type ConsentementData = z.infer<typeof consentementSchema>;
 export type InscriptionCompleteData = z.infer<typeof inscriptionCompleteSchema>;
 
@@ -149,7 +137,6 @@ export type InscriptionCompleteData = z.infer<typeof inscriptionCompleteSchema>;
 export const stepSchemas = [
   personalInfoSchema,
   cpfInfoSchema,
-  formationChoiceSchema,
-  disponibilitesSchema,
+  formationChoiceSchema.merge(commentairesSchema),
   consentementSchema,
 ] as const;

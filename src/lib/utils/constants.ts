@@ -61,6 +61,5 @@ export const FORM_STEPS = [
   { number: 1, title: 'Informations personnelles', shortTitle: 'Identité' },
   { number: 2, title: 'Informations CPF', shortTitle: 'CPF' },
   { number: 3, title: 'Choix de formation', shortTitle: 'Formation' },
-  { number: 4, title: 'Disponibilités', shortTitle: 'Planning' },
-  { number: 5, title: 'Récapitulatif', shortTitle: 'Validation' },
+  { number: 4, title: 'Récapitulatif', shortTitle: 'Validation' },
 ] as const;

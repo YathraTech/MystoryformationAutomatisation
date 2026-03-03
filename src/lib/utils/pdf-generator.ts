@@ -275,6 +275,7 @@ export async function generateAttestationPaiement(
   const modePaiementLabels: Record<string, string> = {
     'especes': 'Espèces',
     'carte_bancaire': 'Carte bancaire',
+    'cpf': 'CPF',
     'autre': 'Autre',
   };
   const modePaiementLabel = modePaiementLabels[examen.moyenPaiement || ''] || '......................................................';
@@ -589,7 +590,7 @@ export async function generateFicheInscription(
   y += 9;
 
   const moyenPaiementLabels: Record<string, string> = {
-    'carte_bancaire': 'Carte bancaire', 'especes': 'Espèces', 'autre': 'Autre',
+    'carte_bancaire': 'Carte bancaire', 'especes': 'Espèces', 'cpf': 'CPF', 'autre': 'Autre',
   };
 
   // Box montant

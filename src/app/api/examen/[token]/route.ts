@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 const diplomeSchema = z.object({
   diplome: z.string().min(1),
-  motivation: z.string().min(1),
+  motivation: z.string().optional(),
   motivationAutre: z.string().nullable().optional(),
 });
 
@@ -187,10 +187,9 @@ export async function PATCH(
     }
 
     const selectedDiplome = result.data.diplome;
-    const selectedMotivation = result.data.motivation;
-    const selectedMotivationAutre = result.data.motivationAutre;
+    const selectedMotivation = result.data.motivation || null;
+    const selectedMotivationAutre = result.data.motivationAutre || null;
     console.log('[Examen PATCH] Selected diplome:', selectedDiplome);
-    console.log('[Examen PATCH] Selected motivation:', selectedMotivation);
 
     // Validate that the diploma format and codes are valid
     const validationResult = await validateDiplome(selectedDiplome);

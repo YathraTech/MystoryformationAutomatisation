@@ -97,6 +97,7 @@ const MOYENS_PAIEMENT: { value: MoyenPaiement; label: string }[] = [
   { value: 'carte_bancaire', label: 'Carte bancaire' },
   { value: 'lien_paiement', label: 'Lien de paiement' },
   { value: 'especes', label: 'Espèces' },
+  { value: 'cpf', label: 'CPF' },
   { value: 'autre', label: 'Autre' },
 ];
 
@@ -1045,7 +1046,7 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
         </CollapsibleSection>
 
         {/* Formation */}
-        <CollapsibleSection title="Formation" icon={BookOpen} defaultOpen>
+        <CollapsibleSection title="Analyse client" icon={BookOpen} defaultOpen>
           {/* Sélecteur de formation */}
           <div className="flex items-start gap-3 py-3 group border-b border-slate-100">
             <BookOpen className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
@@ -1120,13 +1121,6 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
           <EditableField icon={BookOpen} label="Langue" value={inscription.langue} fieldKey="langue" {...fieldProps} />
           <EditableField icon={BookOpen} label="Niveau actuel" value={inscription.niveauActuel} fieldKey="niveauActuel" {...fieldProps} />
           <EditableField icon={BookOpen} label="Objectif" value={inscription.objectif} fieldKey="objectif" {...fieldProps} />
-        </CollapsibleSection>
-
-        {/* Disponibilités du client */}
-        <CollapsibleSection title="Disponibilités souhaitées" icon={Calendar}>
-          <EditableField icon={Calendar} label="Jours disponibles" value={inscription.joursDisponibles} fieldKey="joursDisponibles" {...fieldProps} />
-          <EditableField icon={Clock} label="Créneaux horaires" value={inscription.creneauxHoraires} fieldKey="creneauxHoraires" {...fieldProps} />
-          <EditableField icon={Calendar} label="Date de début souhaitée" value={inscription.dateDebutSouhaitee} fieldKey="dateDebutSouhaitee" {...fieldProps} />
         </CollapsibleSection>
 
         {/* Commentaires */}
