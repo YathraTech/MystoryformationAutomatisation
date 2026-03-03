@@ -18,43 +18,41 @@ export async function POST(
     const { id } = await params;
     const examenId = parseInt(id, 10);
 
-    const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-    const docType = formData.get('docType') as DocType | null;
+    const body = await request.json();
+    const { docType, fileName } = body as { docType: DocType; fileName: string };
 
-    if (!file || !docType || !DOC_TYPE_FIELD_MAP[docType]) {
+    if (!docType || !fileName || !DOC_TYPE_FIELD_MAP[docType]) {
       return NextResponse.json(
-        { error: 'file et docType requis' },
+        { error: 'docType et fileName requis' },
         { status: 400 }
       );
     }
 
     const supabase = createAdminClient();
-    const storagePath = `examens/${examenId}/${docType}_${file.name}`;
+    const storagePath = `examens/${examenId}/${docType}_${fileName}`;
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    const { error: uploadError } = await supabase.storage
+    // Create a signed upload URL so the client uploads directly to Storage
+    const { data, error } = await supabase.storage
       .from('documents')
-      .upload(storagePath, buffer, {
-        contentType: 'application/pdf',
-        upsert: true,
-      });
+      .createSignedUploadUrl(storagePath);
 
-    if (uploadError) {
-      console.error('[Upload PDF Error]', uploadError);
+    if (error || !data) {
+      console.error('[Signed Upload URL Error]', error);
       return NextResponse.json(
-        { error: 'Erreur lors de l\'upload du PDF' },
+        { error: 'Erreur lors de la création de l\'URL d\'upload' },
         { status: 500 }
       );
     }
 
-    // Save the storage path in DB
+    // Save the storage path in DB now (the client will upload the file next)
     const fieldName = DOC_TYPE_FIELD_MAP[docType];
     await updateExamenFields(examenId, { [fieldName]: storagePath });
 
-    return NextResponse.json({ success: true, path: storagePath });
+    return NextResponse.json({
+      signedUrl: data.signedUrl,
+      token: data.token,
+      path: storagePath,
+    });
   } catch (error) {
     console.error('[Upload PDF Error]', error);
     return NextResponse.json(

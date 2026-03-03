@@ -1567,11 +1567,16 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                   } else {
                                     const { blob, fileName } = generateConvocation(inscription, examen);
                                     downloadBlob(blob, fileName);
-                                    const formData = new FormData();
-                                    formData.append('file', new File([blob], fileName, { type: 'application/pdf' }));
-                                    formData.append('docType', 'convocation');
-                                    const uploadRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, { method: 'POST', body: formData });
-                                    if (!uploadRes.ok) console.error('Upload convocation échoué:', await uploadRes.text());
+                                    const urlRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ docType: 'convocation', fileName }),
+                                    });
+                                    if (urlRes.ok) {
+                                      const { signedUrl, token } = await urlRes.json();
+                                      await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: blob });
+                                      void token;
+                                    }
                                     await fetchExamens(inscription.clientId, inscription.email);
                                   }
                                 } catch (err) { console.error('Erreur document:', err); }
@@ -1599,11 +1604,16 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                     const motLabels = Object.fromEntries(examObjectifs.map(o => [o.value, o.label]));
                                     const { blob, fileName } = await generateFicheInscription(inscription, examen, motLabels);
                                     downloadBlob(blob, fileName);
-                                    const formData = new FormData();
-                                    formData.append('file', new File([blob], fileName, { type: 'application/pdf' }));
-                                    formData.append('docType', 'fiche_inscription');
-                                    const uploadRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, { method: 'POST', body: formData });
-                                    if (!uploadRes.ok) console.error('Upload fiche échoué:', await uploadRes.text());
+                                    const urlRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ docType: 'fiche_inscription', fileName }),
+                                    });
+                                    if (urlRes.ok) {
+                                      const { signedUrl, token } = await urlRes.json();
+                                      await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: blob });
+                                      void token;
+                                    }
                                     await fetchExamens(inscription.clientId, inscription.email);
                                   }
                                 } catch (err) { console.error('Erreur document:', err); }
@@ -1632,11 +1642,16 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                     const commercialNom = commercial ? `${commercial.prenom} ${commercial.nom}` : undefined;
                                     const { blob, fileName } = await generateAttestationPaiement(inscription, examen, commercialNom);
                                     downloadBlob(blob, fileName);
-                                    const formData = new FormData();
-                                    formData.append('file', new File([blob], fileName, { type: 'application/pdf' }));
-                                    formData.append('docType', 'attestation_paiement');
-                                    const uploadRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, { method: 'POST', body: formData });
-                                    if (!uploadRes.ok) console.error('Upload attestation échoué:', await uploadRes.text());
+                                    const urlRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ docType: 'attestation_paiement', fileName }),
+                                    });
+                                    if (urlRes.ok) {
+                                      const { signedUrl, token } = await urlRes.json();
+                                      await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: blob });
+                                      void token;
+                                    }
                                     await fetchExamens(inscription.clientId, inscription.email);
                                   }
                                 } catch (err) { console.error('Erreur document:', err); }
