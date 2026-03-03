@@ -306,31 +306,23 @@ export async function generateAttestationPaiement(
   }
   y += 16;
 
-  // Mode de paiement - checkboxes (plusieurs possibles)
+  // Mode de paiement
+  const modePaiementLabels: Record<string, string> = {
+    'carte_bancaire': 'CB',
+    'especes': 'Espèces',
+    'cpf': 'CPF',
+    'lien_paiement': 'Lien de paiement',
+    'autre': 'Autre',
+  };
   doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 100, 100);
   doc.text('MODE DE PAIEMENT', margin, y);
   y += 5;
-
-  const moyenActuel = examen.moyenPaiement || '';
-  const paiementOptions = [
-    { key: 'carte_bancaire', label: 'CB' },
-    { key: 'especes', label: 'Espèces' },
-    { key: 'cpf', label: 'CPF' },
-  ];
-
   doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
   doc.setTextColor(20, 20, 20);
-  let xPos = margin;
-  for (const opt of paiementOptions) {
-    const checked = moyenActuel === opt.key;
-    doc.setFont('helvetica', 'normal');
-    doc.text(checked ? CHECKBOX_CHECKED : CHECKBOX_EMPTY, xPos, y);
-    doc.setFont('helvetica', 'bold');
-    doc.text(opt.label, xPos + 6, y);
-    xPos += 35;
-  }
+  doc.text(modePaiementLabels[examen.moyenPaiement || ''] || '—', margin, y);
   y += 8;
 
   // Date du paiement
