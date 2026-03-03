@@ -1,10 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Archive, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { Inscription, BadgeKey, BadgeColor } from '@/types/admin';
-import { BADGE_DEFINITIONS, BADGE_CYCLE } from '@/lib/utils/admin-constants';
+import type { Inscription } from '@/types/admin';
+
+interface ExamStatusInfo {
+  id: number;
+  resultat: 'a_venir' | 'reussi' | 'echoue' | 'absent';
+  diplome: string | null;
+  dateExamen: string | null;
+  lieu: string | null;
+}
 
 interface InscriptionsTableProps {
   inscriptions: Inscription[];
@@ -15,65 +22,46 @@ interface InscriptionsTableProps {
   showLieu?: boolean;
 }
 
-const BADGE_COLORS: Record<BadgeColor, { bg: string; text: string; ring: string }> = {
-  red: { bg: 'bg-red-100', text: 'text-red-700', ring: 'ring-red-300' },
-  orange: { bg: 'bg-amber-100', text: 'text-amber-700', ring: 'ring-amber-300' },
-  green: { bg: 'bg-emerald-100', text: 'text-emerald-700', ring: 'ring-emerald-300' },
+const RESULTAT_STYLES: Record<string, { bg: string; text: string; ring: string; label: string }> = {
+  a_venir: { bg: 'bg-amber-50', text: 'text-amber-700', ring: 'ring-amber-200', label: 'À venir' },
+  reussi: { bg: 'bg-emerald-50', text: 'text-emerald-700', ring: 'ring-emerald-200', label: 'Réussi' },
+  echoue: { bg: 'bg-red-50', text: 'text-red-700', ring: 'ring-red-200', label: 'Échoué' },
+  absent: { bg: 'bg-orange-50', text: 'text-orange-700', ring: 'ring-orange-200', label: 'Absent' },
 };
 
-function ClickableBadge({
-  label,
-  color,
-  badgeKey,
-  rowIndex,
-  onUpdated,
-}: {
-  label: string;
-  color: BadgeColor;
-  badgeKey: BadgeKey;
-  rowIndex: number;
-  onUpdated: () => void;
-}) {
-  const [current, setCurrent] = useState<BadgeColor>(color || 'red');
-  const [saving, setSaving] = useState(false);
+function formatDateShort(date: string) {
+  return new Date(date).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+  });
+}
 
-  const style = BADGE_COLORS[current] || BADGE_COLORS.red;
-
-  const handleClick = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (saving) return;
-
-    const nextColor = BADGE_CYCLE[current];
-    setSaving(true);
-    setCurrent(nextColor);
-
-    try {
-      const res = await fetch(`/api/admin/inscriptions/${rowIndex}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ badge: badgeKey, color: nextColor }),
-      });
-      if (res.ok) {
-        onUpdated();
-      } else {
-        setCurrent(current);
-      }
-    } catch {
-      setCurrent(current);
-    } finally {
-      setSaving(false);
-    }
-  };
+function ExamStatusBadges({ examens }: { examens: ExamStatusInfo[] }) {
+  if (examens.length === 0) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold leading-4 ring-1 ring-inset bg-slate-50 text-slate-400 ring-slate-200">
+        Non inscrit
+      </span>
+    );
+  }
 
   return (
-    <button
-      onClick={handleClick}
-      disabled={saving}
-      title={`${label} - Cliquer pour changer`}
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold leading-4 transition-colors cursor-pointer select-none ring-1 ring-inset ${style.bg} ${style.text} ${style.ring} hover:brightness-90 disabled:opacity-60`}
-    >
-      {label}
-    </button>
+    <div className="flex flex-col gap-1">
+      {examens.map((ex) => {
+        const style = RESULTAT_STYLES[ex.resultat] || RESULTAT_STYLES.a_venir;
+        return (
+          <div key={ex.id} className="flex items-center gap-1.5">
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold leading-4 ring-1 ring-inset ${style.bg} ${style.text} ${style.ring}`}>
+              {style.label}
+            </span>
+            <span className="text-[10px] text-slate-400 truncate max-w-[120px]">
+              {ex.diplome || 'Examen'}
+              {ex.dateExamen && ` · ${formatDateShort(ex.dateExamen)}`}
+            </span>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -87,6 +75,14 @@ export default function InscriptionsTable({
 }: InscriptionsTableProps) {
   const router = useRouter();
   const [archiving, setArchiving] = useState<number | null>(null);
+  const [examStatuses, setExamStatuses] = useState<Record<string, ExamStatusInfo[]>>({});
+
+  useEffect(() => {
+    fetch('/api/admin/inscriptions/exam-statuses')
+      .then((res) => res.json())
+      .then((data) => setExamStatuses(data.statuses ?? {}))
+      .catch(() => setExamStatuses({}));
+  }, [inscriptions]);
 
   const handleRowClick = (rowIndex: number) => {
     router.push(`/admin/clients/${rowIndex}`);
@@ -109,6 +105,10 @@ export default function InscriptionsTable({
     } finally {
       setArchiving(null);
     }
+  };
+
+  const getExamens = (email: string): ExamStatusInfo[] => {
+    return examStatuses[email.toLowerCase()] || [];
   };
 
   return (
@@ -139,7 +139,7 @@ export default function InscriptionsTable({
                 </th>
               )}
               <th className="text-left px-4 py-3 font-medium text-slate-600">
-                Statut
+                Examen
               </th>
               <th className="text-center px-4 py-3 font-medium text-slate-600 w-12">
                 <Archive className="h-4 w-4 mx-auto text-slate-400" />
@@ -185,19 +185,8 @@ export default function InscriptionsTable({
                     )}
                   </td>
                 )}
-                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {BADGE_DEFINITIONS.map((def) => (
-                      <ClickableBadge
-                        key={def.key}
-                        label={def.label}
-                        color={ins[def.key] || def.defaultColor}
-                        badgeKey={def.key}
-                        rowIndex={ins.rowIndex}
-                        onUpdated={onUpdated}
-                      />
-                    ))}
-                  </div>
+                <td className="px-4 py-3">
+                  <ExamStatusBadges examens={getExamens(ins.email)} />
                 </td>
                 <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                   <button
@@ -266,17 +255,8 @@ export default function InscriptionsTable({
                 Commercial: {ins.commercialNom}
               </p>
             )}
-            <div className="flex items-center gap-1.5 flex-wrap pt-1" onClick={(e) => e.stopPropagation()}>
-              {BADGE_DEFINITIONS.map((def) => (
-                <ClickableBadge
-                  key={def.key}
-                  label={def.label}
-                  color={ins[def.key] || def.defaultColor}
-                  badgeKey={def.key}
-                  rowIndex={ins.rowIndex}
-                  onUpdated={onUpdated}
-                />
-              ))}
+            <div className="pt-1">
+              <ExamStatusBadges examens={getExamens(ins.email)} />
             </div>
             <div className="flex items-center justify-between pt-0.5">
               <span className="text-xs text-slate-400">{ins.timestamp}</span>

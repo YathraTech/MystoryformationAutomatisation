@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
-import { ClipboardCheck, Clock, ChevronRight, Loader2 } from 'lucide-react';
+import { ClipboardCheck, Clock, ChevronRight, Loader2, CheckCircle2 } from 'lucide-react';
 import type { FeuilleAppelExamen, FeuilleAppelSummary } from '@/types/admin';
 
 function CentreBadge({ lieu }: { lieu: string | null | undefined }) {
@@ -49,6 +49,7 @@ function FeuilleActuelle({
 }) {
   const [examens, setExamens] = useState<FeuilleAppelExamen[]>(initialExamens);
   const [countdown, setCountdown] = useState('');
+  const [validated, setValidated] = useState(false);
 
   useEffect(() => {
     setExamens(initialExamens);
@@ -73,6 +74,7 @@ function FeuilleActuelle({
   }, [deadline]);
 
   const filled = examens.filter((e) => e.resultat !== 'a_venir').length;
+  const aVenir = examens.length - filled;
 
   const handleResultat = useCallback(async (id: number, resultat: FeuilleAppelExamen['resultat']) => {
     const previous = examens.map((e) => ({ ...e }));
@@ -173,6 +175,32 @@ function FeuilleActuelle({
           </div>
         ))}
       </div>
+
+      {/* Bandeau de validation */}
+      {validated && (
+        <div className="flex items-center gap-2 bg-green-50 border-t border-green-200 px-5 py-3">
+          <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+          <span className="text-sm font-medium text-green-700">Feuille d&apos;appel validée</span>
+        </div>
+      )}
+
+      {/* Bouton Valider */}
+      {!validated && (
+        <div className="px-5 py-4 border-t border-slate-100">
+          <button
+            disabled={aVenir > 0}
+            onClick={() => setValidated(true)}
+            title={aVenir > 0 ? 'Tous les résultats doivent être remplis' : undefined}
+            className={`w-full rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
+              aVenir > 0
+                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                : 'bg-green-600 text-white hover:bg-green-700'
+            }`}
+          >
+            Valider la feuille d&apos;appel
+          </button>
+        </div>
+      )}
     </div>
   );
 }
