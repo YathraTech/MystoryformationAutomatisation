@@ -85,11 +85,11 @@ export default function InscriptionFilters({
           ))}
         </select>
 
-        {/* Date from */}
+        {/* Date */}
         <input
           type="date"
-          value={filters.dateFrom}
-          onChange={(e) => onFilterChange('dateFrom', e.target.value)}
+          value={filters.date}
+          onChange={(e) => onFilterChange('date', e.target.value)}
           className="text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
         />
       </div>

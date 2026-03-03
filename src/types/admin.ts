@@ -118,8 +118,7 @@ export interface InscriptionFilters {
   status: InscriptionStatus | 'all';
   formation: string | 'all';
   commercial: string | 'all';
-  dateFrom: string;
-  dateTo: string;
+  date: string;
 }
 
 export interface Formation {

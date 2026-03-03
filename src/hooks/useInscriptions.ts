@@ -14,8 +14,7 @@ export function useInscriptions() {
     status: 'all',
     formation: 'all',
     commercial: 'all',
-    dateFrom: '',
-    dateTo: '',
+    date: '',
   });
 
   const fetchInscriptions = useCallback(async () => {
@@ -66,11 +65,8 @@ export function useInscriptions() {
       result = result.filter((ins) => ins.commercialId === filters.commercial);
     }
 
-    if (filters.dateFrom) {
-      result = result.filter((ins) => ins.timestamp >= filters.dateFrom);
-    }
-    if (filters.dateTo) {
-      result = result.filter((ins) => ins.timestamp <= filters.dateTo);
+    if (filters.date) {
+      result = result.filter((ins) => ins.timestamp.startsWith(filters.date));
     }
 
     return result;

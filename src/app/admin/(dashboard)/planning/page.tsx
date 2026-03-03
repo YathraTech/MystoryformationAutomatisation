@@ -8,7 +8,7 @@ import type { Examen } from '@/lib/data/examens';
 
 interface PlanningEvent {
   id: number;
-  type: 'formation' | 'examen';
+  type: 'formation' | 'tef' | 'civique';
   nom: string;
   prenom: string;
   email: string;
@@ -123,9 +123,14 @@ export default function PlanningPage() {
       // Map examens (enrichis avec inscriptionId par l'API)
       (data.examens as (Examen & { inscriptionId?: number | null })[]).forEach((ex) => {
         if (ex.dateExamen) {
+          // Déterminer le type d'examen (TEF ou Civique) via le diplome ou typeExamen
+          const diplome = (ex.diplome || '').toUpperCase();
+          const isCivique = diplome.startsWith('CIVIQUE') || ex.typeExamen === 'Civique';
+          const eventType: 'tef' | 'civique' = isCivique ? 'civique' : 'tef';
+
           planningEvents.push({
             id: ex.id,
-            type: 'examen',
+            type: eventType,
             nom: ex.nom,
             prenom: ex.prenom,
             email: ex.email,
@@ -272,19 +277,29 @@ export default function PlanningPage() {
                   }`}
                 >
                   <div className="space-y-1">
-                    {dayEvents.map((event) => (
+                    {dayEvents.map((event) => {
+                      const colorClass =
+                        event.type === 'formation'
+                          ? 'bg-emerald-50 border border-emerald-200'
+                          : event.type === 'civique'
+                            ? 'bg-purple-50 border border-purple-200'
+                            : 'bg-amber-50 border border-amber-200';
+                      const iconColor =
+                        event.type === 'formation'
+                          ? 'text-emerald-600'
+                          : event.type === 'civique'
+                            ? 'text-purple-600'
+                            : 'text-amber-600';
+
+                      return (
                       <div
                         key={`${event.type}-${event.id}`}
-                        className={`rounded-md px-2 py-1.5 text-xs flex items-center gap-1.5 ${
-                          event.type === 'formation'
-                            ? 'bg-emerald-50 border border-emerald-200'
-                            : 'bg-amber-50 border border-amber-200'
-                        }`}
+                        className={`rounded-md px-2 py-1.5 text-xs flex items-center gap-1.5 ${colorClass}`}
                       >
                         {event.type === 'formation' ? (
-                          <GraduationCap className="h-3 w-3 text-emerald-600 shrink-0" />
+                          <GraduationCap className={`h-3 w-3 ${iconColor} shrink-0`} />
                         ) : (
-                          <ClipboardCheck className="h-3 w-3 text-amber-600 shrink-0" />
+                          <ClipboardCheck className={`h-3 w-3 ${iconColor} shrink-0`} />
                         )}
 
                         {event.heure && (
@@ -305,7 +320,8 @@ export default function PlanningPage() {
                           </span>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
 
                     {dayEvents.length === 0 && (
                       <div className="text-center text-slate-300 py-4 text-xs">-</div>
@@ -321,12 +337,16 @@ export default function PlanningPage() {
       {/* Legend */}
       <div className="flex items-center gap-6 text-sm text-slate-600">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-emerald-100 border border-emerald-300" />
-          <span>Formation</span>
+          <div className="w-4 h-4 rounded bg-amber-100 border border-amber-300" />
+          <span>TEF</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-amber-100 border border-amber-300" />
-          <span>Examen</span>
+          <div className="w-4 h-4 rounded bg-purple-100 border border-purple-300" />
+          <span>Examen Civique</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded bg-emerald-100 border border-emerald-300" />
+          <span>Formation</span>
         </div>
       </div>
     </div>
