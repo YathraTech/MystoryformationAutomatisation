@@ -302,7 +302,7 @@ export async function generateAttestationPaiement(
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(20, 20, 20);
-  doc.text(prixBase ? `${prixBase} €` : '_____ €', margin + 3, y + 9);
+  doc.text(prixBase !== null && prixBase !== undefined ? `${prixBase} €` : '_____ €', margin + 3, y + 9);
 
   // Remise (si présente)
   if (remiseNote) {
@@ -662,7 +662,7 @@ export async function generateFicheInscription(
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...darkText);
-  doc.text(examen.prix ? `${examen.prix} €` : '— €', margin + 3, y + 8);
+  doc.text(examen.prix !== null && examen.prix !== undefined ? `${examen.prix} €` : '— €', margin + 3, y + 8);
 
   drawField('Moyen de paiement', moyenPaiementLabels[examen.moyenPaiement || ''] || '', margin + contentWidth / 2, contentWidth / 2);
   y += 14;
