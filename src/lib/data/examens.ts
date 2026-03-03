@@ -42,6 +42,9 @@ export interface Examen {
   commercialId: string | null;
   motivation: string | null;
   motivationAutre: string | null;
+  pdfAttestationPaiement: string | null;
+  pdfFicheInscription: string | null;
+  pdfConvocation: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -84,6 +87,9 @@ interface DbExamen {
   commercial_id: string | null;
   motivation: string | null;
   motivation_autre: string | null;
+  pdf_attestation_paiement: string | null;
+  pdf_fiche_inscription: string | null;
+  pdf_convocation: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -127,6 +133,9 @@ function dbToExamen(row: DbExamen): Examen {
     commercialId: row.commercial_id,
     motivation: row.motivation,
     motivationAutre: row.motivation_autre,
+    pdfAttestationPaiement: row.pdf_attestation_paiement,
+    pdfFicheInscription: row.pdf_fiche_inscription,
+    pdfConvocation: row.pdf_convocation,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -203,6 +212,9 @@ export interface UpdateExamenFields {
   datePaiement?: string | null;
   lieuConfiguration?: string | null;
   commercialId?: string | null;
+  pdfAttestationPaiement?: string | null;
+  pdfFicheInscription?: string | null;
+  pdfConvocation?: string | null;
 }
 
 export async function updateExamenFields(
@@ -224,6 +236,9 @@ export async function updateExamenFields(
   if (fields.datePaiement !== undefined) dbFields.date_paiement = fields.datePaiement;
   if (fields.lieuConfiguration !== undefined) dbFields.lieu_configuration = fields.lieuConfiguration;
   if (fields.commercialId !== undefined) dbFields.commercial_id = fields.commercialId;
+  if (fields.pdfAttestationPaiement !== undefined) dbFields.pdf_attestation_paiement = fields.pdfAttestationPaiement;
+  if (fields.pdfFicheInscription !== undefined) dbFields.pdf_fiche_inscription = fields.pdfFicheInscription;
+  if (fields.pdfConvocation !== undefined) dbFields.pdf_convocation = fields.pdfConvocation;
 
   if (Object.keys(dbFields).length === 0) return;
 

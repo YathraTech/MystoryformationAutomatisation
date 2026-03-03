@@ -131,6 +131,17 @@ function addHeader(doc: jsPDF, title: string) {
   doc.text(`Paris, le ${today}`, 190, 70, { align: 'right' });
 }
 
+export function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function addFooter(doc: jsPDF) {
   const pageHeight = doc.internal.pageSize.height;
   doc.setFontSize(8);
@@ -147,7 +158,7 @@ export async function generateAttestationPaiement(
   inscription: Inscription,
   examen: Examen,
   commercialNom?: string
-): Promise<void> {
+): Promise<{ blob: Blob; fileName: string }> {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = 210;
   const pageHeight = 297;
@@ -397,16 +408,16 @@ export async function generateAttestationPaiement(
   doc.setTextColor(255, 255, 255);
   doc.text('MyStoryFormation - Document officiel', pageWidth / 2, pageHeight - 1.5, { align: 'center' });
 
-  // Téléchargement
   const fileName = `attestation_paiement_${inscription.nom}_${inscription.prenom}.pdf`;
-  doc.save(fileName);
+  const blob = doc.output('blob');
+  return { blob, fileName };
 }
 
 export async function generateFicheInscription(
   inscription: Inscription,
   examen: Examen,
   motivationLabels?: Record<string, string>
-): Promise<void> {
+): Promise<{ blob: Blob; fileName: string }> {
   const doc = new jsPDF('p', 'mm', 'a4'); // Explicit A4
   const pageWidth = 210; // A4 width in mm
   const pageHeight = 297; // A4 height in mm
@@ -695,15 +706,15 @@ export async function generateFicheInscription(
   doc.setTextColor(255, 255, 255);
   doc.text('MyStoryFormation - Document officiel', pageWidth / 2, pageHeight - 1.5, { align: 'center' });
 
-  // Téléchargement
   const fileName = `fiche_inscription_${inscription.nom}_${inscription.prenom}.pdf`;
-  doc.save(fileName);
+  const blob = doc.output('blob');
+  return { blob, fileName };
 }
 
 export function generateConvocation(
   inscription: Inscription,
   examen: Examen
-): void {
+): { blob: Blob; fileName: string } {
   const doc = new jsPDF();
 
   addHeader(doc, 'CONVOCATION À L\'EXAMEN');
@@ -825,7 +836,7 @@ export function generateConvocation(
 
   addFooter(doc);
 
-  // Téléchargement
   const fileName = `convocation_${inscription.nom}_${inscription.prenom}_${formatDate(examen.dateExamen).replace(/\//g, '-')}.pdf`;
-  doc.save(fileName);
+  const blob = doc.output('blob');
+  return { blob, fileName };
 }

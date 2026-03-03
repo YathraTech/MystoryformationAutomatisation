@@ -58,6 +58,9 @@ export async function PATCH(
       datePaiement: body.datePaiement,
       lieuConfiguration: body.lieuConfiguration,
       commercialId: body.commercialId,
+      pdfAttestationPaiement: body.pdfAttestationPaiement,
+      pdfFicheInscription: body.pdfFicheInscription,
+      pdfConvocation: body.pdfConvocation,
     });
 
     // Recalculer le CA mensuel si prix ou commercialId a changé
