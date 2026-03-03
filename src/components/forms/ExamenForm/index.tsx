@@ -45,7 +45,7 @@ const step1Schema = z.object({
   codePostal: z.string().regex(postalCodeRegex, 'Code postal invalide (5 chiffres)'),
   ville: z.string().min(2, 'Ville requise'),
   nationalite: z.string().min(2, 'Nationalité requise'),
-  villeNaissance: z.string().min(2, 'Ville de naissance requise'),
+  villeNaissance: z.string().optional(),
   lieuNaissance: z.string().min(2, 'Pays de naissance requis'),
   dateNaissance: z.string().min(1, 'La date de naissance est requise'),
   langueMaternelle: z.string().min(2, 'Langue maternelle requise'),
