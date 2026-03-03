@@ -13,6 +13,7 @@ export function useInscriptions() {
     search: '',
     status: 'all',
     formation: 'all',
+    commercial: 'all',
     dateFrom: '',
     dateTo: '',
   });
@@ -61,6 +62,10 @@ export function useInscriptions() {
       result = result.filter((ins) => ins.formationNom === filters.formation);
     }
 
+    if (filters.commercial !== 'all') {
+      result = result.filter((ins) => ins.commercialId === filters.commercial);
+    }
+
     if (filters.dateFrom) {
       result = result.filter((ins) => ins.timestamp >= filters.dateFrom);
     }
@@ -80,6 +85,18 @@ export function useInscriptions() {
   const formations = useMemo(() => {
     const set = new Set(allInscriptions.map((i) => i.formationNom).filter(Boolean));
     return Array.from(set).sort();
+  }, [allInscriptions]);
+
+  const commercials = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const ins of allInscriptions) {
+      if (ins.commercialId && ins.commercialNom && !map.has(ins.commercialId)) {
+        map.set(ins.commercialId, ins.commercialNom);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([id, nom]) => ({ id, nom }))
+      .sort((a, b) => a.nom.localeCompare(b.nom));
   }, [allInscriptions]);
 
   const updateFilter = useCallback(
@@ -102,6 +119,7 @@ export function useInscriptions() {
     filters,
     updateFilter,
     formations,
+    commercials,
     refetch: fetchInscriptions,
   };
 }

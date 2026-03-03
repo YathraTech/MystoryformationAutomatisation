@@ -130,6 +130,9 @@ export default function InscriptionsTable({
               <th className="text-left px-4 py-3 font-medium text-slate-600">
                 Date
               </th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">
+                Commercial
+              </th>
               {showLieu && (
                 <th className="text-left px-4 py-3 font-medium text-slate-600">
                   Centre
@@ -167,6 +170,9 @@ export default function InscriptionsTable({
                 </td>
                 <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
                   {ins.timestamp}
+                </td>
+                <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                  {ins.commercialNom || <span className="text-slate-300">—</span>}
                 </td>
                 {showLieu && (
                   <td className="px-4 py-3">
@@ -212,7 +218,7 @@ export default function InscriptionsTable({
             {inscriptions.length === 0 && (
               <tr>
                 <td
-                  colSpan={showLieu ? 7 : 6}
+                  colSpan={showLieu ? 8 : 7}
                   className="px-4 py-12 text-center text-slate-400"
                 >
                   Aucun client trouvé
@@ -255,6 +261,11 @@ export default function InscriptionsTable({
             <p className="text-sm text-slate-500 truncate">
               {ins.formationNom}
             </p>
+            {ins.commercialNom && (
+              <p className="text-xs text-slate-400">
+                Commercial: {ins.commercialNom}
+              </p>
+            )}
             <div className="flex items-center gap-1.5 flex-wrap pt-1" onClick={(e) => e.stopPropagation()}>
               {BADGE_DEFINITIONS.map((def) => (
                 <ClickableBadge

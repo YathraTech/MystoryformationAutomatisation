@@ -324,7 +324,7 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
   const [examens, setExamens] = useState<Examen[]>([]);
   const [loadingExamens, setLoadingExamens] = useState(false);
 
-  // Staff members pour le formateur
+  // Staff members pour le commercial
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
 
   // Créneaux d'examens disponibles (avec places) - fallback général
@@ -344,7 +344,6 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
   const [examenForm, setExamenForm] = useState({
     prix: '',
     moyenPaiement: '' as MoyenPaiement | '',
-    formateurId: '' as string,
     commercialId: '' as string,
     typeExamen: '' as TypeExamen | '',
     lieu: '',
@@ -637,7 +636,6 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
     setExamenForm({
       prix: examen.prix?.toString() || '',
       moyenPaiement: examen.moyenPaiement || '',
-      formateurId: examen.formateurId || '',
       commercialId: examen.commercialId || '',
       typeExamen: examen.typeExamen || '',
       lieu: examen.lieu || '',
@@ -658,7 +656,6 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
     setExamenForm({
       prix: '',
       moyenPaiement: '',
-      formateurId: '',
       commercialId: '',
       typeExamen: '',
       lieu: '',
@@ -703,7 +700,6 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
         body: JSON.stringify({
           prix: prixFinal,
           moyenPaiement: examenForm.moyenPaiement || null,
-          formateurId: examenForm.formateurId || null,
           commercialId: examenForm.commercialId || null,
           typeExamen: examenForm.typeExamen || null,
           lieu: examenForm.lieu || null,
@@ -784,7 +780,6 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
       examen.dateExamen !== null &&
       examen.heureExamen !== null &&
       examen.lieu !== null &&
-      examen.formateurId !== null &&
       examen.commercialId !== null &&
       examen.datePaiement !== null &&
       examen.lieuConfiguration !== null;
@@ -797,7 +792,6 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
       examenForm.dateExamen !== '' &&
       examenForm.heureExamen !== '' &&
       examenForm.lieu !== '' &&
-      examenForm.formateurId !== '' &&
       examenForm.commercialId !== '' &&
       examenForm.datePaiement !== '' &&
       examenForm.lieuConfiguration !== '';
@@ -806,7 +800,6 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
   // Obtenir les champs manquants pour l'affichage
   const getMissingFields = () => {
     const missing: string[] = [];
-    if (!examenForm.formateurId) missing.push('Formateur');
     if (!examenForm.commercialId) missing.push('Commercial');
     if (!examenForm.dateExamen) missing.push('Date d\'examen');
     if (!examenForm.lieu) missing.push('Lieu');
@@ -823,8 +816,7 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
       examen.moyenPaiement !== null ||
       examen.dateExamen !== null ||
       examen.heureExamen !== null ||
-      examen.lieu !== null ||
-      examen.formateurId !== null;
+      examen.lieu !== null;
     return hasAnyConfig && !isExamenConfigured(examen);
   };
 
@@ -1266,21 +1258,6 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                     {isEditing ? (
                       <div className="space-y-4 pt-3 border-t border-slate-200">
                         <div className="grid grid-cols-2 gap-3">
-                          {/* Formateur */}
-                          <div className="col-span-2">
-                            <label className="block text-xs font-medium text-slate-600 mb-1">Formateur</label>
-                            <select
-                              value={examenForm.formateurId}
-                              onChange={(e) => setExamenForm({ ...examenForm, formateurId: e.target.value })}
-                              className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
-                            >
-                              <option value="">Sélectionner...</option>
-                              {staffMembers.map((s) => (
-                                <option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>
-                              ))}
-                            </select>
-                          </div>
-
                           {/* Commercial (attribution CA) */}
                           <div className="col-span-2">
                             <label className="block text-xs font-medium text-slate-600 mb-1">Commercial (attribution CA)</label>
@@ -1558,9 +1535,6 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                             {examen.moyenPaiement && (
                               <div><span className="text-slate-500">Paiement:</span> <span className="font-medium">{MOYENS_PAIEMENT.find(m => m.value === examen.moyenPaiement)?.label}</span></div>
                             )}
-                            {examen.formateurId && (
-                              <div><span className="text-slate-500">Formateur:</span> <span className="font-medium">{staffMembers.find(s => s.id === examen.formateurId)?.prenom} {staffMembers.find(s => s.id === examen.formateurId)?.nom}</span></div>
-                            )}
                             {examen.commercialId && (
                               <div><span className="text-slate-500">Commercial:</span> <span className="font-medium">{staffMembers.find(s => s.id === examen.commercialId)?.prenom} {staffMembers.find(s => s.id === examen.commercialId)?.nom}</span></div>
                             )}
@@ -1586,10 +1560,8 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                             <button
                               onClick={async () => {
                                 if (!inscription) return;
-                                const formateur = staffMembers.find(s => s.id === examen.formateurId);
-                                const formateurNom = formateur ? `${formateur.prenom} ${formateur.nom}` : undefined;
                                 const motLabels = Object.fromEntries(examObjectifs.map(o => [o.value, o.label]));
-                                await generateFicheInscription(inscription, examen, formateurNom, motLabels);
+                                await generateFicheInscription(inscription, examen, motLabels);
                               }}
                               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                             >

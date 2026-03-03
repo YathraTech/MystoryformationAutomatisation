@@ -348,7 +348,6 @@ export async function generateAttestationPaiement(
 export async function generateFicheInscription(
   inscription: Inscription,
   examen: Examen,
-  formateurNom?: string,
   motivationLabels?: Record<string, string>
 ): Promise<void> {
   const doc = new jsPDF('p', 'mm', 'a4'); // Explicit A4
@@ -411,13 +410,6 @@ export async function generateFicheInscription(
   doc.setTextColor(...darkText);
   doc.setFont('helvetica', 'bold');
   doc.text(examen.dateExamen ? formatDateSlash(examen.dateExamen) : '__/__/____', margin + 14, headerY + 6);
-
-  doc.setTextColor(...lightText);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Formateur:', pageWidth / 2 + 10, headerY + 6);
-  doc.setTextColor(...darkText);
-  doc.setFont('helvetica', 'bold');
-  doc.text(formateurNom || '________________', pageWidth / 2 + 30, headerY + 6);
 
   let y = headerY + 16;
 

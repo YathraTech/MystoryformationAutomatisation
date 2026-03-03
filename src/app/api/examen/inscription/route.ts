@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getSessionUser } from '@/lib/auth/session';
 import { z } from 'zod';
 
 const phoneRegex = /^(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}$/;
@@ -42,9 +41,6 @@ export async function POST(request: Request) {
 
     const data = result.data;
     const supabase = await createClient();
-
-    // Récupérer l'utilisateur connecté (si staff/commercial)
-    const currentUser = await getSessionUser();
 
     // Trouver ou créer le client
     const { data: clientResult, error: clientError } = await supabase
@@ -113,7 +109,6 @@ export async function POST(request: Request) {
     }
 
     // Créer l'examen avec le client_id
-    // Si un membre du staff est connecté, pré-remplir le formateur_id avec son ID
     const { data: examen, error } = await supabase
       .from('examens')
       .insert({
@@ -136,8 +131,6 @@ export async function POST(request: Request) {
         piece_identite: data.pieceIdentite || null,
         numero_passeport: data.numeroPasseport || null,
         numero_cni: data.numeroCni || null,
-        // Pré-remplir le formateur avec l'utilisateur connecté
-        formateur_id: currentUser?.id || null,
       })
       .select('id, token')
       .single();

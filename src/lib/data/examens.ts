@@ -196,7 +196,6 @@ export interface UpdateExamenFields {
   resultat?: ExamenResultat;
   prix?: number | null;
   moyenPaiement?: MoyenPaiement | null;
-  formateurId?: string | null;
   typeExamen?: TypeExamen | null;
   lieu?: string | null;
   remises?: string | null;
@@ -218,7 +217,6 @@ export async function updateExamenFields(
   if (fields.resultat !== undefined) dbFields.resultat = fields.resultat;
   if (fields.prix !== undefined) dbFields.prix = fields.prix;
   if (fields.moyenPaiement !== undefined) dbFields.moyen_paiement = fields.moyenPaiement;
-  if (fields.formateurId !== undefined) dbFields.formateur_id = fields.formateurId;
   if (fields.typeExamen !== undefined) dbFields.type_examen = fields.typeExamen;
   if (fields.lieu !== undefined) dbFields.lieu = fields.lieu;
   if (fields.remises !== undefined) dbFields.remises = fields.remises;

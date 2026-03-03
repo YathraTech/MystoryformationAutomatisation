@@ -161,8 +161,7 @@ export async function GET() {
         ex.typeExamen !== null &&
         ex.dateExamen !== null &&
         ex.heureExamen !== null &&
-        ex.lieu !== null &&
-        ex.formateurId !== null;
+        ex.lieu !== null;
     };
 
     // Recent exams (5 derniers) avec lien vers inscription

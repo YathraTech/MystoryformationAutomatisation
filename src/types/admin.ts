@@ -40,6 +40,8 @@ export interface Inscription {
   badgePaye: BadgeColor;
   badgeDossier: BadgeColor;
   lieu: string | null;
+  commercialId?: string | null;
+  commercialNom?: string | null;
 }
 
 export interface RecentExamen {
@@ -115,6 +117,7 @@ export interface InscriptionFilters {
   search: string;
   status: InscriptionStatus | 'all';
   formation: string | 'all';
+  commercial: string | 'all';
   dateFrom: string;
   dateTo: string;
 }

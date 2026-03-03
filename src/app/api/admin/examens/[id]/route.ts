@@ -51,7 +51,6 @@ export async function PATCH(
       resultat: body.resultat,
       prix: body.prix,
       moyenPaiement: body.moyenPaiement,
-      formateurId: body.formateurId,
       typeExamen: body.typeExamen,
       lieu: body.lieu,
       remises: body.remises,

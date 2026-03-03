@@ -35,6 +35,7 @@ export default function InscriptionsPage() {
     filters,
     updateFilter,
     formations,
+    commercials,
     refetch,
   } = useInscriptions();
 
@@ -204,6 +205,7 @@ export default function InscriptionsPage() {
         filters={filters}
         onFilterChange={updateFilter}
         formations={formations}
+        commercials={commercials}
         totalCount={allCount}
         filteredCount={filteredCount}
       />
