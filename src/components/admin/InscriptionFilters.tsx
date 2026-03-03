@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter, X } from 'lucide-react';
 import type { InscriptionFilters as Filters } from '@/types/admin';
 import { INSCRIPTION_STATUSES } from '@/lib/utils/admin-constants';
 
@@ -86,12 +86,23 @@ export default function InscriptionFilters({
         </select>
 
         {/* Date */}
-        <input
-          type="date"
-          value={filters.date}
-          onChange={(e) => onFilterChange('date', e.target.value)}
-          className="text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-        />
+        <div className="relative">
+          <input
+            type="date"
+            value={filters.date}
+            onChange={(e) => onFilterChange('date', e.target.value)}
+            className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 pr-8 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+          />
+          {filters.date && (
+            <button
+              onClick={() => onFilterChange('date', '')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+              title="Effacer la date"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
