@@ -319,7 +319,7 @@ export async function generateAttestationPaiement(
 
   // Mode de paiement
   const modePaiementLabels: Record<string, string> = {
-    'carte_bancaire': 'CB',
+    'carte_bancaire': 'Carte bancaire',
     'especes': 'Espèces',
     'cpf': 'CPF',
     'lien_paiement': 'Lien de paiement',
