@@ -23,6 +23,7 @@ interface InscriptionsTableProps {
 }
 
 const RESULTAT_STYLES: Record<string, { bg: string; text: string; ring: string; label: string }> = {
+  a_planifier: { bg: 'bg-slate-50', text: 'text-slate-500', ring: 'ring-slate-200', label: 'À planifier' },
   a_venir: { bg: 'bg-amber-50', text: 'text-amber-700', ring: 'ring-amber-200', label: 'À venir' },
   reussi: { bg: 'bg-emerald-50', text: 'text-emerald-700', ring: 'ring-emerald-200', label: 'Réussi' },
   echoue: { bg: 'bg-red-50', text: 'text-red-700', ring: 'ring-red-200', label: 'Échoué' },
@@ -48,7 +49,8 @@ function ExamStatusBadges({ examens }: { examens: ExamStatusInfo[] }) {
   return (
     <div className="flex flex-col gap-1">
       {examens.map((ex) => {
-        const style = RESULTAT_STYLES[ex.resultat] || RESULTAT_STYLES.a_venir;
+        const styleKey = ex.resultat === 'a_venir' && !ex.dateExamen ? 'a_planifier' : ex.resultat;
+        const style = RESULTAT_STYLES[styleKey] || RESULTAT_STYLES.a_planifier;
         return (
           <div key={ex.id} className="flex items-center gap-1.5">
             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold leading-4 ring-1 ring-inset ${style.bg} ${style.text} ${style.ring}`}>
