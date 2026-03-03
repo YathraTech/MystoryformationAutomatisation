@@ -3,6 +3,7 @@ import { getAllExamens } from '@/lib/data/examens';
 import { getAllInscriptions } from '@/lib/data/inscriptions';
 import { getSessionUser } from '@/lib/auth/session';
 import type { FeuilleAppelExamen, FeuilleAppelSummary } from '@/types/admin';
+import { computeFeuilleDeadline } from '@/lib/utils/feuille-deadline';
 
 function computeSummary(examens: { resultat: string }[], dateExamen: string): FeuilleAppelSummary {
   let reussi = 0, echoue = 0, absent = 0, aVenir = 0;
@@ -57,26 +58,17 @@ export async function GET() {
     // Calculer l'heure Paris actuelle
     const now = new Date();
     const parisNow = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
-    const parisHour = parisNow.getHours();
-    const parisMinute = parisNow.getMinutes();
-    const parisTimeDecimal = parisHour + parisMinute / 60;
-
     const todayStr = parisNow.toISOString().split('T')[0];
-    const yesterday = new Date(parisNow);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-    // Si avant 15h30: inclure hier ET aujourd'hui. Si après 15h30: uniquement aujourd'hui
-    const datesToInclude = parisTimeDecimal < 15.5
-      ? [yesterdayStr, todayStr]
-      : [todayStr];
-
-    // Trouver la feuille courante: date la plus récente <= aujourd'hui avec des résultats a_venir ou dans les dates à inclure
+    // Trouver la feuille courante : date dont la deadline n'est pas encore passée
     let currentDateExamen: string | null = null;
 
-    // D'abord chercher dans les dates à inclure (aujourd'hui/hier)
     const candidateDates = Array.from(grouped.keys())
-      .filter((d) => datesToInclude.includes(d))
+      .filter((d) => {
+        const exs = grouped.get(d)!;
+        const dl = computeFeuilleDeadline(exs, d);
+        return dl > parisNow;
+      })
       .sort();
 
     if (candidateDates.length > 0) {
@@ -105,9 +97,8 @@ export async function GET() {
 
     if (currentDateExamen && grouped.has(currentDateExamen)) {
       const currentExamens = grouped.get(currentDateExamen)!;
-      const deadlineDate = new Date(currentDateExamen + 'T15:30:00');
-      deadlineDate.setDate(deadlineDate.getDate() + 1);
-      const deadlineIso = `${deadlineDate.toISOString().split('T')[0]}T15:30:00+01:00`;
+      const deadlineDate = computeFeuilleDeadline(currentExamens, currentDateExamen);
+      const deadlineIso = deadlineDate.toISOString();
 
       current = {
         examens: currentExamens.map((ex) => ({

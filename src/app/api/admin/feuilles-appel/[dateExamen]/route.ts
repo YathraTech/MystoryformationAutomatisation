@@ -3,6 +3,7 @@ import { getExamensByDate, archiveExamensByDate } from '@/lib/data/examens';
 import { getAllInscriptions } from '@/lib/data/inscriptions';
 import { getSessionUser } from '@/lib/auth/session';
 import type { FeuilleAppelExamen, FeuilleAppelSummary } from '@/types/admin';
+import { computeFeuilleDeadline } from '@/lib/utils/feuille-deadline';
 
 export async function GET(
   request: NextRequest,
@@ -43,10 +44,9 @@ export async function GET(
       }
     }
 
-    // Deadline = dateExamen + 1 jour à 15:30
-    const deadlineDate = new Date(dateExamen + 'T15:30:00');
-    deadlineDate.setDate(deadlineDate.getDate() + 1);
-    const deadlineIso = `${deadlineDate.toISOString().split('T')[0]}T15:30:00+01:00`;
+    // Deadline dynamique basée sur les heures d'examen
+    const deadlineDate = computeFeuilleDeadline(examens, dateExamen);
+    const deadlineIso = deadlineDate.toISOString();
 
     const feuilleExamens: FeuilleAppelExamen[] = examens.map((ex) => ({
       id: ex.id,

@@ -1,19 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getExamensPendingResultEmail, markResultatEmailSent, updateExamenResultat, getAllExamens } from '@/lib/data/examens';
 import type { ExamenResultat } from '@/lib/data/examens';
-
-function getParisDeadline(dateExamen: string): Date {
-  // Deadline = dateExamen + 1 jour à 15:30 Paris
-  const d = new Date(dateExamen + 'T15:30:00');
-  d.setDate(d.getDate() + 1);
-  return d;
-}
-
-function isDeadlinePassed(dateExamen: string): boolean {
-  const deadline = getParisDeadline(dateExamen);
-  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
-  return now >= deadline;
-}
+import { isDeadlinePassed } from '@/lib/utils/feuille-deadline';
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -30,7 +18,7 @@ export async function GET(request: NextRequest) {
         ex.resultat === 'a_venir' &&
         !ex.resultatEmailSent &&
         ex.dateExamen &&
-        isDeadlinePassed(ex.dateExamen)
+        isDeadlinePassed(ex.dateExamen, ex.heureExamen)
       ) {
         await updateExamenResultat(ex.id, 'absent');
         autoAbsentCount++;
@@ -41,7 +29,7 @@ export async function GET(request: NextRequest) {
     const pending = await getExamensPendingResultEmail();
 
     // 3. Filtrer : ne garder que ceux dont la deadline est passée
-    const ready = pending.filter((ex) => ex.dateExamen && isDeadlinePassed(ex.dateExamen));
+    const ready = pending.filter((ex) => ex.dateExamen && isDeadlinePassed(ex.dateExamen, ex.heureExamen));
 
     if (ready.length === 0) {
       return NextResponse.json({
