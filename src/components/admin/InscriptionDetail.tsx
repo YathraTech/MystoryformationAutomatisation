@@ -1569,7 +1569,12 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                               Fiche d&apos;inscription
                             </button>
                             <button
-                              onClick={async () => inscription && await generateAttestationPaiement(inscription, examen)}
+                              onClick={async () => {
+                                if (!inscription) return;
+                                const commercial = staffMembers.find(s => s.id === examen.commercialId);
+                                const commercialNom = commercial ? `${commercial.prenom} ${commercial.nom}` : undefined;
+                                await generateAttestationPaiement(inscription, examen, commercialNom);
+                              }}
                               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"
                             >
                               <Download className="h-3.5 w-3.5" />

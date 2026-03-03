@@ -145,200 +145,265 @@ function addFooter(doc: jsPDF) {
 
 export async function generateAttestationPaiement(
   inscription: Inscription,
-  examen: Examen
+  examen: Examen,
+  commercialNom?: string
 ): Promise<void> {
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.width;
-  const marginLeft = 20;
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 15;
+  const contentWidth = pageWidth - margin * 2;
 
-  // Charger et ajouter le logo en haut à droite
+  // Charger les assets
   const logo = await loadLogo();
+  const tampon = await loadTampon(examen.lieuConfiguration || '');
+
+  // ===== HEADER =====
+  doc.setFillColor(30, 30, 30);
+  doc.rect(0, 0, pageWidth, 5, 'F');
+  doc.setFillColor(60, 60, 60);
+  doc.rect(0, 5, pageWidth, 1, 'F');
+
+  let headerY = 10;
   if (logo) {
-    doc.addImage(logo, 'PNG', pageWidth - 60, 12, 45, 15);
+    const logoWidth = 45;
+    const logoHeight = logoWidth / 3.59;
+    doc.addImage(logo, 'PNG', (pageWidth - logoWidth) / 2, headerY, logoWidth, logoHeight);
+    headerY += logoHeight + 5;
+  } else {
+    headerY += 8;
   }
 
-  let y = 50;
-
-  // Titre principal avec soulignement
+  // Titre
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  const titleText = 'ATTESTATION DE PAIEMENT';
-  const titleWidth = doc.getTextWidth(titleText);
-  const titleX = (pageWidth - titleWidth) / 2;
-  doc.text(titleText, pageWidth / 2, y, { align: 'center' });
-  doc.setLineWidth(0.5);
-  doc.line(titleX, y + 2, titleX + titleWidth, y + 2);
+  doc.setTextColor(20, 20, 20);
+  doc.text('ATTESTATION DE PAIEMENT', pageWidth / 2, headerY, { align: 'center' });
+  headerY += 3;
+  doc.setDrawColor(30, 30, 30);
+  doc.setLineWidth(0.6);
+  doc.line(pageWidth / 2 - 35, headerY, pageWidth / 2 + 35, headerY);
 
-  y += 22;
+  let y = headerY + 10;
 
-  // L'organisme atteste...
+  // ===== CANDIDAT =====
+  doc.setFillColor(30, 30, 30);
+  doc.roundedRect(margin, y, contentWidth, 6, 1, 1, 'F');
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('CANDIDAT', margin + 3, y + 4.2);
+  y += 10;
+
+  const nomComplet = `${inscription.civilite || ''} ${inscription.prenom || ''} ${inscription.nom || ''}`.trim();
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text("L'organisme atteste avoir reçu la somme de :", marginLeft, y);
-
-  y += 12;
-
-  // Montant
-  const montant = examen.prix ? `${examen.prix} €` : '____________ €';
+  doc.setTextColor(20, 20, 20);
+  doc.text(nomComplet || '___________________________________', margin, y);
+  y += 7;
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Montant : ', marginLeft, y);
-  doc.setFont('helvetica', 'bold');
-  doc.text(montant, marginLeft + 22, y);
-
+  doc.setTextColor(80, 80, 80);
+  doc.text(`Tél: ${inscription.telephone || ''}     Email: ${inscription.email || ''}`, margin, y);
   y += 10;
 
-  // de la part de
-  doc.setFont('helvetica', 'normal');
-  doc.text('de la part de :', marginLeft, y);
-
+  // ===== EXAMEN =====
+  doc.setFillColor(30, 30, 30);
+  doc.roundedRect(margin, y, contentWidth, 6, 1, 1, 'F');
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('EXAMEN', margin + 3, y + 4.2);
   y += 10;
 
-  // Nom et prénom
-  const nomComplet = `${inscription.civilite || ''} ${inscription.prenom || ''} ${inscription.nom || ''}`.trim();
-  const nomDisplay = nomComplet || '..........................................................................................';
-  doc.text('Nom et prénom du/de la candidat(e) : ', marginLeft, y);
-  doc.setFont('helvetica', 'bold');
-  doc.text(nomDisplay, marginLeft + 75, y);
-
-  y += 10;
-
-  // Date et lieu d'examen
-  const dateExam = examen.dateExamen ? formatDateSlash(examen.dateExamen) : '____/____/________';
-  const lieuExam = examen.lieu || 'Gagny';
-  doc.setFont('helvetica', 'normal');
-  doc.text("au titre du règlement pour la session d'examen prévue le : ", marginLeft, y);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`${dateExam} à ${lieuExam}`, marginLeft + 105, y);
-
-  y += 14;
-
-  // Examen - Parse le nouveau format TYPE_CODE:OPTION_CODE
+  // Parse diplome
   const diplome = examen.diplome || '';
-  let examenText = '';
-
-  // Labels pour les types d'examens souhaités
-  const attestExamTypeLabels: Record<string, string> = {
-    'TEF_IRN': 'TEF IRN',
-    'CIVIQUE': 'Examen Civique',
-  };
-
-  // Labels pour les niveaux/options
+  const attestExamTypeLabels: Record<string, string> = { 'TEF_IRN': 'TEF IRN', 'CIVIQUE': 'Examen Civique' };
   const attestOptionLabels: Record<string, string> = {
-    'A1': 'Niveau A1',
-    'A2': 'Niveau A2',
-    'B1': 'Niveau B1',
-    'B2': 'Niveau B2',
-    'carte_pluriannuelle': 'Carte pluriannuelle',
-    'carte_residence': 'Carte de résident',
-    'naturalisation': 'Naturalisation',
+    'A1': 'Niveau A1', 'A2': 'Niveau A2', 'B1': 'Niveau B1', 'B2': 'Niveau B2',
+    'carte_pluriannuelle': 'Carte pluriannuelle', 'carte_residence': 'Carte de résident', 'naturalisation': 'Naturalisation',
   };
-
+  let examTypeName = '';
+  let mentionText = '';
   if (diplome) {
     const parts = diplome.split(':');
     if (parts.length === 2) {
-      // Nouveau format: TYPE_CODE:OPTION_CODE
-      const typeCode = parts[0];
-      const optionCode = parts[1];
-      const typeName = attestExamTypeLabels[typeCode] || typeCode;
-      const optionName = attestOptionLabels[optionCode] || optionCode;
-      examenText = `${typeName} - ${optionName}`;
+      examTypeName = attestExamTypeLabels[parts[0]] || parts[0];
+      mentionText = attestOptionLabels[parts[1]] || parts[1];
     } else {
-      // Ancien format - essayer de parser
       const code = diplome.toUpperCase();
-      if (attestExamTypeLabels[code]) {
-        examenText = attestExamTypeLabels[code];
-      } else if (attestOptionLabels[diplome]) {
-        examenText = attestOptionLabels[diplome];
-      } else if (diplome.includes('A1') || diplome.includes('A2') || diplome.includes('B1') || diplome.includes('B2')) {
-        let niveau = '';
-        if (diplome.includes('A1')) niveau = 'A1';
-        else if (diplome.includes('A2')) niveau = 'A2';
-        else if (diplome.includes('B1')) niveau = 'B1';
-        else if (diplome.includes('B2')) niveau = 'B2';
-        examenText = niveau ? `TEF IRN - ${niveau}` : diplome;
-      } else {
-        examenText = diplome;
-      }
+      if (attestExamTypeLabels[code]) examTypeName = attestExamTypeLabels[code];
+      else if (attestOptionLabels[diplome]) mentionText = attestOptionLabels[diplome];
+      else examTypeName = diplome;
     }
-  } else {
-    examenText = '......................................................';
   }
 
+  const col3 = contentWidth / 3;
+
+  // Ligne 1: Examen + Mention
+  doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
-  doc.text('Examen : ', marginLeft, y);
+  doc.setTextColor(100, 100, 100);
+  doc.text('EXAMEN', margin, y);
+  doc.text('MENTION', margin + col3, y);
+  y += 4;
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text(examenText, marginLeft + 20, y);
+  doc.setTextColor(20, 20, 20);
+  doc.text(examTypeName || '—', margin, y);
+  doc.text(mentionText || '—', margin + col3, y);
+  y += 8;
 
-  y += 12;
-
-  // Mode de paiement
-  const modePaiementLabels: Record<string, string> = {
-    'especes': 'Espèces',
-    'carte_bancaire': 'Carte bancaire',
-    'cpf': 'CPF',
-    'autre': 'Autre',
-  };
-  const modePaiementLabel = modePaiementLabels[examen.moyenPaiement || ''] || '......................................................';
+  // Ligne 2: Date / Heure / Lieu (en gras)
+  doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
-  doc.text('Mode de paiement : ', marginLeft, y);
+  doc.setTextColor(100, 100, 100);
+  doc.text('DATE', margin, y);
+  doc.text('HEURE', margin + col3, y);
+  doc.text('LIEU', margin + col3 * 2, y);
+  y += 4;
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text(modePaiementLabel, marginLeft + 40, y);
+  doc.setTextColor(20, 20, 20);
+  doc.text(examen.dateExamen ? formatDateSlash(examen.dateExamen) : '—', margin, y);
+  doc.text(examen.heureExamen || '—', margin + col3, y);
+  doc.text(examen.lieu || '—', margin + col3 * 2, y);
+  y += 10;
 
-  y += 12;
+  // ===== RÈGLEMENT =====
+  doc.setFillColor(30, 30, 30);
+  doc.roundedRect(margin, y, contentWidth, 6, 1, 1, 'F');
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('RÈGLEMENT', margin + 3, y + 4.2);
+  y += 10;
+
+  // Montant + remise
+  const prixBase = examen.prix;
+  const remiseNote = examen.remises || '';
+
+  doc.setFillColor(240, 240, 240);
+  doc.roundedRect(margin, y - 1, contentWidth / 2 - 5, 12, 1.5, 1.5, 'F');
+  doc.setFontSize(6);
+  doc.setTextColor(100, 100, 100);
+  doc.text('MONTANT TOTAL', margin + 3, y + 2);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(20, 20, 20);
+  doc.text(prixBase ? `${prixBase} €` : '_____ €', margin + 3, y + 9);
+
+  // Remise (si présente)
+  if (remiseNote) {
+    doc.setFontSize(6);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'normal');
+    doc.text('REMISE', margin + contentWidth / 2, y + 2);
+    doc.setFontSize(9);
+    doc.setTextColor(20, 20, 20);
+    doc.setFont('helvetica', 'bold');
+    doc.text(remiseNote, margin + contentWidth / 2, y + 8, { maxWidth: contentWidth / 2 - 5 });
+  }
+  y += 16;
+
+  // Mode de paiement - checkboxes (plusieurs possibles)
+  doc.setFontSize(6);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  doc.text('MODE DE PAIEMENT', margin, y);
+  y += 5;
+
+  const moyenActuel = examen.moyenPaiement || '';
+  const paiementOptions = [
+    { key: 'carte_bancaire', label: 'CB' },
+    { key: 'especes', label: 'Espèces' },
+    { key: 'cpf', label: 'CPF' },
+  ];
+
+  doc.setFontSize(10);
+  doc.setTextColor(20, 20, 20);
+  let xPos = margin;
+  for (const opt of paiementOptions) {
+    const checked = moyenActuel === opt.key;
+    doc.setFont('helvetica', 'normal');
+    doc.text(checked ? CHECKBOX_CHECKED : CHECKBOX_EMPTY, xPos, y);
+    doc.setFont('helvetica', 'bold');
+    doc.text(opt.label, xPos + 6, y);
+    xPos += 35;
+  }
+  y += 8;
 
   // Date du paiement
   const datePaiement = examen.datePaiement
     ? formatDateSlash(examen.datePaiement)
     : formatDateSlash(examen.updatedAt || examen.createdAt);
+  doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
-  doc.text('Le paiement a été effectué en date du : ', marginLeft, y);
+  doc.setTextColor(100, 100, 100);
+  doc.text('DATE DE PAIEMENT', margin, y);
+  y += 4;
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text(datePaiement, marginLeft + 75, y);
+  doc.setTextColor(20, 20, 20);
+  doc.text(datePaiement, margin, y);
+  y += 10;
 
-  y += 14;
-
-  // Fait à (utilise lieuConfiguration si défini, sinon lieu d'examen)
-  const lieuFait = examen.lieuConfiguration || examen.lieu || '......................................';
-  const today = formatDateSlash(new Date().toISOString());
+  // Vendu par
+  doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
-  doc.text('Fait à : ', marginLeft, y);
+  doc.setTextColor(100, 100, 100);
+  doc.text('VENDU PAR', margin, y);
+  y += 4;
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text(lieuFait, marginLeft + 16, y);
-  doc.setFont('helvetica', 'normal');
-  doc.text(', le ', marginLeft + 16 + doc.getTextWidth(lieuFait), y);
-  doc.setFont('helvetica', 'bold');
-  doc.text(today, marginLeft + 16 + doc.getTextWidth(lieuFait) + 10, y);
+  doc.setTextColor(20, 20, 20);
+  doc.text(commercialNom || '___________________________________', margin, y);
+  y += 12;
 
-  y += 14;
-
-  // Remarque
-  doc.setFont('helvetica', 'bold');
-  doc.text('Remarque :', marginLeft, y);
-  doc.setFont('helvetica', 'normal');
-  doc.text(' Le test se déroule sur ', marginLeft + 24, y);
-  doc.setFont('helvetica', 'bold');
-  doc.text('ORDINATEUR', marginLeft + 65, y);
-  doc.setFont('helvetica', 'normal');
-  doc.text(" et les frais d'inscription ne sont ", marginLeft + 97, y);
-  doc.setFont('helvetica', 'bold');
-  doc.text('pas', marginLeft + 158, y);
-
+  // ===== FAIT À =====
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.3);
+  doc.line(margin, y, margin + contentWidth, y);
   y += 6;
-  doc.text('remboursables.', marginLeft, y);
 
-  y += 20;
-
-  // Signatures
+  const lieuFait = examen.lieuConfiguration || examen.lieu || '..............';
+  const today = formatDateSlash(new Date().toISOString());
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text("Cachet de l'organisme ou signature :", marginLeft, y);
-  doc.text("Signature du/de la candidat(e) :", pageWidth / 2 + 15, y);
+  doc.setTextColor(20, 20, 20);
+  doc.text(`Fait à ${lieuFait}, le ${today}`, margin, y);
+  y += 10;
 
-  // Ajouter le tampon si disponible
-  const tampon = await loadTampon(examen.lieuConfiguration || '');
+  // Cachet organisme
+  const signatureBoxWidth = contentWidth / 2;
+  const signatureBoxHeight = 35;
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(margin, y, signatureBoxWidth, signatureBoxHeight, 1.5, 1.5, 'S');
+  doc.setFontSize(7);
+  doc.setTextColor(100, 100, 100);
+  doc.text("Cachet de l'organisme", margin + signatureBoxWidth / 2, y + 4, { align: 'center' });
+
   if (tampon) {
-    // Position du tampon sous "Cachet de l'organisme"
-    doc.addImage(tampon, 'PNG', marginLeft, y + 5, 50, 40);
+    doc.addImage(tampon, 'PNG', margin + 4, y + 7, 38, 28);
   }
+
+  y += signatureBoxHeight + 10;
+
+  // ===== AVERTISSEMENT EN ROUGE EN BAS =====
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(220, 38, 38); // Rouge
+  doc.text('EXAMEN SUR ORDINATEUR', pageWidth / 2, y, { align: 'center' });
+  y += 9;
+  doc.text('NON REMBOURSABLE', pageWidth / 2, y, { align: 'center' });
+
+  // ===== FOOTER =====
+  doc.setFillColor(40, 40, 40);
+  doc.rect(0, pageHeight - 5, pageWidth, 5, 'F');
+  doc.setFontSize(6);
+  doc.setTextColor(255, 255, 255);
+  doc.text('MyStoryFormation - Document officiel', pageWidth / 2, pageHeight - 1.5, { align: 'center' });
 
   // Téléchargement
   const fileName = `attestation_paiement_${inscription.nom}_${inscription.prenom}.pdf`;
