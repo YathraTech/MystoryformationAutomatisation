@@ -1571,7 +1571,7 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                     formData.append('file', new File([blob], fileName, { type: 'application/pdf' }));
                                     formData.append('docType', 'convocation');
                                     await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, { method: 'POST', body: formData });
-                                    if (inscription.clientId) await fetchExamens(inscription.clientId, inscription.email);
+                                    await fetchExamens(inscription.clientId, inscription.email);
                                   }
                                 } catch (err) { console.error('Erreur document:', err); }
                                 finally { setGeneratingDoc(null); }
@@ -1602,7 +1602,7 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                     formData.append('file', new File([blob], fileName, { type: 'application/pdf' }));
                                     formData.append('docType', 'fiche_inscription');
                                     await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, { method: 'POST', body: formData });
-                                    if (inscription.clientId) await fetchExamens(inscription.clientId, inscription.email);
+                                    await fetchExamens(inscription.clientId, inscription.email);
                                   }
                                 } catch (err) { console.error('Erreur document:', err); }
                                 finally { setGeneratingDoc(null); }
@@ -1634,7 +1634,7 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                     formData.append('file', new File([blob], fileName, { type: 'application/pdf' }));
                                     formData.append('docType', 'attestation_paiement');
                                     await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, { method: 'POST', body: formData });
-                                    if (inscription.clientId) await fetchExamens(inscription.clientId, inscription.email);
+                                    await fetchExamens(inscription.clientId, inscription.email);
                                   }
                                 } catch (err) { console.error('Erreur document:', err); }
                                 finally { setGeneratingDoc(null); }
