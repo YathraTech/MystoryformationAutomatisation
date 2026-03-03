@@ -356,13 +356,13 @@ export async function generateFicheInscription(
   const margin = 12;
   const contentWidth = pageWidth - margin * 2;
 
-  // Couleurs du design
-  const primaryColor: [number, number, number] = [41, 98, 255]; // Bleu vif
-  const secondaryColor: [number, number, number] = [99, 102, 241]; // Indigo
-  const accentColor: [number, number, number] = [16, 185, 129]; // Vert émeraude
-  const darkText: [number, number, number] = [30, 41, 59]; // Slate 800
-  const lightText: [number, number, number] = [100, 116, 139]; // Slate 500
-  const bgLight: [number, number, number] = [248, 250, 252]; // Slate 50
+  // Couleurs du design — thème noir et blanc
+  const primaryColor: [number, number, number] = [30, 30, 30]; // Noir
+  const secondaryColor: [number, number, number] = [60, 60, 60]; // Gris foncé
+  const accentColor: [number, number, number] = [30, 30, 30]; // Noir (règlement)
+  const darkText: [number, number, number] = [20, 20, 20]; // Noir texte
+  const lightText: [number, number, number] = [100, 100, 100]; // Gris labels
+  const bgLight: [number, number, number] = [240, 240, 240]; // Gris clair fond
 
   // Charger les assets
   const logo = await loadLogo();
@@ -586,14 +586,14 @@ export async function generateFicheInscription(
   };
 
   // Box montant
-  doc.setFillColor(236, 253, 245);
+  doc.setFillColor(...bgLight);
   doc.roundedRect(margin, y - 1, contentWidth / 2 - 5, 12, 1.5, 1.5, 'F');
   doc.setFontSize(6);
   doc.setTextColor(...lightText);
   doc.text('MONTANT', margin + 3, y + 2);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...accentColor);
+  doc.setTextColor(...darkText);
   doc.text(examen.prix ? `${examen.prix} €` : '— €', margin + 3, y + 8);
 
   drawField('Moyen de paiement', moyenPaiementLabels[examen.moyenPaiement || ''] || '', margin + contentWidth / 2, contentWidth / 2);
@@ -615,19 +615,16 @@ export async function generateFicheInscription(
 
   y += 8;
 
-  // Boxes signature
-  const signatureBoxWidth = (contentWidth - 15) / 2;
+  // Box cachet de l'organisme (sans signature candidat)
+  const signatureBoxWidth = contentWidth / 2;
   const signatureBoxHeight = 38;
 
-  doc.setDrawColor(200, 200, 200);
+  doc.setDrawColor(180, 180, 180);
   doc.setLineWidth(0.2);
   doc.roundedRect(margin, y, signatureBoxWidth, signatureBoxHeight, 1.5, 1.5, 'S');
   doc.setFontSize(7);
   doc.setTextColor(...lightText);
   doc.text("Cachet de l'organisme", margin + signatureBoxWidth / 2, y + 4, { align: 'center' });
-
-  doc.roundedRect(margin + signatureBoxWidth + 15, y, signatureBoxWidth, signatureBoxHeight, 1.5, 1.5, 'S');
-  doc.text("Signature du candidat(e)", margin + signatureBoxWidth + 15 + signatureBoxWidth / 2, y + 4, { align: 'center' });
 
   // Tampon
   if (tampon) {
@@ -635,7 +632,7 @@ export async function generateFicheInscription(
   }
 
   // ===== FOOTER =====
-  doc.setFillColor(...primaryColor);
+  doc.setFillColor(40, 40, 40);
   doc.rect(0, pageHeight - 5, pageWidth, 5, 'F');
   doc.setFontSize(6);
   doc.setTextColor(255, 255, 255);
