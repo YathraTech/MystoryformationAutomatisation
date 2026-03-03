@@ -50,7 +50,7 @@ export interface RecentExamen {
   prenom: string;
   diplome: string | null;
   createdAt: string;
-  resultat: 'a_venir' | 'reussi' | 'echoue';
+  resultat: 'a_venir' | 'reussi' | 'echoue' | 'absent';
   inscriptionId: number | null;
   configured: boolean;
   lieu: string | null;
@@ -98,6 +98,26 @@ export interface CentreRevenue {
   examenStats: CentreExamenStats;     // Stats examens du centre
 }
 
+export interface FeuilleAppelExamen {
+  id: number;
+  nom: string;
+  prenom: string;
+  email: string;
+  telephone: string;
+  diplome: string | null;
+  dateExamen: string;
+  heureExamen: string | null;
+  resultat: 'a_venir' | 'reussi' | 'echoue' | 'absent';
+  lieu: string | null;
+  inscriptionId: number | null;
+}
+
+export interface FeuilleAppelData {
+  examens: FeuilleAppelExamen[];
+  deadline: string;       // ISO de la deadline (lendemain 15:30 Paris)
+  dateExamen: string;     // Date de l'examen concerné
+}
+
 export interface DashboardStats {
   totalInscriptions: number;
   totalExamens: number;
@@ -111,6 +131,7 @@ export interface DashboardStats {
   userLieu: string | null;
   commercialRevenues: CommercialRevenue[];
   revenueByCentre: CentreRevenue[] | null; // Pour les admins : CA par centre
+  feuilleAppel: FeuilleAppelData | null;
 }
 
 export interface InscriptionFilters {

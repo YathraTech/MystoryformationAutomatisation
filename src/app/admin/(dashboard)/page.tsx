@@ -1,16 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useStats } from '@/hooks/useStats';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import StatusBadge from '@/components/admin/StatusBadge';
 import RevenueChart from '@/components/admin/RevenueChart';
 import Link from 'next/link';
-import type { CommercialRevenue } from '@/types/admin';
-import { GraduationCap, BookOpen, Eye, EyeOff, Trophy, Sparkles, PartyPopper, Users, MapPin, Target, Crown, ShieldCheck, TrendingUp, TrendingDown } from 'lucide-react';
+import type { CommercialRevenue, FeuilleAppelData, FeuilleAppelExamen } from '@/types/admin';
+import { GraduationCap, BookOpen, Eye, EyeOff, Trophy, Sparkles, PartyPopper, Users, MapPin, Target, Crown, ShieldCheck, TrendingUp, TrendingDown, ClipboardCheck } from 'lucide-react';
 
-// États des examens pour le tableau de bord (2 états uniquement)
+// États des examens pour le tableau de bord (2 états uniquement + absent)
 function getExamenEtat(examen: { resultat: string; diplome: string | null; configured?: boolean }): { label: string; color: string } {
+  if (examen.resultat === 'absent') {
+    return { label: 'Absent', color: 'bg-orange-100 text-orange-700' };
+  }
   // Traité = configuration complète OU résultat connu (réussi/échoué)
   if (examen.configured || examen.resultat === 'reussi' || examen.resultat === 'echoue') {
     return { label: 'Traité', color: 'bg-emerald-100 text-emerald-700' };
@@ -31,6 +34,153 @@ function CentreBadge({ lieu }: { lieu: string | null | undefined }) {
     <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none ${colors}`}>
       {lieu}
     </span>
+  );
+}
+
+// ===================== Feuille d'appel =====================
+function FeuilleAppelSection({ feuilleAppel, isAdmin }: { feuilleAppel: FeuilleAppelData; isAdmin: boolean }) {
+  const [examens, setExamens] = useState<FeuilleAppelExamen[]>(feuilleAppel.examens);
+  const [countdown, setCountdown] = useState('');
+
+  // Sync when feuilleAppel prop changes
+  useEffect(() => {
+    setExamens(feuilleAppel.examens);
+  }, [feuilleAppel.examens]);
+
+  // Countdown timer
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+      const deadline = new Date(feuilleAppel.deadline);
+      const diff = deadline.getTime() - now.getTime();
+      if (diff <= 0) {
+        setCountdown('Deadline dépassée');
+        return;
+      }
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      setCountdown(`${hours}h${String(minutes).padStart(2, '0')} restantes`);
+    };
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 60000);
+    return () => clearInterval(interval);
+  }, [feuilleAppel.deadline]);
+
+  const filled = examens.filter((e) => e.resultat !== 'a_venir').length;
+
+  const handleResultat = useCallback(async (id: number, resultat: FeuilleAppelExamen['resultat']) => {
+    // Optimistic update
+    const previous = examens.map((e) => ({ ...e }));
+    setExamens((prev) => prev.map((e) => e.id === id ? { ...e, resultat } : e));
+
+    try {
+      const res = await fetch(`/api/admin/examens/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resultat }),
+      });
+      if (!res.ok) throw new Error('Erreur');
+    } catch {
+      // Revert on error
+      setExamens(previous);
+    }
+  }, [examens]);
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    });
+  };
+
+  return (
+    <div className="bg-white rounded-xl border-2 border-orange-200 overflow-hidden">
+      {/* Header */}
+      <div className="bg-orange-50 border-b border-orange-200 px-5 py-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            <ClipboardCheck className="h-5 w-5 text-orange-600" />
+            <div>
+              <h2 className="text-lg font-semibold text-orange-800">Feuille d&apos;appel</h2>
+              <p className="text-xs text-orange-600">{formatDate(feuilleAppel.dateExamen)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-orange-700">
+              {filled}/{examens.length} rempli{filled > 1 ? 's' : ''}
+            </span>
+            <span className="text-xs bg-orange-100 text-orange-700 rounded-full px-3 py-1 font-medium">
+              {countdown}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Liste des candidats */}
+      <div className="divide-y divide-slate-100">
+        {examens.map((examen) => (
+          <div key={examen.id} className="flex items-center gap-3 px-5 py-3">
+            {/* Nom + Diplôme */}
+            <div className="flex-1 min-w-0">
+              {examen.inscriptionId ? (
+                <Link
+                  href={`/admin/clients/${examen.inscriptionId}`}
+                  className="text-sm font-medium text-slate-800 hover:text-blue-700 hover:underline"
+                >
+                  {examen.prenom} {examen.nom}
+                </Link>
+              ) : (
+                <span className="text-sm font-medium text-slate-800">
+                  {examen.prenom} {examen.nom}
+                </span>
+              )}
+              <p className="text-xs text-slate-500">
+                {examen.diplome || 'Diplôme non choisi'}
+                {examen.heureExamen && ` — ${examen.heureExamen}`}
+              </p>
+            </div>
+
+            {/* Badge centre (admin only) */}
+            {isAdmin && examen.lieu && <CentreBadge lieu={examen.lieu} />}
+
+            {/* Boutons résultat */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={() => handleResultat(examen.id, examen.resultat === 'reussi' ? 'a_venir' : 'reussi')}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                  examen.resultat === 'reussi'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-slate-100 text-slate-500 hover:bg-green-50 hover:text-green-700'
+                }`}
+              >
+                Réussi
+              </button>
+              <button
+                onClick={() => handleResultat(examen.id, examen.resultat === 'echoue' ? 'a_venir' : 'echoue')}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                  examen.resultat === 'echoue'
+                    ? 'bg-red-600 text-white'
+                    : 'bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-700'
+                }`}
+              >
+                Échoué
+              </button>
+              <button
+                onClick={() => handleResultat(examen.id, examen.resultat === 'absent' ? 'a_venir' : 'absent')}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                  examen.resultat === 'absent'
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-slate-100 text-slate-500 hover:bg-orange-50 hover:text-orange-700'
+                }`}
+              >
+                Absent
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -350,6 +500,10 @@ export default function DashboardPage() {
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-slate-800">Tableau de bord</h1>
 
+        {stats.feuilleAppel && stats.feuilleAppel.examens.length > 0 && (
+          <FeuilleAppelSection feuilleAppel={stats.feuilleAppel} isAdmin={false} />
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6 lg:items-start">
           {/* ===== COLONNE GAUCHE — CA + Stats + Commerciaux ===== */}
           <div
@@ -465,6 +619,10 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-slate-800">Tableau de bord</h1>
+
+      {stats.feuilleAppel && stats.feuilleAppel.examens.length > 0 && (
+        <FeuilleAppelSection feuilleAppel={stats.feuilleAppel} isAdmin={true} />
+      )}
 
       {/* Chiffre d'affaires - Section avec flou */}
       {stats.revenue && (

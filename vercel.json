@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/auto-archive",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/send-resultats",
+      "schedule": "45 15 * * *"
     }
   ]
 }

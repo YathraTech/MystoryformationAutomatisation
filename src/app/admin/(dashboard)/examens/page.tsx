@@ -9,7 +9,7 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 
 type ExamenWithInscription = Examen & { inscriptionId?: number | null; examenSeul?: boolean };
 
-type FilterType = 'tous' | 'a_planifier' | 'a_venir' | 'a_replanifier' | 'termines';
+type FilterType = 'tous' | 'a_planifier' | 'a_venir' | 'a_replanifier' | 'termines' | 'absent';
 
 const FILTER_TABS: { value: FilterType; label: string; color: string }[] = [
   { value: 'tous', label: 'Tous', color: 'bg-slate-100 text-slate-700' },
@@ -17,12 +17,14 @@ const FILTER_TABS: { value: FilterType; label: string; color: string }[] = [
   { value: 'a_venir', label: 'À venir', color: 'bg-blue-100 text-blue-700' },
   { value: 'a_replanifier', label: 'À replanifier', color: 'bg-red-100 text-red-700' },
   { value: 'termines', label: 'Terminés', color: 'bg-green-100 text-green-700' },
+  { value: 'absent', label: 'Absents', color: 'bg-orange-100 text-orange-700' },
 ];
 
 const RESULTAT_LABELS: Record<ExamenResultat, { label: string; color: string }> = {
   a_venir: { label: 'À venir', color: 'bg-slate-100 text-slate-600' },
   reussi: { label: 'Réussi', color: 'bg-green-100 text-green-700' },
   echoue: { label: 'Échoué', color: 'bg-red-100 text-red-700' },
+  absent: { label: 'Absent', color: 'bg-orange-100 text-orange-700' },
 };
 
 function CentreBadge({ lieu }: { lieu: string | null | undefined }) {
@@ -91,6 +93,8 @@ export default function ExamensPage() {
           return examen.resultat === 'echoue';
         case 'termines':
           return examen.resultat === 'reussi';
+        case 'absent':
+          return examen.resultat === 'absent';
         default:
           return true;
       }
@@ -113,6 +117,8 @@ export default function ExamensPage() {
           return examen.resultat === 'echoue';
         case 'termines':
           return examen.resultat === 'reussi';
+        case 'absent':
+          return examen.resultat === 'absent';
         default:
           return true;
       }

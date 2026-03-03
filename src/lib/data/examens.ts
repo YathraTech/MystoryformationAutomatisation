@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 
-export type ExamenResultat = 'a_venir' | 'reussi' | 'echoue';
+export type ExamenResultat = 'a_venir' | 'reussi' | 'echoue' | 'absent';
 export type MoyenPaiement = 'carte_bancaire' | 'lien_paiement' | 'especes' | 'cpf' | 'autre';
 export type TypeExamen = 'TEF IRN' | 'Civique' | 'PrepMyFuture';
 
@@ -23,7 +23,7 @@ export interface Examen {
   langueMaternelle: string | null;
   objectifAdministratif: string | null;
   sourceConnaissance: string | null;
-  pieceIdentite: string | null;
+  pieceIdentite: string[] | null;
   numeroPasseport: string | null;
   numeroCni: string | null;
   diplome: string | null;
@@ -45,6 +45,7 @@ export interface Examen {
   pdfAttestationPaiement: string | null;
   pdfFicheInscription: string | null;
   pdfConvocation: string | null;
+  resultatEmailSent: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -90,6 +91,7 @@ interface DbExamen {
   pdf_attestation_paiement: string | null;
   pdf_fiche_inscription: string | null;
   pdf_convocation: string | null;
+  resultat_email_sent: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -114,7 +116,7 @@ function dbToExamen(row: DbExamen): Examen {
     langueMaternelle: row.langue_maternelle,
     objectifAdministratif: row.objectif_administratif,
     sourceConnaissance: row.source_connaissance,
-    pieceIdentite: row.piece_identite,
+    pieceIdentite: row.piece_identite ? JSON.parse(row.piece_identite) : null,
     numeroPasseport: row.numero_passeport,
     numeroCni: row.numero_cni,
     diplome: row.diplome,
@@ -136,6 +138,7 @@ function dbToExamen(row: DbExamen): Examen {
     pdfAttestationPaiement: row.pdf_attestation_paiement,
     pdfFicheInscription: row.pdf_fiche_inscription,
     pdfConvocation: row.pdf_convocation,
+    resultatEmailSent: row.resultat_email_sent || false,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -215,6 +218,8 @@ export interface UpdateExamenFields {
   pdfAttestationPaiement?: string | null;
   pdfFicheInscription?: string | null;
   pdfConvocation?: string | null;
+  pieceIdentite?: string[] | null;
+  resultatEmailSent?: boolean;
 }
 
 export async function updateExamenFields(
@@ -239,6 +244,8 @@ export async function updateExamenFields(
   if (fields.pdfAttestationPaiement !== undefined) dbFields.pdf_attestation_paiement = fields.pdfAttestationPaiement;
   if (fields.pdfFicheInscription !== undefined) dbFields.pdf_fiche_inscription = fields.pdfFicheInscription;
   if (fields.pdfConvocation !== undefined) dbFields.pdf_convocation = fields.pdfConvocation;
+  if (fields.pieceIdentite !== undefined) dbFields.piece_identite = fields.pieceIdentite ? JSON.stringify(fields.pieceIdentite) : null;
+  if (fields.resultatEmailSent !== undefined) dbFields.resultat_email_sent = fields.resultatEmailSent;
 
   if (Object.keys(dbFields).length === 0) return;
 
@@ -303,6 +310,31 @@ export async function autoArchiveOldExamens(): Promise<number> {
     console.log(`[autoArchiveOldExamens] ${count} examen(s) archivé(s) automatiquement`);
   }
   return count;
+}
+
+export async function getExamensPendingResultEmail(): Promise<Examen[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('examens')
+    .select('*')
+    .neq('resultat', 'a_venir')
+    .eq('resultat_email_sent', false)
+    .not('date_examen', 'is', null)
+    .neq('statut', 'Archivee');
+
+  if (error) throw new Error(error.message);
+  return (data || []).map((row: DbExamen) => dbToExamen(row));
+}
+
+export async function markResultatEmailSent(ids: number[]): Promise<void> {
+  if (ids.length === 0) return;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('examens')
+    .update({ resultat_email_sent: true })
+    .in('id', ids);
+
+  if (error) throw new Error(error.message);
 }
 
 export async function getExamensForPlanning(startDate: string, endDate: string): Promise<Examen[]> {

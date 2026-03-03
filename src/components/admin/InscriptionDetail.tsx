@@ -91,6 +91,7 @@ const RESULTAT_CONFIG: Record<ExamenResultat, { label: string; bg: string; text:
   a_venir: { label: 'À venir', bg: 'bg-blue-100', text: 'text-blue-700' },
   reussi: { label: 'Réussi', bg: 'bg-green-100', text: 'text-green-700' },
   echoue: { label: 'Échoué', bg: 'bg-red-100', text: 'text-red-700' },
+  absent: { label: 'Absent', bg: 'bg-orange-100', text: 'text-orange-700' },
 };
 
 // Options pour les moyens de paiement
@@ -361,6 +362,46 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
   const [resendingLinkId, setResendingLinkId] = useState<number | null>(null);
   const [generatingDoc, setGeneratingDoc] = useState<string | null>(null);
 
+  // Pièces d'identité
+  const [piecesIdentite, setPiecesIdentite] = useState<{ path: string; url: string | null; name: string }[]>([]);
+  const [loadingPieces, setLoadingPieces] = useState(false);
+  const [deletingPiecePath, setDeletingPiecePath] = useState<string | null>(null);
+
+  // Charger les pièces d'identité pour un examen
+  const loadPiecesIdentite = useCallback(async (examenId: number) => {
+    setLoadingPieces(true);
+    try {
+      const res = await fetch(`/api/admin/examens/${examenId}/pieces-identite`);
+      if (res.ok) {
+        const data = await res.json();
+        setPiecesIdentite(data.files || []);
+      }
+    } catch (err) {
+      console.error('Error loading pieces identite:', err);
+    } finally {
+      setLoadingPieces(false);
+    }
+  }, []);
+
+  const handleDeletePiece = async (examenId: number, path: string) => {
+    if (!confirm('Supprimer ce fichier de pièce d\'identité ?')) return;
+    setDeletingPiecePath(path);
+    try {
+      const res = await fetch(`/api/admin/examens/${examenId}/pieces-identite`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path }),
+      });
+      if (res.ok) {
+        setPiecesIdentite((prev) => prev.filter((p) => p.path !== path));
+      }
+    } catch (err) {
+      console.error('Error deleting piece identite:', err);
+    } finally {
+      setDeletingPiecePath(null);
+    }
+  };
+
   // Fonction pour renvoyer le lien de choix de diplôme
   const handleResendLink = async (examenId: number, resetChoice: boolean = false) => {
     if (!confirm(
@@ -514,6 +555,15 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
     fetchExamObjectifs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Charger les pièces d'identité quand les examens sont chargés
+  useEffect(() => {
+    if (examens.length > 0 && examens[0].pieceIdentite && examens[0].pieceIdentite.length > 0) {
+      loadPiecesIdentite(examens[0].id);
+    } else {
+      setPiecesIdentite([]);
+    }
+  }, [examens, loadPiecesIdentite]);
 
   const handleStartEdit = (key: string) => {
     setEditingField(key);
@@ -1028,6 +1078,50 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                   </div>
                 </div>
               )}
+
+              {/* Pièces d'identité uploadées */}
+              <div className="border-t border-slate-100 pt-3 mt-2">
+                <p className="text-xs text-slate-500 mb-2 font-medium">Pièces d&apos;identité</p>
+                {loadingPieces ? (
+                  <div className="flex items-center gap-2 py-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+                    <span className="text-xs text-slate-400">Chargement...</span>
+                  </div>
+                ) : piecesIdentite.length > 0 ? (
+                  <div className="space-y-2">
+                    {piecesIdentite.map((piece) => (
+                      <div key={piece.path} className="flex items-center gap-2 py-1.5 px-2 bg-slate-50 rounded-lg">
+                        <FileText className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        <span className="flex-1 text-sm text-slate-700 truncate">{piece.name}</span>
+                        {piece.url && (
+                          <a
+                            href={piece.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 transition-colors"
+                          >
+                            Voir
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePiece(examens[0].id, piece.path)}
+                          disabled={deletingPiecePath === piece.path}
+                          className="px-2 py-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 transition-colors disabled:opacity-50"
+                        >
+                          {deletingPiecePath === piece.path ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            'Supprimer'
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">Aucun fichier uploadé</p>
+                )}
+              </div>
             </>
           )}
         </CollapsibleSection>

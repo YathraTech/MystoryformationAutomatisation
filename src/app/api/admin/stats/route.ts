@@ -4,7 +4,7 @@ import { getAllExamens } from '@/lib/data/examens';
 import { getSessionUser } from '@/lib/auth/session';
 import { getSafeUsers } from '@/lib/auth/users';
 import { getCaMensuelHistory } from '@/lib/data/ca-mensuel';
-import type { DashboardStats, InscriptionStatus, RevenueStats, CommercialRevenue, CentreRevenue, CentreExamenStats } from '@/types/admin';
+import type { DashboardStats, InscriptionStatus, RevenueStats, CommercialRevenue, CentreRevenue, CentreExamenStats, FeuilleAppelData, FeuilleAppelExamen } from '@/types/admin';
 
 // Helper pour formater le nom du mois
 function getMonthLabel(year: number, month: number): string {
@@ -188,7 +188,7 @@ export async function GET() {
       }
 
       // Traité = configuration complète OU résultat connu
-      if (isExamenConfigured(ex) || ex.resultat === 'reussi' || ex.resultat === 'echoue') {
+      if (isExamenConfigured(ex) || ex.resultat === 'reussi' || ex.resultat === 'echoue' || ex.resultat === 'absent') {
         termines++;
       }
     }
@@ -322,7 +322,7 @@ export async function GET() {
         // Stats examens par centre
         let centreTraites = 0;
         for (const ex of centreExamens) {
-          if (isExamenConfigured(ex) || ex.resultat === 'reussi' || ex.resultat === 'echoue') {
+          if (isExamenConfigured(ex) || ex.resultat === 'reussi' || ex.resultat === 'echoue' || ex.resultat === 'absent') {
             centreTraites++;
           }
         }
@@ -344,6 +344,65 @@ export async function GET() {
       });
     }
 
+    // ===== Feuille d'appel =====
+    // Calculer l'heure Paris actuelle
+    const parisNow = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+    const parisHour = parisNow.getHours();
+    const parisMinute = parisNow.getMinutes();
+    const parisTimeDecimal = parisHour + parisMinute / 60;
+
+    // Dates à inclure
+    const todayStr = parisNow.toISOString().split('T')[0];
+    const yesterday = new Date(parisNow);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    // Si avant 15h30: inclure hier ET aujourd'hui. Si après 15h30: uniquement aujourd'hui
+    const datesToInclude = parisTimeDecimal < 15.5
+      ? [yesterdayStr, todayStr]
+      : [todayStr];
+
+    // Filtrer les examens avec dateExamen correspondant
+    const feuilleExamens = examens.filter((ex) =>
+      ex.dateExamen && datesToInclude.includes(ex.dateExamen)
+    );
+
+    let feuilleAppel: FeuilleAppelData | null = null;
+    if (feuilleExamens.length > 0) {
+      // Prendre la date d'examen la plus récente comme référence
+      const dateExamenRef = feuilleExamens
+        .map((ex) => ex.dateExamen!)
+        .sort()
+        .pop()!;
+
+      // Deadline = dateExamen + 1 jour à 15:30 Paris
+      const deadlineDate = new Date(dateExamenRef + 'T15:30:00');
+      deadlineDate.setDate(deadlineDate.getDate() + 1);
+      // Convertir en ISO en tenant compte du fuseau Paris (CET = UTC+1, CEST = UTC+2)
+      // On utilise une approximation: construire l'ISO string manuellement
+      const deadlineIso = `${deadlineDate.toISOString().split('T')[0]}T15:30:00+01:00`;
+
+      const feuilleAppelExamens: FeuilleAppelExamen[] = feuilleExamens.map((ex) => ({
+        id: ex.id,
+        nom: ex.nom,
+        prenom: ex.prenom,
+        email: ex.email,
+        telephone: ex.telephone,
+        diplome: ex.diplome,
+        dateExamen: ex.dateExamen!,
+        heureExamen: ex.heureExamen,
+        resultat: ex.resultat as FeuilleAppelExamen['resultat'],
+        lieu: ex.lieu,
+        inscriptionId: emailToInscriptionId.get(ex.email.toLowerCase()) || null,
+      }));
+
+      feuilleAppel = {
+        examens: feuilleAppelExamens,
+        deadline: deadlineIso,
+        dateExamen: dateExamenRef,
+      };
+    }
+
     const stats: DashboardStats = {
       totalInscriptions: inscriptions.length,
       totalExamens: examens.length,
@@ -357,6 +416,7 @@ export async function GET() {
       userLieu: (isCommercial && userLieu) ? userLieu : null,
       commercialRevenues,
       revenueByCentre,
+      feuilleAppel,
     };
 
     return NextResponse.json(stats);
