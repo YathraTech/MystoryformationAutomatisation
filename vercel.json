@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/cron/send-resultats",
-      "schedule": "15 12,20 * * *"
+      "schedule": "0 9 * * *"
     }
   ]
 }
