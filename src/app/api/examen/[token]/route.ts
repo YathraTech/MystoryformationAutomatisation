@@ -293,6 +293,55 @@ export async function PATCH(
       );
     }
 
+    // Envoi webhook Make.com — Confirmation pré-inscription examen
+    const webhookExamen = process.env.MAKE_WEBHOOK_EXAMEN;
+    if (webhookExamen) {
+      const { data: fullExamen } = await supabase
+        .from('examens')
+        .select('*')
+        .eq('token', token)
+        .single();
+
+      if (fullExamen) {
+        try {
+          await fetch(webhookExamen, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'confirmation_preinscription_examen',
+              id: fullExamen.id,
+              token: fullExamen.token,
+              date_creation: fullExamen.created_at,
+              civilite: fullExamen.civilite || '',
+              nom: fullExamen.nom || '',
+              prenom: fullExamen.prenom || '',
+              email: fullExamen.email || '',
+              telephone: fullExamen.telephone || '',
+              date_naissance: fullExamen.date_naissance || '',
+              adresse: fullExamen.adresse || '',
+              code_postal: fullExamen.code_postal || '',
+              ville: fullExamen.ville || '',
+              nationalite: fullExamen.nationalite || '',
+              ville_naissance: fullExamen.ville_naissance || '',
+              lieu_naissance: fullExamen.lieu_naissance || '',
+              langue_maternelle: fullExamen.langue_maternelle || '',
+              numero_passeport: fullExamen.numero_passeport || '',
+              numero_cni: fullExamen.numero_cni || '',
+              type_examen: fullExamen.type_examen || '',
+              diplome: fullExamen.diplome || '',
+              lieu: fullExamen.lieu || '',
+              motivation: fullExamen.motivation || '',
+              motivation_autre: fullExamen.motivation_autre || '',
+              source_connaissance: fullExamen.source_connaissance || '',
+              resultat: fullExamen.resultat || 'a_venir',
+            }),
+          });
+        } catch (webhookError) {
+          console.error('Make webhook examen error (non-blocking):', webhookError);
+        }
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('Error updating examen:', err);

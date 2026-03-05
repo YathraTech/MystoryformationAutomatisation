@@ -12,6 +12,7 @@ const SHEET_HEADERS = [
   'Jours dispo', 'Créneaux', 'Date début souhaitée',
   'Commentaires', 'Statut', 'Relance date', 'Relance note',
   'Badge Contacté', 'Badge Payé', 'Badge Dossier',
+  'Date formation', 'Heure formation',
 ];
 
 const BADGE_HEADER_MAP: Record<BadgeKey, string> = {
@@ -55,8 +56,8 @@ function parseRow(headers: string[], row: string[], rowIndex: number): Inscripti
     joursDisponibles: obj.joursDisponibles || '',
     creneauxHoraires: obj.creneauxHoraires || '',
     dateDebutSouhaitee: obj.dateDebutSouhaitee || '',
-    dateFormation: null,
-    heureFormation: null,
+    dateFormation: obj.dateFormation || null,
+    heureFormation: obj.heureFormation || null,
     commentaires: obj.commentaires || '',
     statut: (obj.statut as InscriptionStatus) || 'En attente',
     relanceDate: obj.relanceDate || '',
@@ -69,7 +70,7 @@ function parseRow(headers: string[], row: string[], rowIndex: number): Inscripti
 }
 
 export async function getAllInscriptions(): Promise<Inscription[]> {
-  const data = await getSheetData('A1:AH1000');
+  const data = await getSheetData('A1:AL1000');
 
   if (data.length < 2) return [];
 
@@ -87,7 +88,7 @@ export async function getAllInscriptions(): Promise<Inscription[]> {
 export async function getInscriptionByRow(
   rowIndex: number
 ): Promise<Inscription | null> {
-  const data = await getSheetData('A1:AH1000');
+  const data = await getSheetData('A1:AL1000');
 
   if (data.length < 2) return null;
 
@@ -103,7 +104,7 @@ export async function updateInscriptionStatus(
   rowIndex: number,
   status: InscriptionStatus
 ): Promise<void> {
-  const data = await getSheetData('A1:AH1');
+  const data = await getSheetData('A1:AL1');
   if (!data[0]) throw new Error('Headers not found');
 
   const headers = data[0];
@@ -122,7 +123,7 @@ export async function updateBadge(
   color: BadgeColor
 ): Promise<void> {
   const headerName = BADGE_HEADER_MAP[badge];
-  const data = await getSheetData('A1:AH1');
+  const data = await getSheetData('A1:AL1');
   if (!data[0]) throw new Error('Headers not found');
 
   const headers = data[0];
@@ -139,7 +140,7 @@ export async function addRelance(
   rowIndex: number,
   note: string
 ): Promise<void> {
-  const data = await getSheetData('A1:AH1');
+  const data = await getSheetData('A1:AL1');
   if (!data[0]) throw new Error('Headers not found');
 
   const headers = data[0];
@@ -187,6 +188,7 @@ function inscriptionToRow(ins: Inscription): string[] {
     'Formation': ins.formationNom,
     'Durée': ins.formationDuree,
     'Prix': ins.formationPrix,
+    'Lieu': ins.lieu || '',
     'Jours dispo': ins.joursDisponibles,
     'Créneaux': ins.creneauxHoraires,
     'Date début souhaitée': ins.dateDebutSouhaitee,
@@ -197,6 +199,8 @@ function inscriptionToRow(ins: Inscription): string[] {
     'Badge Contacté': ins.badgeContacte,
     'Badge Payé': ins.badgePaye,
     'Badge Dossier': ins.badgeDossier,
+    'Date formation': ins.dateFormation || '',
+    'Heure formation': ins.heureFormation || '',
   };
 
   return SHEET_HEADERS.map((header) => fieldMap[header] || '');

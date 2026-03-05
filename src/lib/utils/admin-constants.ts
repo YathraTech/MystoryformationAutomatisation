@@ -60,6 +60,9 @@ export const SHEET_COLUMN_MAP: Record<string, keyof import('@/types/admin').Insc
   'Badge Contacté': 'badgeContacte',
   'Badge Payé': 'badgePaye',
   'Badge Dossier': 'badgeDossier',
+  'Lieu': 'lieu',
+  'Date formation': 'dateFormation',
+  'Heure formation': 'heureFormation',
 };
 
 export const ITEMS_PER_PAGE = 20;

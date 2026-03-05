@@ -92,16 +92,16 @@ export async function POST(request: NextRequest) {
       lieu: userLieu,
     });
 
-    // Also send to Make webhook if configured
-    const webhookUrl = process.env.MAKE_WEBHOOK_URL;
-    if (webhookUrl) {
+    // Envoi webhook Make.com — Confirmation de pré-inscription
+    const webhookPreinscription = process.env.MAKE_WEBHOOK_PREINSCRIPTION;
+    if (webhookPreinscription) {
       try {
-        await fetch(webhookUrl, {
+        await fetch(webhookPreinscription, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            type: 'confirmation_preinscription',
             timestamp: new Date().toISOString(),
-            source: 'formulaire_web',
             civilite: data.civilite,
             nom: data.nom.toUpperCase(),
             prenom: data.prenom,
@@ -125,12 +125,10 @@ export async function POST(request: NextRequest) {
             creneaux_horaires: (data.creneauxHoraires || []).join(', '),
             date_debut_souhaitee: data.dateDebutSouhaitee || '',
             commentaires: data.commentaires || '',
-            accept_cgu: data.acceptCGU,
-            accept_rgpd: data.acceptRGPD,
           }),
         });
       } catch (webhookError) {
-        console.error('Make webhook error (non-blocking):', webhookError);
+        console.error('Make webhook pré-inscription error (non-blocking):', webhookError);
       }
     }
 

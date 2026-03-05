@@ -1,4 +1,14 @@
 import { createClient } from '@/lib/supabase/server';
+import { isGoogleSheetsConfigured } from '@/lib/google-sheets/client';
+import { updateExamenInSheet, updateExamenResultatInSheet, markResultatEmailSentInSheet } from '@/lib/google-sheets/examens';
+
+/** Non-blocking Google Sheets sync for examens */
+function syncExamenToSheets(fn: () => Promise<void>): void {
+  if (!isGoogleSheetsConfigured()) return;
+  fn().catch((err) => {
+    console.error('[Google Sheets examen sync error]', err);
+  });
+}
 
 export type ExamenResultat = 'a_venir' | 'reussi' | 'echoue' | 'absent';
 export type MoyenPaiement = 'carte_bancaire' | 'lien_paiement' | 'especes' | 'cpf' | 'autre';
@@ -200,6 +210,8 @@ export async function updateExamenResultat(id: number, resultat: ExamenResultat)
     .eq('id', id);
 
   if (error) throw new Error(error.message);
+
+  syncExamenToSheets(() => updateExamenResultatInSheet(id, resultat));
 }
 
 export interface UpdateExamenFields {
@@ -255,6 +267,8 @@ export async function updateExamenFields(
     .eq('id', id);
 
   if (error) throw new Error(error.message);
+
+  syncExamenToSheets(() => updateExamenInSheet(id, fields));
 }
 
 export async function archiveExamen(id: number): Promise<void> {
@@ -335,6 +349,8 @@ export async function markResultatEmailSent(ids: number[]): Promise<void> {
     .in('id', ids);
 
   if (error) throw new Error(error.message);
+
+  syncExamenToSheets(() => markResultatEmailSentInSheet(ids));
 }
 
 export async function getExamensByDate(dateExamen: string): Promise<Examen[]> {

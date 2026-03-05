@@ -81,10 +81,11 @@ function getSheetName(): string {
   return process.env.GOOGLE_SHEET_NAME || 'Inscriptions CPF';
 }
 
-export async function getSheetData(range: string): Promise<string[][]> {
+export async function getSheetData(range: string, sheetName?: string): Promise<string[][]> {
   const token = await getAccessToken();
   const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID!;
-  const fullRange = `'${getSheetName()}'!${range}`;
+  const sheet = sheetName || getSheetName();
+  const fullRange = `'${sheet}'!${range}`;
 
   const res = await fetch(
     `${SHEETS_BASE}/${spreadsheetId}/values/${encodeURIComponent(fullRange)}`,
@@ -106,13 +107,15 @@ export async function getSheetData(range: string): Promise<string[][]> {
 export async function updateSheetCell(
   row: number,
   col: number,
-  value: string
+  value: string,
+  sheetName?: string
 ): Promise<void> {
   const token = await getAccessToken();
   const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID!;
+  const sheet = sheetName || getSheetName();
 
   const colLetter = colToLetter(col);
-  const range = `'${getSheetName()}'!${colLetter}${row}`;
+  const range = `'${sheet}'!${colLetter}${row}`;
 
   const res = await fetch(
     `${SHEETS_BASE}/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,
@@ -163,10 +166,11 @@ export async function updateSheetRow(
 }
 
 /** Append a new row at the end of the sheet */
-export async function appendSheetRow(values: string[]): Promise<void> {
+export async function appendSheetRow(values: string[], sheetName?: string): Promise<void> {
   const token = await getAccessToken();
   const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID!;
-  const range = `'${getSheetName()}'!A:A`;
+  const sheet = sheetName || getSheetName();
+  const range = `'${sheet}'!A:A`;
 
   const res = await fetch(
     `${SHEETS_BASE}/${spreadsheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
