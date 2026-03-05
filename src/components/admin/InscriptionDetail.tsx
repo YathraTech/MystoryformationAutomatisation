@@ -28,7 +28,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import type { Inscription, Formation, ExamOption } from '@/types/admin';
-import type { Examen, ExamenResultat, MoyenPaiement, TypeExamen } from '@/lib/data/examens';
+import type { Examen, ExamenResultat, MoyenPaiement, TypeExamen, PdfVersion } from '@/lib/data/examens';
 import {
   CIVILITES,
   MODES_FINANCEMENT,
@@ -1645,117 +1645,185 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
 
                         {/* Boutons de génération / téléchargement de documents - seulement si configuré */}
                         {configured && (
-                          <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-200">
-                            {/* Convocation */}
-                            <button
-                              disabled={generatingDoc !== null}
-                              onClick={async () => {
-                                if (!inscription) return;
-                                const docKey = `convocation_${examen.id}`;
-                                setGeneratingDoc(docKey);
-                                try {
-                                  if (examen.pdfConvocation) {
-                                    const res = await fetch(`/api/admin/examens/${examen.id}/download-pdf?path=${encodeURIComponent(examen.pdfConvocation)}`);
-                                    const data = await res.json();
-                                    if (data.url) window.open(data.url, '_blank');
-                                  } else {
-                                    const { blob, fileName } = generateConvocation(inscription, examen);
-                                    downloadBlob(blob, fileName);
-                                    const urlRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ docType: 'convocation', fileName }),
-                                    });
-                                    if (urlRes.ok) {
-                                      const { signedUrl, token } = await urlRes.json();
-                                      await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: blob });
-                                      void token;
-                                    }
-                                    await fetchExamens(inscription.clientId, inscription.email);
-                                  }
-                                } catch (err) { console.error('Erreur document:', err); }
-                                finally { setGeneratingDoc(null); }
-                              }}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors disabled:opacity-50"
-                            >
-                              {generatingDoc === `convocation_${examen.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                              {examen.pdfConvocation ? 'Télécharger Convocation' : 'Convocation'}
-                            </button>
+                          <div className="mt-3 pt-3 border-t border-slate-200 space-y-2">
+                            {/* Version actuelle */}
+                            <div>
+                              {(examen.pdfConvocation || examen.pdfFicheInscription || examen.pdfAttestationPaiement) && (
+                                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">(Version actuelle)</span>
+                              )}
+                              <div className="flex flex-wrap items-center gap-2 mt-1">
+                                {/* Convocation */}
+                                <button
+                                  disabled={generatingDoc !== null}
+                                  onClick={async () => {
+                                    if (!inscription) return;
+                                    const docKey = `convocation_${examen.id}`;
+                                    setGeneratingDoc(docKey);
+                                    try {
+                                      if (examen.pdfConvocation) {
+                                        const res = await fetch(`/api/admin/examens/${examen.id}/download-pdf?path=${encodeURIComponent(examen.pdfConvocation)}`);
+                                        const data = await res.json();
+                                        if (data.url) window.open(data.url, '_blank');
+                                      } else {
+                                        const { blob, fileName } = await generateConvocation(inscription, examen);
+                                        downloadBlob(blob, fileName);
+                                        const urlRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ docType: 'convocation', fileName }),
+                                        });
+                                        if (urlRes.ok) {
+                                          const { signedUrl, token } = await urlRes.json();
+                                          await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: blob });
+                                          void token;
+                                        }
+                                        await fetchExamens(inscription.clientId, inscription.email);
+                                      }
+                                    } catch (err) { console.error('Erreur document:', err); }
+                                    finally { setGeneratingDoc(null); }
+                                  }}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors disabled:opacity-50"
+                                >
+                                  {generatingDoc === `convocation_${examen.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                                  {examen.pdfConvocation ? 'Télécharger Convocation' : 'Convocation'}
+                                </button>
 
-                            {/* Fiche d'inscription */}
-                            <button
-                              disabled={generatingDoc !== null}
-                              onClick={async () => {
-                                if (!inscription) return;
-                                const docKey = `fiche_${examen.id}`;
-                                setGeneratingDoc(docKey);
-                                try {
-                                  if (examen.pdfFicheInscription) {
-                                    const res = await fetch(`/api/admin/examens/${examen.id}/download-pdf?path=${encodeURIComponent(examen.pdfFicheInscription)}`);
-                                    const data = await res.json();
-                                    if (data.url) window.open(data.url, '_blank');
-                                  } else {
-                                    const motLabels = Object.fromEntries(examObjectifs.map(o => [o.value, o.label]));
-                                    const { blob, fileName } = await generateFicheInscription(inscription, examen, motLabels);
-                                    downloadBlob(blob, fileName);
-                                    const urlRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ docType: 'fiche_inscription', fileName }),
-                                    });
-                                    if (urlRes.ok) {
-                                      const { signedUrl, token } = await urlRes.json();
-                                      await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: blob });
-                                      void token;
-                                    }
-                                    await fetchExamens(inscription.clientId, inscription.email);
-                                  }
-                                } catch (err) { console.error('Erreur document:', err); }
-                                finally { setGeneratingDoc(null); }
-                              }}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
-                            >
-                              {generatingDoc === `fiche_${examen.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                              {examen.pdfFicheInscription ? 'Télécharger Fiche' : 'Fiche d\u0027inscription'}
-                            </button>
+                                {/* Fiche d'inscription */}
+                                <button
+                                  disabled={generatingDoc !== null}
+                                  onClick={async () => {
+                                    if (!inscription) return;
+                                    const docKey = `fiche_${examen.id}`;
+                                    setGeneratingDoc(docKey);
+                                    try {
+                                      if (examen.pdfFicheInscription) {
+                                        const res = await fetch(`/api/admin/examens/${examen.id}/download-pdf?path=${encodeURIComponent(examen.pdfFicheInscription)}`);
+                                        const data = await res.json();
+                                        if (data.url) window.open(data.url, '_blank');
+                                      } else {
+                                        const motLabels = Object.fromEntries(examObjectifs.map(o => [o.value, o.label]));
+                                        const { blob, fileName } = await generateFicheInscription(inscription, examen, motLabels);
+                                        downloadBlob(blob, fileName);
+                                        const urlRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ docType: 'fiche_inscription', fileName }),
+                                        });
+                                        if (urlRes.ok) {
+                                          const { signedUrl, token } = await urlRes.json();
+                                          await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: blob });
+                                          void token;
+                                        }
+                                        await fetchExamens(inscription.clientId, inscription.email);
+                                      }
+                                    } catch (err) { console.error('Erreur document:', err); }
+                                    finally { setGeneratingDoc(null); }
+                                  }}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+                                >
+                                  {generatingDoc === `fiche_${examen.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                                  {examen.pdfFicheInscription ? 'Télécharger Fiche' : 'Fiche d\u0027inscription'}
+                                </button>
 
-                            {/* Attestation de paiement */}
-                            <button
-                              disabled={generatingDoc !== null}
-                              onClick={async () => {
-                                if (!inscription) return;
-                                const docKey = `attestation_${examen.id}`;
-                                setGeneratingDoc(docKey);
-                                try {
-                                  if (examen.pdfAttestationPaiement) {
-                                    const res = await fetch(`/api/admin/examens/${examen.id}/download-pdf?path=${encodeURIComponent(examen.pdfAttestationPaiement)}`);
-                                    const data = await res.json();
-                                    if (data.url) window.open(data.url, '_blank');
-                                  } else {
-                                    const commercial = staffMembers.find(s => s.id === examen.commercialId);
-                                    const commercialNom = commercial ? `${commercial.prenom} ${commercial.nom}` : undefined;
-                                    const { blob, fileName } = await generateAttestationPaiement(inscription, examen, commercialNom);
-                                    downloadBlob(blob, fileName);
-                                    const urlRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ docType: 'attestation_paiement', fileName }),
-                                    });
-                                    if (urlRes.ok) {
-                                      const { signedUrl, token } = await urlRes.json();
-                                      await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: blob });
-                                      void token;
-                                    }
-                                    await fetchExamens(inscription.clientId, inscription.email);
-                                  }
-                                } catch (err) { console.error('Erreur document:', err); }
-                                finally { setGeneratingDoc(null); }
-                              }}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
-                            >
-                              {generatingDoc === `attestation_${examen.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                              {examen.pdfAttestationPaiement ? 'Télécharger Attestation' : 'Attestation de paiement'}
-                            </button>
+                                {/* Attestation de paiement */}
+                                <button
+                                  disabled={generatingDoc !== null}
+                                  onClick={async () => {
+                                    if (!inscription) return;
+                                    const docKey = `attestation_${examen.id}`;
+                                    setGeneratingDoc(docKey);
+                                    try {
+                                      if (examen.pdfAttestationPaiement) {
+                                        const res = await fetch(`/api/admin/examens/${examen.id}/download-pdf?path=${encodeURIComponent(examen.pdfAttestationPaiement)}`);
+                                        const data = await res.json();
+                                        if (data.url) window.open(data.url, '_blank');
+                                      } else {
+                                        const commercial = staffMembers.find(s => s.id === examen.commercialId);
+                                        const commercialNom = commercial ? `${commercial.prenom} ${commercial.nom}` : undefined;
+                                        const { blob, fileName } = await generateAttestationPaiement(inscription, examen, commercialNom);
+                                        downloadBlob(blob, fileName);
+                                        const urlRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ docType: 'attestation_paiement', fileName }),
+                                        });
+                                        if (urlRes.ok) {
+                                          const { signedUrl, token } = await urlRes.json();
+                                          await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: blob });
+                                          void token;
+                                        }
+                                        await fetchExamens(inscription.clientId, inscription.email);
+                                      }
+                                    } catch (err) { console.error('Erreur document:', err); }
+                                    finally { setGeneratingDoc(null); }
+                                  }}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                                >
+                                  {generatingDoc === `attestation_${examen.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                                  {examen.pdfAttestationPaiement ? 'Télécharger Attestation' : 'Attestation de paiement'}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Anciennes versions */}
+                            {examen.pdfVersions && examen.pdfVersions.length > 0 && (
+                              <div className="space-y-1.5">
+                                {[...examen.pdfVersions].sort((a, b) => b.version - a.version).map((pv) => (
+                                  <div key={pv.version} className="opacity-50">
+                                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                                      Version {pv.version} — {new Date(pv.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                                      {pv.convocation && (
+                                        <button
+                                          onClick={async () => {
+                                            try {
+                                              const res = await fetch(`/api/admin/examens/${examen.id}/download-pdf?path=${encodeURIComponent(pv.convocation!)}`);
+                                              const data = await res.json();
+                                              if (data.url) window.open(data.url, '_blank');
+                                            } catch (err) { console.error('Erreur téléchargement:', err); }
+                                          }}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                                        >
+                                          <Download className="h-3.5 w-3.5" />
+                                          Convocation
+                                        </button>
+                                      )}
+                                      {pv.ficheInscription && (
+                                        <button
+                                          onClick={async () => {
+                                            try {
+                                              const res = await fetch(`/api/admin/examens/${examen.id}/download-pdf?path=${encodeURIComponent(pv.ficheInscription!)}`);
+                                              const data = await res.json();
+                                              if (data.url) window.open(data.url, '_blank');
+                                            } catch (err) { console.error('Erreur téléchargement:', err); }
+                                          }}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                                        >
+                                          <Download className="h-3.5 w-3.5" />
+                                          Fiche
+                                        </button>
+                                      )}
+                                      {pv.attestationPaiement && (
+                                        <button
+                                          onClick={async () => {
+                                            try {
+                                              const res = await fetch(`/api/admin/examens/${examen.id}/download-pdf?path=${encodeURIComponent(pv.attestationPaiement!)}`);
+                                              const data = await res.json();
+                                              if (data.url) window.open(data.url, '_blank');
+                                            } catch (err) { console.error('Erreur téléchargement:', err); }
+                                          }}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                                        >
+                                          <Download className="h-3.5 w-3.5" />
+                                          Attestation
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </>

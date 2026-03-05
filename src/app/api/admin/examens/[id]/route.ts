@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getExamenById, updateExamenFields, archiveExamen, deleteExamen } from '@/lib/data/examens';
+import type { PdfVersion } from '@/lib/data/examens';
 import { recalculateCaAfterExamenChange } from '@/lib/data/ca-mensuel';
-import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function GET(
   request: NextRequest,
@@ -53,22 +53,28 @@ export async function PATCH(
       ? await getExamenById(parseInt(id, 10))
       : null;
 
-    // Si des champs de configuration changent, supprimer les anciens PDF du Storage
+    // Si des champs de configuration changent, archiver les anciens PDF au lieu de les supprimer
     let pdfResetFields: Record<string, null> = {};
+    let pdfVersionsUpdate: PdfVersion[] | undefined;
     if (configFieldsChanging && beforeExamen) {
-      const pdfPaths = [
-        beforeExamen.pdfAttestationPaiement,
-        beforeExamen.pdfFicheInscription,
-        beforeExamen.pdfConvocation,
-      ].filter((p): p is string => !!p);
+      const hasPdfs = beforeExamen.pdfConvocation || beforeExamen.pdfFicheInscription || beforeExamen.pdfAttestationPaiement;
 
-      if (pdfPaths.length > 0) {
-        try {
-          const supabase = createAdminClient();
-          await supabase.storage.from('documents').remove(pdfPaths);
-        } catch (storageError) {
-          console.error('[PDF Storage Cleanup Error]', storageError);
-        }
+      if (hasPdfs) {
+        // Archiver les PDFs actuels dans pdf_versions
+        const existingVersions: PdfVersion[] = beforeExamen.pdfVersions || [];
+        const nextVersion = existingVersions.length > 0
+          ? Math.max(...existingVersions.map(v => v.version)) + 1
+          : 1;
+
+        const newVersion: PdfVersion = {
+          version: nextVersion,
+          date: new Date().toISOString(),
+          convocation: beforeExamen.pdfConvocation,
+          ficheInscription: beforeExamen.pdfFicheInscription,
+          attestationPaiement: beforeExamen.pdfAttestationPaiement,
+        };
+
+        pdfVersionsUpdate = [...existingVersions, newVersion];
       }
 
       pdfResetFields = {
@@ -96,6 +102,7 @@ export async function PATCH(
       pdfFicheInscription: body.pdfFicheInscription,
       pdfConvocation: body.pdfConvocation,
       ...pdfResetFields,
+      ...(pdfVersionsUpdate ? { pdfVersions: pdfVersionsUpdate } : {}),
     });
 
     // Recalculer le CA mensuel si prix ou commercialId a changé

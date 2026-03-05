@@ -14,6 +14,14 @@ export type ExamenResultat = 'a_venir' | 'reussi' | 'echoue' | 'absent';
 export type MoyenPaiement = 'carte_bancaire' | 'lien_paiement' | 'especes' | 'cpf' | 'autre';
 export type TypeExamen = 'TEF IRN' | 'Civique' | 'PrepMyFuture';
 
+export interface PdfVersion {
+  version: number;
+  date: string;
+  convocation: string | null;
+  ficheInscription: string | null;
+  attestationPaiement: string | null;
+}
+
 export interface Examen {
   id: number;
   token: string;
@@ -55,6 +63,7 @@ export interface Examen {
   pdfAttestationPaiement: string | null;
   pdfFicheInscription: string | null;
   pdfConvocation: string | null;
+  pdfVersions: PdfVersion[];
   resultatEmailSent: boolean;
   createdAt: string;
   updatedAt: string;
@@ -101,6 +110,7 @@ interface DbExamen {
   pdf_attestation_paiement: string | null;
   pdf_fiche_inscription: string | null;
   pdf_convocation: string | null;
+  pdf_versions: PdfVersion[] | null;
   resultat_email_sent: boolean;
   created_at: string;
   updated_at: string;
@@ -148,6 +158,7 @@ function dbToExamen(row: DbExamen): Examen {
     pdfAttestationPaiement: row.pdf_attestation_paiement,
     pdfFicheInscription: row.pdf_fiche_inscription,
     pdfConvocation: row.pdf_convocation,
+    pdfVersions: row.pdf_versions || [],
     resultatEmailSent: row.resultat_email_sent || false,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -231,6 +242,7 @@ export interface UpdateExamenFields {
   pdfFicheInscription?: string | null;
   pdfConvocation?: string | null;
   pieceIdentite?: string[] | null;
+  pdfVersions?: PdfVersion[];
   resultatEmailSent?: boolean;
 }
 
@@ -240,7 +252,7 @@ export async function updateExamenFields(
 ): Promise<void> {
   const supabase = await createClient();
 
-  const dbFields: Record<string, string | number | boolean | null> = {};
+  const dbFields: Record<string, string | number | boolean | null | PdfVersion[]> = {};
   if (fields.dateExamen !== undefined) dbFields.date_examen = fields.dateExamen;
   if (fields.heureExamen !== undefined) dbFields.heure_examen = fields.heureExamen;
   if (fields.resultat !== undefined) dbFields.resultat = fields.resultat;
@@ -257,6 +269,7 @@ export async function updateExamenFields(
   if (fields.pdfFicheInscription !== undefined) dbFields.pdf_fiche_inscription = fields.pdfFicheInscription;
   if (fields.pdfConvocation !== undefined) dbFields.pdf_convocation = fields.pdfConvocation;
   if (fields.pieceIdentite !== undefined) dbFields.piece_identite = fields.pieceIdentite ? JSON.stringify(fields.pieceIdentite) : null;
+  if (fields.pdfVersions !== undefined) dbFields.pdf_versions = fields.pdfVersions;
   if (fields.resultatEmailSent !== undefined) dbFields.resultat_email_sent = fields.resultatEmailSent;
 
   if (Object.keys(dbFields).length === 0) return;
