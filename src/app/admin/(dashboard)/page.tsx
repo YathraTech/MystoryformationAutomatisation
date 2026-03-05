@@ -7,7 +7,7 @@ import StatusBadge from '@/components/admin/StatusBadge';
 import RevenueChart from '@/components/admin/RevenueChart';
 import Link from 'next/link';
 import type { CommercialRevenue, FeuilleAppelData, FeuilleAppelExamen } from '@/types/admin';
-import { GraduationCap, BookOpen, Eye, EyeOff, Trophy, Sparkles, PartyPopper, Users, MapPin, Target, Crown, ShieldCheck, TrendingUp, TrendingDown, ClipboardCheck } from 'lucide-react';
+import { GraduationCap, BookOpen, Eye, EyeOff, Trophy, Sparkles, PartyPopper, Users, MapPin, Target, Crown, ShieldCheck, TrendingUp, TrendingDown, ClipboardCheck, RefreshCw } from 'lucide-react';
 
 // États des examens pour le tableau de bord (2 états uniquement + absent)
 function getExamenEtat(examen: { resultat: string; diplome: string | null; configured?: boolean }): { label: string; color: string } {
@@ -266,7 +266,7 @@ function CommercialList({ commercials, currentUserId }: { commercials: Commercia
 }
 
 export default function DashboardPage() {
-  const { stats, loading, error } = useStats();
+  const { stats, loading, refreshing, error, refresh } = useStats();
   const { id: currentUserId } = useAdminAuth();
   const [showRevenue, setShowRevenue] = useState(false);
 
@@ -498,7 +498,17 @@ export default function DashboardPage() {
   if (!isAdmin) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-slate-800">Tableau de bord</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-slate-800">Tableau de bord</h1>
+          <button
+            onClick={refresh}
+            disabled={refreshing}
+            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-800 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Actualisation...' : 'Actualiser'}
+          </button>
+        </div>
 
         {stats.feuilleAppel && stats.feuilleAppel.examens.length > 0 && (
           <FeuilleAppelSection feuilleAppel={stats.feuilleAppel} isAdmin={false} />
@@ -618,7 +628,17 @@ export default function DashboardPage() {
   // ===================== VUE ADMIN =====================
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-800">Tableau de bord</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-800">Tableau de bord</h1>
+        <button
+          onClick={refresh}
+          disabled={refreshing}
+          className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-800 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Actualisation...' : 'Actualiser'}
+        </button>
+      </div>
 
       {stats.feuilleAppel && stats.feuilleAppel.examens.length > 0 && (
         <FeuilleAppelSection feuilleAppel={stats.feuilleAppel} isAdmin={true} />
