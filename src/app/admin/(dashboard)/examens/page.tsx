@@ -16,7 +16,7 @@ const FILTER_TABS: { value: FilterType; label: string; color: string }[] = [
   { value: 'a_planifier', label: 'À planifier', color: 'bg-amber-100 text-amber-700' },
   { value: 'a_venir', label: 'À venir', color: 'bg-blue-100 text-blue-700' },
   { value: 'a_replanifier', label: 'À replanifier', color: 'bg-red-100 text-red-700' },
-  { value: 'termines', label: 'Terminés', color: 'bg-green-100 text-green-700' },
+  { value: 'termines', label: 'Suivi des résultats', color: 'bg-green-100 text-green-700' },
   { value: 'absent', label: 'Absents', color: 'bg-orange-100 text-orange-700' },
 ];
 
