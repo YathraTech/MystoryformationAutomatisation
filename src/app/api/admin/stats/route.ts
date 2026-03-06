@@ -4,7 +4,7 @@ import { getAllExamens } from '@/lib/data/examens';
 import { getSessionUser } from '@/lib/auth/session';
 import { getSafeUsers } from '@/lib/auth/users';
 import { getCaMensuelHistory } from '@/lib/data/ca-mensuel';
-import type { DashboardStats, InscriptionStatus, RevenueStats, CommercialRevenue, CentreRevenue, CentreExamenStats, FeuilleAppelData, FeuilleAppelExamen } from '@/types/admin';
+import type { DashboardStats, InscriptionStatus, RevenueStats, CommercialRevenue, CentreRevenue, CentreExamenStats, FeuilleAppelData, FeuilleAppelExamen, Inscription } from '@/types/admin';
 
 // Helper pour formater le nom du mois
 function getMonthLabel(year: number, month: number): string {
@@ -132,6 +132,13 @@ export async function GET() {
         }
       }
     }
+
+    // Compter les vraies formations (exclure les inscriptions auto-créées pour examens)
+    const isRealFormation = (ins: Inscription) => {
+      const nom = (ins.formationNom || '').toLowerCase();
+      return nom !== '' && !nom.includes('examen uniquement');
+    };
+    const totalFormations = inscriptions.filter(isRealFormation).length;
 
     const byFormation = Array.from(formationMap.entries())
       .map(([formation, count]) => ({ formation, count }))
@@ -328,11 +335,13 @@ export async function GET() {
         }
         // Inscriptions par centre
         const centreInscriptions = allInscriptions.filter((ins) => ins.lieu === centre);
+        const centreFormations = centreInscriptions.filter(isRealFormation).length;
         const centreExamenStats: CentreExamenStats = {
           totalExamens: centreExamens.length,
           examenTraites: centreTraites,
           examenACompleter: centreExamens.length - centreTraites,
           totalInscriptions: centreInscriptions.length,
+          totalFormations: centreFormations,
         };
 
         return {
@@ -405,6 +414,7 @@ export async function GET() {
 
     const stats: DashboardStats = {
       totalInscriptions: inscriptions.length,
+      totalFormations,
       totalExamens: examens.length,
       byStatus,
       byFormation,

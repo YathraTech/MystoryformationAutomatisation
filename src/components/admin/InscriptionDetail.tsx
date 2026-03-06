@@ -958,17 +958,14 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                     <span className="hidden sm:inline">{rawValue('telephone')}</span>
                   </a>
                 )}
-                {/* Bouton Passer l'examen */}
-                <button
-                  className="flex items-center gap-1.5 ml-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-red-600 transition-[background-color] duration-500 ease-in-out"
-                >
-                  <GraduationCap className="h-3.5 w-3.5" />
-                  Passer l'examen
-                </button>
               </div>
             </div>
             <p className="text-sm text-slate-500">
               Inscrit le {new Date(inscription.timestamp).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+              {examens.length > 0 && examens[0].commercialId && (() => {
+                const agent = staffMembers.find(s => s.id === examens[0].commercialId);
+                return agent ? <span> par <span className="font-medium text-slate-700">{agent.prenom} {agent.nom}</span></span> : null;
+              })()}
             </p>
           </div>
         </div>

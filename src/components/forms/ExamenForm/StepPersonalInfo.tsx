@@ -36,6 +36,12 @@ const LANGUES_LIST = [
   'Tamoul', 'Roumain', 'Polonais', 'Russe', 'Ukrainien',
 ];
 
+interface Agent {
+  id: string;
+  prenom: string;
+  nom: string;
+}
+
 interface StepPersonalInfoProps {
   hideAgence?: boolean;
   pendingFiles: File[];
@@ -85,6 +91,15 @@ export function StepPersonalInfo({ hideAgence, pendingFiles, onFilesChange }: St
   const [langueMaternelleSuggestions, setLangueMaternelleSuggestions] = useState<string[]>([]);
   const [showLangueMaternelleSuggestions, setShowLangueMaternelleSuggestions] = useState(false);
   const langueMaternelleSuggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Agents (inscrit par)
+  const [agents, setAgents] = useState<Agent[]>([]);
+  useEffect(() => {
+    fetch('/api/agents')
+      .then((res) => res.ok ? res.json() : [])
+      .then((data: Agent[]) => setAgents(Array.isArray(data) ? data : []))
+      .catch(() => setAgents([]));
+  }, []);
 
   // Autocomplétion langue (évaluation)
   const [langueInput, setLangueInput] = useState('');
@@ -792,6 +807,15 @@ export function StepPersonalInfo({ hideAgence, pendingFiles, onFilesChange }: St
                 <p className="mt-1 text-xs text-red-600">{errors.pieceIdentite.message}</p>
               )}
             </div>
+
+            {/* Agent inscripteur */}
+            <Select
+              label="Inscrit par"
+              placeholder="Sélectionnez l'agent..."
+              options={agents.map((a) => ({ value: a.id, label: `${a.prenom} ${a.nom}` }))}
+              error={errors.agentId?.message}
+              {...register('agentId')}
+            />
 
             {/* Comment nous avez-vous connu (optionnel) */}
             <Select

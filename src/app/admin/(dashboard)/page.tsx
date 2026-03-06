@@ -290,7 +290,7 @@ export default function DashboardPage() {
   const formationInscriptions = stats.recentInscriptions.filter(
     (ins) => ins.formationNom && !ins.formationNom.toLowerCase().includes('examen')
   );
-  const totalFormations = stats.totalInscriptions || 1;
+  const totalFormations = stats.totalFormations || stats.totalInscriptions || 1;
   const enAttente = stats.byStatus['En attente'] || 0;
   const validees = stats.byStatus['Validee'] || 0;
   const refusees = stats.byStatus['Refusee'] || 0;
@@ -429,7 +429,7 @@ export default function DashboardPage() {
       <div className="p-5 border-b border-slate-100 bg-slate-50/50">
         <div className="flex items-end gap-4">
           <div className="shrink-0">
-            <p className="text-4xl font-extrabold text-slate-800">{stats.totalInscriptions}</p>
+            <p className="text-4xl font-extrabold text-slate-800">{stats.totalFormations ?? stats.totalInscriptions}</p>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex h-2.5 rounded-full overflow-hidden bg-slate-200">
@@ -567,7 +567,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-center">
                   <p className="text-[9px] font-medium text-slate-400 uppercase tracking-wider">Formations</p>
-                  <p className="text-base font-bold text-blue-600">{stats.totalInscriptions}</p>
+                  <p className="text-base font-bold text-blue-600">{stats.totalFormations ?? stats.totalInscriptions}</p>
                 </div>
               </div>
 
@@ -699,7 +699,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
                           <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Formations</p>
-                          <p className="text-xl font-bold text-blue-600">{cs.totalInscriptions}</p>
+                          <p className="text-xl font-bold text-blue-600">{cs.totalFormations ?? cs.totalInscriptions}</p>
                         </div>
                       </div>
 

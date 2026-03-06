@@ -88,6 +88,7 @@ const step1Schema = z.object({
   motivation: z.string().min(1, 'Motivation requise'),
   motivationAutre: z.string().optional(),
   langue: z.string().min(1, 'Langue requise'),
+  agentId: z.string().min(1, 'Agent requis'),
 });
 
 // Schéma complet (étape 2 = récap, pas de champs supplémentaires)
@@ -127,6 +128,7 @@ const defaultValues: ExamenFormData = {
   motivation: '',
   motivationAutre: '',
   langue: '',
+  agentId: '',
 };
 
 interface SubmissionResult {

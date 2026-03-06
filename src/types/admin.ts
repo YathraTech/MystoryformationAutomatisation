@@ -89,6 +89,7 @@ export interface CentreExamenStats {
   examenTraites: number;
   examenACompleter: number;
   totalInscriptions: number;
+  totalFormations: number;
 }
 
 export interface CentreRevenue {
@@ -129,6 +130,7 @@ export interface FeuilleAppelSummary {
 
 export interface DashboardStats {
   totalInscriptions: number;
+  totalFormations: number;
   totalExamens: number;
   byStatus: Record<InscriptionStatus, number>;
   byFormation: { formation: string; count: number }[];

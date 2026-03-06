@@ -1,8 +1,15 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, AlertCircle, Globe, Building2, FileText } from 'lucide-react';
 import type { ExamenFormData } from './index';
 import { SOURCES_CONNAISSANCE, AGENCES, SERVICES_SOUHAITES, NIVEAUX, MOTIVATIONS } from './index';
+
+interface Agent {
+  id: string;
+  prenom: string;
+  nom: string;
+}
 
 interface StepRecapProps {
   data: ExamenFormData;
@@ -20,6 +27,18 @@ function getLabel(options: { value: string; label: string }[], value: string): s
 }
 
 export function StepRecap({ data, pendingFiles }: StepRecapProps) {
+  const [agents, setAgents] = useState<Agent[]>([]);
+  useEffect(() => {
+    fetch('/api/agents')
+      .then((res) => res.ok ? res.json() : [])
+      .then((d: Agent[]) => setAgents(Array.isArray(d) ? d : []))
+      .catch(() => setAgents([]));
+  }, []);
+
+  const agentName = data.agentId
+    ? (() => { const a = agents.find((ag) => ag.id === data.agentId); return a ? `${a.prenom} ${a.nom}` : data.agentId; })()
+    : '-';
+
   return (
     <div className="space-y-6">
       {/* Header avec icône d'alerte */}
@@ -189,6 +208,10 @@ export function StepRecap({ data, pendingFiles }: StepRecapProps) {
                   ? `Autres — ${data.motivationAutre}`
                   : getLabel(MOTIVATIONS, data.motivation)}
               </span>
+            </div>
+            <div>
+              <span className="text-slate-500">Inscrit par :</span>{' '}
+              <span className="font-medium text-slate-800">{agentName}</span>
             </div>
             {data.sourceConnaissance && (
               <div>
