@@ -291,9 +291,10 @@ export default function DashboardPage() {
     (ins) => ins.formationNom && !ins.formationNom.toLowerCase().includes('examen')
   );
   const totalFormations = stats.totalFormations || stats.totalInscriptions || 1;
-  const enAttente = stats.byStatus['En attente'] || 0;
-  const validees = stats.byStatus['Validee'] || 0;
-  const refusees = stats.byStatus['Refusee'] || 0;
+  const fStatus = stats.formationsByStatus || stats.byStatus;
+  const enAttente = fStatus['En attente'] || 0;
+  const validees = fStatus['Validee'] || 0;
+  const refusees = fStatus['Refusee'] || 0;
 
   const pctFormationValidees = (validees / totalFormations) * 100;
   const pctFormationAttente = (enAttente / totalFormations) * 100;

@@ -138,7 +138,23 @@ export async function GET() {
       const nom = (ins.formationNom || '').toLowerCase();
       return nom !== '' && !nom.includes('examen uniquement');
     };
-    const totalFormations = inscriptions.filter(isRealFormation).length;
+    const realFormations = inscriptions.filter(isRealFormation);
+    const totalFormations = realFormations.length;
+
+    // byStatus filtré pour les vraies formations uniquement
+    const formationsByStatus: Record<InscriptionStatus, number> = {
+      'En attente': 0,
+      Validee: 0,
+      Refusee: 0,
+      Archivee: 0,
+    };
+    for (const ins of realFormations) {
+      if (ins.statut in formationsByStatus) {
+        formationsByStatus[ins.statut]++;
+      } else {
+        formationsByStatus['En attente']++;
+      }
+    }
 
     const byFormation = Array.from(formationMap.entries())
       .map(([formation, count]) => ({ formation, count }))
@@ -417,6 +433,7 @@ export async function GET() {
       totalFormations,
       totalExamens: examens.length,
       byStatus,
+      formationsByStatus,
       byFormation,
       byMonth,
       recentInscriptions,

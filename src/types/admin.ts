@@ -133,6 +133,7 @@ export interface DashboardStats {
   totalFormations: number;
   totalExamens: number;
   byStatus: Record<InscriptionStatus, number>;
+  formationsByStatus: Record<InscriptionStatus, number>;
   byFormation: { formation: string; count: number }[];
   byMonth: { month: string; count: number }[];
   recentInscriptions: Inscription[];
