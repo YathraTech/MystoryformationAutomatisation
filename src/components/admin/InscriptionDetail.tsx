@@ -26,6 +26,7 @@ import {
   Archive,
   Trash2,
   Loader2,
+  Send,
 } from 'lucide-react';
 import type { Inscription, Formation, ExamOption } from '@/types/admin';
 import type { Examen, ExamenResultat, MoyenPaiement, TypeExamen, PdfVersion } from '@/lib/data/examens';
@@ -366,6 +367,8 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
   const [piecesIdentite, setPiecesIdentite] = useState<{ path: string; url: string | null; name: string }[]>([]);
   const [loadingPieces, setLoadingPieces] = useState(false);
   const [deletingPiecePath, setDeletingPiecePath] = useState<string | null>(null);
+  const [sendingAttestationId, setSendingAttestationId] = useState<number | null>(null);
+  const [attestationSentId, setAttestationSentId] = useState<number | null>(null);
 
   // Charger les pièces d'identité pour un examen
   const loadPiecesIdentite = useCallback(async (examenId: number) => {
@@ -1762,6 +1765,32 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                   {generatingDoc === `attestation_${examen.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                                   {examen.pdfAttestationPaiement ? 'Télécharger Attestation' : 'Attestation de paiement'}
                                 </button>
+
+                                {/* Envoyer attestation par email */}
+                                {examen.pdfAttestationPaiement && (
+                                  <button
+                                    disabled={sendingAttestationId === examen.id}
+                                    onClick={async () => {
+                                      setSendingAttestationId(examen.id);
+                                      setAttestationSentId(null);
+                                      try {
+                                        const res = await fetch(`/api/admin/examens/${examen.id}/send-attestation`, { method: 'POST' });
+                                        const data = await res.json();
+                                        if (res.ok) {
+                                          setAttestationSentId(examen.id);
+                                          setTimeout(() => setAttestationSentId(null), 4000);
+                                        } else {
+                                          console.error('Erreur envoi attestation:', data.error);
+                                        }
+                                      } catch (err) { console.error('Erreur envoi attestation:', err); }
+                                      finally { setSendingAttestationId(null); }
+                                    }}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors disabled:opacity-50"
+                                  >
+                                    {sendingAttestationId === examen.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                                    {attestationSentId === examen.id ? 'Envoyé !' : 'Envoyer par email'}
+                                  </button>
+                                )}
                               </div>
                             </div>
 
