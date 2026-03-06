@@ -370,26 +370,12 @@ export async function GET() {
     }
 
     // ===== Feuille d'appel =====
-    // Calculer l'heure Paris actuelle
+    // Uniquement les examens du jour
     const parisNow = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
-    const parisHour = parisNow.getHours();
-    const parisMinute = parisNow.getMinutes();
-    const parisTimeDecimal = parisHour + parisMinute / 60;
-
-    // Dates à inclure
     const todayStr = parisNow.toISOString().split('T')[0];
-    const yesterday = new Date(parisNow);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-    // Si avant 15h30: inclure hier ET aujourd'hui. Si après 15h30: uniquement aujourd'hui
-    const datesToInclude = parisTimeDecimal < 15.5
-      ? [yesterdayStr, todayStr]
-      : [todayStr];
-
-    // Filtrer les examens avec dateExamen correspondant
     const feuilleExamens = examens.filter((ex) =>
-      ex.dateExamen && datesToInclude.includes(ex.dateExamen)
+      ex.dateExamen && ex.dateExamen === todayStr
     );
 
     let feuilleAppel: FeuilleAppelData | null = null;
