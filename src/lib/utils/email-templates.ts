@@ -1,3 +1,39 @@
+import { createAdminClient } from '@/lib/supabase/admin';
+
+/**
+ * Résout le code diplôme (ex: "TEF_IRN:A1") en label lisible (ex: "TEF IRN - A1")
+ */
+export async function resolveDiplomeLabel(diplome: string | null): Promise<string> {
+  if (!diplome) return '-';
+
+  const supabase = createAdminClient();
+  const parts = diplome.split(':');
+  const typeCode = parts[0];
+  const optionCode = parts.length > 1 ? parts[1] : null;
+
+  // Récupérer le label du type d'examen
+  const { data: typeData } = await supabase
+    .from('exam_types')
+    .select('label')
+    .eq('code', typeCode)
+    .single();
+
+  const typeLabel = typeData?.label || typeCode;
+
+  if (!optionCode) return typeLabel;
+
+  // Récupérer le label de l'option
+  const { data: optionData } = await supabase
+    .from('exam_options')
+    .select('label')
+    .eq('code', optionCode)
+    .single();
+
+  const optionLabel = optionData?.label || optionCode;
+
+  return `${typeLabel} - ${optionLabel}`;
+}
+
 function formatDate(date: string | null): string {
   if (!date) return '-';
   return new Date(date).toLocaleDateString('fr-FR', {

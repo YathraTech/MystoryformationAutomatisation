@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getExamenById } from '@/lib/data/examens';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { buildConvocationEmail } from '@/lib/utils/email-templates';
+import { buildConvocationEmail, resolveDiplomeLabel } from '@/lib/utils/email-templates';
 
 export async function POST(
   _request: NextRequest,
@@ -35,10 +35,12 @@ export async function POST(
       );
     }
 
+    const diplomeLabel = await resolveDiplomeLabel(examen.diplome);
+
     const emailHtml = buildConvocationEmail(
       examen.prenom,
       examen.nom,
-      examen.typeExamen,
+      diplomeLabel,
       examen.dateExamen,
       examen.heureExamen,
       examen.lieu,
@@ -60,7 +62,7 @@ export async function POST(
               nom: examen.nom,
             },
             document_url: data.signedUrl,
-            email_subject: `MyStoryFormation - Votre convocation - ${examen.typeExamen || 'Examen'}`,
+            email_subject: `MyStoryFormation - Votre convocation - ${diplomeLabel}`,
             email_html: emailHtml,
           }),
         });

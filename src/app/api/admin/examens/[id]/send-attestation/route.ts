@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getExamenById } from '@/lib/data/examens';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { buildAttestationEmail } from '@/lib/utils/email-templates';
+import { buildAttestationEmail, resolveDiplomeLabel } from '@/lib/utils/email-templates';
 
 export async function POST(
   _request: NextRequest,
@@ -35,10 +35,12 @@ export async function POST(
       );
     }
 
+    const diplomeLabel = await resolveDiplomeLabel(examen.diplome);
+
     const emailHtml = buildAttestationEmail(
       examen.prenom,
       examen.nom,
-      examen.typeExamen,
+      diplomeLabel,
       examen.dateExamen,
       examen.prix,
       data.signedUrl,
@@ -59,7 +61,7 @@ export async function POST(
               nom: examen.nom,
             },
             document_url: data.signedUrl,
-            email_subject: `MyStoryFormation - Votre attestation de paiement - ${examen.typeExamen || 'Examen'}`,
+            email_subject: `MyStoryFormation - Votre attestation de paiement - ${diplomeLabel}`,
             email_html: emailHtml,
           }),
         });
