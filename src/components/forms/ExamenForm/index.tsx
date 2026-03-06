@@ -34,6 +34,34 @@ export const AGENCES = [
   { value: 'Sarcelles', label: 'Sarcelles' },
 ];
 
+// Services souhaités
+export const SERVICES_SOUHAITES = [
+  { value: 'examen_uniquement', label: 'Examen uniquement' },
+  { value: 'formation_tef_irn_examen', label: 'Formation TEF IRN + Examen' },
+  { value: 'formation_tef_irn_civique_examen', label: 'Formation TEF IRN + Formation Civique + Examen TEF IRN + Examen Civique' },
+];
+
+// Niveaux
+export const NIVEAUX = [
+  { value: 'A1', label: 'A1' },
+  { value: 'A2', label: 'A2' },
+  { value: 'B1', label: 'B1' },
+  { value: 'B2', label: 'B2' },
+  { value: 'C1', label: 'C1' },
+  { value: 'C2', label: 'C2' },
+];
+
+// Motivations
+export const MOTIVATIONS = [
+  { value: 'premiere_demande_titre_sejour', label: '1ère demande de titre de séjour' },
+  { value: 'carte_sejour_pluriannuelle', label: 'Carte de séjour pluriannuelle' },
+  { value: 'carte_resident', label: 'Carte de résident' },
+  { value: 'naturalisation', label: 'Naturalisation' },
+  { value: 'cnaps', label: 'Métier de la sécurité (CNAPS)' },
+  { value: 'formation_professionnelle', label: 'Formation professionnelle' },
+  { value: 'autre', label: 'Autres' },
+];
+
 // Schéma de validation pour l'étape 1 (informations personnelles)
 const step1Schema = z.object({
   civilite: z.enum(['M.', 'Mme', 'Autre'], { message: 'Veuillez sélectionner une civilité' }),
@@ -55,6 +83,11 @@ const step1Schema = z.object({
   typePieceIdentite: z.enum(['passeport', 'cni'], { message: 'Veuillez choisir un type de pièce d\'identité' }),
   numeroPasseport: z.string().optional(),
   numeroCni: z.string().optional(),
+  serviceSouhaite: z.string().min(1, 'Service souhaité requis'),
+  niveau: z.string().min(1, 'Niveau requis'),
+  motivation: z.string().min(1, 'Motivation requise'),
+  motivationAutre: z.string().optional(),
+  langue: z.string().min(1, 'Langue requise'),
 });
 
 // Schéma complet (étape 2 = récap, pas de champs supplémentaires)
@@ -89,6 +122,11 @@ const defaultValues: ExamenFormData = {
   typePieceIdentite: '' as ExamenFormData['typePieceIdentite'],
   numeroPasseport: '',
   numeroCni: '',
+  serviceSouhaite: '',
+  niveau: '',
+  motivation: '',
+  motivationAutre: '',
+  langue: '',
 };
 
 interface SubmissionResult {

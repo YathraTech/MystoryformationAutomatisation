@@ -2,7 +2,7 @@
 
 import { User, Mail, Phone, MapPin, AlertCircle, Globe, Building2, FileText } from 'lucide-react';
 import type { ExamenFormData } from './index';
-import { SOURCES_CONNAISSANCE, AGENCES } from './index';
+import { SOURCES_CONNAISSANCE, AGENCES, SERVICES_SOUHAITES, NIVEAUX, MOTIVATIONS } from './index';
 
 interface StepRecapProps {
   data: ExamenFormData;
@@ -164,6 +164,30 @@ export function StepRecap({ data, pendingFiles }: StepRecapProps) {
               <span className="text-slate-500">Agence :</span>{' '}
               <span className="font-medium text-slate-800">
                 {getLabel(AGENCES, data.agence)}
+              </span>
+            </div>
+            <div>
+              <span className="text-slate-500">Service souhaité :</span>{' '}
+              <span className="font-medium text-slate-800">
+                {getLabel(SERVICES_SOUHAITES, data.serviceSouhaite)}
+              </span>
+            </div>
+            <div>
+              <span className="text-slate-500">Niveau actuel :</span>{' '}
+              <span className="font-medium text-slate-800">
+                {getLabel(NIVEAUX, data.niveau)}
+              </span>
+            </div>
+            <div>
+              <span className="text-slate-500">Langue :</span>{' '}
+              <span className="font-medium text-slate-800">{data.langue || '-'}</span>
+            </div>
+            <div>
+              <span className="text-slate-500">Motivation :</span>{' '}
+              <span className="font-medium text-slate-800">
+                {data.motivation === 'autre' && data.motivationAutre
+                  ? `Autres — ${data.motivationAutre}`
+                  : getLabel(MOTIVATIONS, data.motivation)}
               </span>
             </div>
             {data.sourceConnaissance && (

@@ -6,7 +6,7 @@ import { Mail, Phone, Loader2, MapPin, Upload, X, FileText } from 'lucide-react'
 import { Input, Select, DatePicker } from '@/components/ui';
 import { CIVILITES } from '@/lib/utils/constants';
 import type { ExamenFormData } from './index';
-import { SOURCES_CONNAISSANCE, AGENCES } from './index';
+import { SOURCES_CONNAISSANCE, AGENCES, SERVICES_SOUHAITES, NIVEAUX, MOTIVATIONS } from './index';
 
 interface AddressSuggestion {
   properties: {
@@ -28,13 +28,13 @@ const NATIONALITES = [
   'Libanaise', 'Égyptienne', 'Autre'
 ].map(n => ({ value: n, label: n }));
 
-// Langues maternelles courantes
-const LANGUES = [
+// Langues courantes (suggestions pour autocomplete)
+const LANGUES_LIST = [
   'Français', 'Arabe', 'Berbère', 'Anglais', 'Espagnol', 'Portugais', 'Italien',
   'Allemand', 'Turc', 'Wolof', 'Bambara', 'Peul', 'Soninké', 'Mandingue',
   'Lingala', 'Swahili', 'Chinois (Mandarin)', 'Hindi', 'Ourdou', 'Bengali',
-  'Tamoul', 'Roumain', 'Polonais', 'Russe', 'Ukrainien', 'Autre'
-].map(l => ({ value: l, label: l }));
+  'Tamoul', 'Roumain', 'Polonais', 'Russe', 'Ukrainien',
+];
 
 interface StepPersonalInfoProps {
   hideAgence?: boolean;
@@ -74,6 +74,24 @@ export function StepPersonalInfo({ hideAgence, pendingFiles, onFilesChange }: St
   const [showPaysSuggestions, setShowPaysSuggestions] = useState(false);
   const paysSuggestionsRef = useRef<HTMLDivElement>(null);
 
+  // Autocomplétion ville de naissance
+  const [villeNaissanceInput, setVilleNaissanceInput] = useState('');
+  const [villeNaissanceSuggestions, setVilleNaissanceSuggestions] = useState<string[]>([]);
+  const [showVilleNaissanceSuggestions, setShowVilleNaissanceSuggestions] = useState(false);
+  const villeNaissanceSuggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Autocomplétion langue maternelle
+  const [langueMaternelleInput, setLangueMaternelleInput] = useState('');
+  const [langueMaternelleSuggestions, setLangueMaternelleSuggestions] = useState<string[]>([]);
+  const [showLangueMaternelleSuggestions, setShowLangueMaternelleSuggestions] = useState(false);
+  const langueMaternelleSuggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Autocomplétion langue (évaluation)
+  const [langueInput, setLangueInput] = useState('');
+  const [langueSuggestions, setLangueSuggestions] = useState<string[]>([]);
+  const [showLangueSuggestions, setShowLangueSuggestions] = useState(false);
+  const langueSuggestionsRef = useRef<HTMLDivElement>(null);
+
   // Fermer les suggestions quand on clique ailleurs
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -82,6 +100,15 @@ export function StepPersonalInfo({ hideAgence, pendingFiles, onFilesChange }: St
       }
       if (paysSuggestionsRef.current && !paysSuggestionsRef.current.contains(e.target as Node)) {
         setShowPaysSuggestions(false);
+      }
+      if (villeNaissanceSuggestionsRef.current && !villeNaissanceSuggestionsRef.current.contains(e.target as Node)) {
+        setShowVilleNaissanceSuggestions(false);
+      }
+      if (langueMaternelleSuggestionsRef.current && !langueMaternelleSuggestionsRef.current.contains(e.target as Node)) {
+        setShowLangueMaternelleSuggestions(false);
+      }
+      if (langueSuggestionsRef.current && !langueSuggestionsRef.current.contains(e.target as Node)) {
+        setShowLangueSuggestions(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -156,6 +183,94 @@ export function StepPersonalInfo({ hideAgence, pendingFiles, onFilesChange }: St
     setValue('lieuNaissance', pays, { shouldValidate: true });
     setPaysSuggestions([]);
     setShowPaysSuggestions(false);
+  };
+
+  // Liste des villes de naissance (suggestions)
+  const VILLES_NAISSANCE_LIST = [
+    'Paris', 'Marseille', 'Lyon', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Montpellier',
+    'Bordeaux', 'Lille', 'Rennes', 'Reims', 'Saint-Étienne', 'Toulon', 'Le Havre',
+    'Alger', 'Oran', 'Constantine', 'Annaba', 'Blida', 'Batna', 'Sétif', 'Tlemcen', 'Béjaïa',
+    'Casablanca', 'Rabat', 'Fès', 'Marrakech', 'Tanger', 'Meknès', 'Agadir', 'Oujda', 'Nador',
+    'Tunis', 'Sfax', 'Sousse', 'Gabès', 'Bizerte', 'Kairouan',
+    'Dakar', 'Bamako', 'Abidjan', 'Douala', 'Yaoundé', 'Kinshasa', 'Brazzaville',
+    'Conakry', 'Ouagadougou', 'Niamey', 'Cotonou', 'Lomé', 'Nouakchott',
+    'Istanbul', 'Ankara', 'Lisbonne', 'Madrid', 'Rome', 'Bucarest',
+    'Londres', 'Berlin', 'Bruxelles', 'Genève',
+    'Beyrouth', 'Damas', 'Bagdad', 'Le Caire', 'Amman',
+    'Pékin', 'New Delhi', 'Karachi', 'Lahore', 'Dacca', 'Colombo',
+    'Port-au-Prince', 'Antananarivo', 'Moroni',
+  ];
+
+  // Recherche de ville de naissance
+  const searchVilleNaissance = useCallback((query: string) => {
+    if (query.length < 1) {
+      setVilleNaissanceSuggestions([]);
+      setShowVilleNaissanceSuggestions(false);
+      return;
+    }
+
+    const queryLower = query.toLowerCase();
+    const results = VILLES_NAISSANCE_LIST.filter(ville =>
+      ville.toLowerCase().includes(queryLower)
+    ).slice(0, 8);
+
+    setVilleNaissanceSuggestions(results);
+    setShowVilleNaissanceSuggestions(results.length > 0);
+  }, []);
+
+  const handleVilleNaissanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setVilleNaissanceInput(value);
+    setValue('villeNaissance', value, { shouldValidate: true });
+    searchVilleNaissance(value);
+  };
+
+  const handleSelectVilleNaissance = (ville: string) => {
+    setVilleNaissanceInput(ville);
+    setValue('villeNaissance', ville, { shouldValidate: true });
+    setVilleNaissanceSuggestions([]);
+    setShowVilleNaissanceSuggestions(false);
+  };
+
+  // Recherche de langue (générique pour les deux champs)
+  const searchLangue = useCallback((query: string): string[] => {
+    if (query.length < 1) return [];
+    const queryLower = query.toLowerCase();
+    return LANGUES_LIST.filter(l => l.toLowerCase().includes(queryLower)).slice(0, 8);
+  }, []);
+
+  // Handlers langue maternelle
+  const handleLangueMaternelleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLangueMaternelleInput(value);
+    setValue('langueMaternelle', value, { shouldValidate: true });
+    const results = searchLangue(value);
+    setLangueMaternelleSuggestions(results);
+    setShowLangueMaternelleSuggestions(results.length > 0);
+  };
+
+  const handleSelectLangueMaternelle = (langue: string) => {
+    setLangueMaternelleInput(langue);
+    setValue('langueMaternelle', langue, { shouldValidate: true });
+    setLangueMaternelleSuggestions([]);
+    setShowLangueMaternelleSuggestions(false);
+  };
+
+  // Handlers langue (évaluation)
+  const handleLangueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLangueInput(value);
+    setValue('langue', value, { shouldValidate: true });
+    const results = searchLangue(value);
+    setLangueSuggestions(results);
+    setShowLangueSuggestions(results.length > 0);
+  };
+
+  const handleSelectLangue = (langue: string) => {
+    setLangueInput(langue);
+    setValue('langue', langue, { shouldValidate: true });
+    setLangueSuggestions([]);
+    setShowLangueSuggestions(false);
   };
 
   const handleAdresseChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -295,13 +410,33 @@ export function StepPersonalInfo({ hideAgence, pendingFiles, onFilesChange }: St
             maxDate={new Date().toISOString().split('T')[0]}
             {...register('dateNaissance')}
           />
-          <Input
-            label="Ville de naissance"
-            placeholder="Ex: Paris, Alger, Casablanca..."
-            leftIcon={<MapPin className="h-4 w-4" />}
-            error={errors.villeNaissance?.message}
-            {...register('villeNaissance')}
-          />
+          {/* Ville de naissance avec autocomplétion */}
+          <div className="relative" ref={villeNaissanceSuggestionsRef}>
+            <Input
+              label="Ville de naissance"
+              placeholder="Ex: Paris, Alger, Casablanca..."
+              leftIcon={<MapPin className="h-4 w-4" />}
+              error={errors.villeNaissance?.message}
+              value={villeNaissanceInput}
+              onChange={handleVilleNaissanceChange}
+              onFocus={() => villeNaissanceSuggestions.length > 0 && setShowVilleNaissanceSuggestions(true)}
+              autoComplete="off"
+            />
+            {showVilleNaissanceSuggestions && villeNaissanceSuggestions.length > 0 && (
+              <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {villeNaissanceSuggestions.map((ville, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => handleSelectVilleNaissance(ville)}
+                    className="w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors border-b border-slate-100 last:border-0"
+                  >
+                    <p className="text-sm font-medium text-slate-800">{ville}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -344,13 +479,32 @@ export function StepPersonalInfo({ hideAgence, pendingFiles, onFilesChange }: St
             error={errors.nationalite?.message}
             {...register('nationalite')}
           />
-          <Select
-            label="Langue maternelle"
-            placeholder="Sélectionnez..."
-            options={LANGUES}
-            error={errors.langueMaternelle?.message}
-            {...register('langueMaternelle')}
-          />
+          {/* Langue maternelle avec autocomplétion */}
+          <div className="relative" ref={langueMaternelleSuggestionsRef}>
+            <Input
+              label="Langue maternelle"
+              placeholder="Ex: Français, Arabe, Anglais..."
+              error={errors.langueMaternelle?.message}
+              value={langueMaternelleInput}
+              onChange={handleLangueMaternelleChange}
+              onFocus={() => langueMaternelleSuggestions.length > 0 && setShowLangueMaternelleSuggestions(true)}
+              autoComplete="off"
+            />
+            {showLangueMaternelleSuggestions && langueMaternelleSuggestions.length > 0 && (
+              <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {langueMaternelleSuggestions.map((langue, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => handleSelectLangueMaternelle(langue)}
+                    className="w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors border-b border-slate-100 last:border-0"
+                  >
+                    <p className="text-sm font-medium text-slate-800">{langue}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Adresse avec autocomplétion */}
@@ -482,6 +636,67 @@ export function StepPersonalInfo({ hideAgence, pendingFiles, onFilesChange }: St
                 options={AGENCES}
                 error={errors.agence?.message}
                 {...register('agence')}
+              />
+            )}
+
+            <Select
+              label="Service souhaité"
+              placeholder="Sélectionnez..."
+              options={SERVICES_SOUHAITES}
+              error={errors.serviceSouhaite?.message}
+              {...register('serviceSouhaite')}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Select
+                label="Niveau actuel"
+                placeholder="Sélectionnez..."
+                options={NIVEAUX}
+                error={errors.niveau?.message}
+                {...register('niveau')}
+              />
+              {/* Langue d'évaluation avec autocomplétion */}
+              <div className="relative" ref={langueSuggestionsRef}>
+                <Input
+                  label="Langue"
+                  placeholder="Ex: Français, Anglais..."
+                  error={errors.langue?.message}
+                  value={langueInput}
+                  onChange={handleLangueChange}
+                  onFocus={() => langueSuggestions.length > 0 && setShowLangueSuggestions(true)}
+                  autoComplete="off"
+                />
+                {showLangueSuggestions && langueSuggestions.length > 0 && (
+                  <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {langueSuggestions.map((langue, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => handleSelectLangue(langue)}
+                        className="w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors border-b border-slate-100 last:border-0"
+                      >
+                        <p className="text-sm font-medium text-slate-800">{langue}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <Select
+              label="Motivation"
+              placeholder="Sélectionnez..."
+              options={MOTIVATIONS}
+              error={errors.motivation?.message}
+              {...register('motivation')}
+            />
+
+            {watch('motivation') === 'autre' && (
+              <Input
+                label="Précisez votre motivation"
+                placeholder="Décrivez votre motivation..."
+                error={errors.motivationAutre?.message}
+                {...register('motivationAutre')}
               />
             )}
 

@@ -60,6 +60,9 @@ export interface Examen {
   commercialId: string | null;
   motivation: string | null;
   motivationAutre: string | null;
+  serviceSouhaite: string | null;
+  niveau: string | null;
+  langue: string | null;
   pdfAttestationPaiement: string | null;
   pdfFicheInscription: string | null;
   pdfConvocation: string | null;
@@ -107,6 +110,9 @@ interface DbExamen {
   commercial_id: string | null;
   motivation: string | null;
   motivation_autre: string | null;
+  service_souhaite: string | null;
+  niveau: string | null;
+  langue: string | null;
   pdf_attestation_paiement: string | null;
   pdf_fiche_inscription: string | null;
   pdf_convocation: string | null;
@@ -155,6 +161,9 @@ function dbToExamen(row: DbExamen): Examen {
     commercialId: row.commercial_id,
     motivation: row.motivation,
     motivationAutre: row.motivation_autre,
+    serviceSouhaite: row.service_souhaite,
+    niveau: row.niveau,
+    langue: row.langue,
     pdfAttestationPaiement: row.pdf_attestation_paiement,
     pdfFicheInscription: row.pdf_fiche_inscription,
     pdfConvocation: row.pdf_convocation,

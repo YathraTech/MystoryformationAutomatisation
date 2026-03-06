@@ -25,6 +25,11 @@ const examenSchema = z.object({
   typePieceIdentite: z.enum(['passeport', 'cni']),
   numeroPasseport: z.string().optional(),
   numeroCni: z.string().optional(),
+  serviceSouhaite: z.string().min(1),
+  niveau: z.string().min(1),
+  motivation: z.string().min(1),
+  motivationAutre: z.string().optional(),
+  langue: z.string().min(1),
 });
 
 export async function POST(request: Request) {
@@ -93,8 +98,8 @@ export async function POST(request: Request) {
           numero_cpf: '',
           numero_securite_sociale: '',
           mode_financement: '',
-          langue: '',
-          niveau_actuel: '',
+          langue: data.langue || '',
+          niveau_actuel: data.niveau || '',
           objectif: '',
           formation_id: '',
           formation_nom: 'Examen uniquement',
@@ -130,6 +135,11 @@ export async function POST(request: Request) {
         source_connaissance: data.sourceConnaissance || null,
         numero_passeport: data.numeroPasseport || null,
         numero_cni: data.numeroCni || null,
+        service_souhaite: data.serviceSouhaite,
+        niveau: data.niveau,
+        motivation: data.motivation,
+        motivation_autre: data.motivationAutre || null,
+        langue: data.langue,
       })
       .select('id, token')
       .single();
