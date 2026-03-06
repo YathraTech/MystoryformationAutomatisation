@@ -1652,7 +1652,9 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                             {/* Version actuelle */}
                             <div>
                               {(examen.pdfConvocation || examen.pdfFicheInscription || examen.pdfAttestationPaiement) && (
-                                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">(Version actuelle)</span>
+                                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
+                                  Version {(examen.pdfVersions?.length || 0) + 1} (actuelle)
+                                </span>
                               )}
                               <div className="flex flex-wrap items-center gap-2 mt-1">
                                 {/* Envoie de la convocation */}
