@@ -7,7 +7,7 @@ import StatusBadge from '@/components/admin/StatusBadge';
 import RevenueChart from '@/components/admin/RevenueChart';
 import Link from 'next/link';
 import type { CommercialRevenue, FeuilleAppelData, FeuilleAppelExamen } from '@/types/admin';
-import { GraduationCap, BookOpen, Eye, EyeOff, Trophy, Sparkles, PartyPopper, Users, MapPin, Target, Crown, ShieldCheck, TrendingUp, TrendingDown, ClipboardCheck, RefreshCw } from 'lucide-react';
+import { GraduationCap, BookOpen, Eye, EyeOff, Trophy, Sparkles, PartyPopper, Users, MapPin, Target, Crown, ShieldCheck, TrendingUp, TrendingDown, ClipboardCheck, RefreshCw, Check } from 'lucide-react';
 
 // États des examens pour le tableau de bord (2 états uniquement + absent)
 function getExamenEtat(examen: { resultat: string; diplome: string | null; configured?: boolean }): { label: string; color: string } {
@@ -38,9 +38,11 @@ function CentreBadge({ lieu }: { lieu: string | null | undefined }) {
 }
 
 // ===================== Feuille d'appel =====================
-function FeuilleAppelSection({ feuilleAppel, isAdmin }: { feuilleAppel: FeuilleAppelData; isAdmin: boolean }) {
+function FeuilleAppelSection({ feuilleAppel, isAdmin, onValidated }: { feuilleAppel: FeuilleAppelData; isAdmin: boolean; onValidated?: () => void }) {
   const [examens, setExamens] = useState<FeuilleAppelExamen[]>(feuilleAppel.examens);
   const [countdown, setCountdown] = useState('');
+  const [validating, setValidating] = useState(false);
+  const [validated, setValidated] = useState(false);
 
   // Sync when feuilleAppel prop changes
   useEffect(() => {
@@ -85,6 +87,25 @@ function FeuilleAppelSection({ feuilleAppel, isAdmin }: { feuilleAppel: FeuilleA
       setExamens(previous);
     }
   }, [examens]);
+
+  const allFilled = examens.length > 0 && examens.every((e) => e.resultat !== 'a_venir');
+
+  const handleValidate = useCallback(async () => {
+    setValidating(true);
+    try {
+      const res = await fetch(`/api/admin/feuilles-appel/${feuilleAppel.dateExamen}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setValidated(true);
+        onValidated?.();
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setValidating(false);
+    }
+  }, [feuilleAppel.dateExamen, onValidated]);
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('fr-FR', {
@@ -180,6 +201,32 @@ function FeuilleAppelSection({ feuilleAppel, isAdmin }: { feuilleAppel: FeuilleA
           </div>
         ))}
       </div>
+
+      {/* Bouton Valider l'appel */}
+      {allFilled && !validated && (
+        <div className="px-5 py-4 border-t border-orange-200 bg-orange-50/50">
+          <button
+            onClick={handleValidate}
+            disabled={validating}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-60"
+          >
+            {validating ? (
+              <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
+            {validating ? 'Validation...' : 'Valider l\u2019appel'}
+          </button>
+        </div>
+      )}
+      {validated && (
+        <div className="px-5 py-4 border-t border-emerald-200 bg-emerald-50 text-center">
+          <p className="text-sm font-medium text-emerald-700 flex items-center justify-center gap-2">
+            <Check className="h-4 w-4" />
+            Feuille d&apos;appel validée
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -512,7 +559,7 @@ export default function DashboardPage() {
         </div>
 
         {stats.feuilleAppel && stats.feuilleAppel.examens.length > 0 && (
-          <FeuilleAppelSection feuilleAppel={stats.feuilleAppel} isAdmin={false} />
+          <FeuilleAppelSection feuilleAppel={stats.feuilleAppel} isAdmin={false} onValidated={refresh} />
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6 lg:items-start">
@@ -642,7 +689,7 @@ export default function DashboardPage() {
       </div>
 
       {stats.feuilleAppel && stats.feuilleAppel.examens.length > 0 && (
-        <FeuilleAppelSection feuilleAppel={stats.feuilleAppel} isAdmin={true} />
+        <FeuilleAppelSection feuilleAppel={stats.feuilleAppel} isAdmin={true} onValidated={refresh} />
       )}
 
       {/* Chiffre d'affaires - Section avec flou */}
