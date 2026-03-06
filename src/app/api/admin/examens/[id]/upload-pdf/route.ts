@@ -29,7 +29,8 @@ export async function POST(
     }
 
     const supabase = createAdminClient();
-    const storagePath = `examens/${examenId}/${docType}_${fileName}`;
+    const timestamp = Date.now();
+    const storagePath = `examens/${examenId}/${docType}_${timestamp}_${fileName}`;
 
     // Create a signed upload URL so the client uploads directly to Storage
     const { data, error } = await supabase.storage
@@ -39,14 +40,22 @@ export async function POST(
     if (error || !data) {
       console.error('[Signed Upload URL Error]', error);
       return NextResponse.json(
-        { error: 'Erreur lors de la création de l\'URL d\'upload' },
+        { error: `Erreur signed URL: ${error?.message || 'unknown'}` },
         { status: 500 }
       );
     }
 
     // Save the storage path in DB now (the client will upload the file next)
-    const fieldName = DOC_TYPE_FIELD_MAP[docType];
-    await updateExamenFields(examenId, { [fieldName]: storagePath });
+    try {
+      const fieldName = DOC_TYPE_FIELD_MAP[docType];
+      await updateExamenFields(examenId, { [fieldName]: storagePath });
+    } catch (dbError) {
+      console.error('[Upload PDF DB Error]', dbError);
+      return NextResponse.json(
+        { error: `Erreur DB: ${dbError instanceof Error ? dbError.message : 'unknown'}` },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       signedUrl: data.signedUrl,
@@ -56,7 +65,7 @@ export async function POST(
   } catch (error) {
     console.error('[Upload PDF Error]', error);
     return NextResponse.json(
-      { error: 'Erreur lors de l\'upload' },
+      { error: `Erreur upload: ${error instanceof Error ? error.message : 'unknown'}` },
       { status: 500 }
     );
   }
