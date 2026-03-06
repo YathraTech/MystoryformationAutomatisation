@@ -1667,7 +1667,6 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                       try {
                                         if (!examen.pdfConvocation) {
                                           const { blob, fileName } = await generateConvocation(inscription, examen);
-                                          downloadBlob(blob, fileName);
                                           const urlRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
@@ -1747,7 +1746,6 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                         if (!examen.pdfFicheInscription) {
                                           const motLabels = Object.fromEntries(examObjectifs.map(o => [o.value, o.label]));
                                           const { blob, fileName } = await generateFicheInscription(inscription, examen, motLabels);
-                                          downloadBlob(blob, fileName);
                                           const urlRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
@@ -1829,7 +1827,6 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                           const commercial = staffMembers.find(s => s.id === examen.commercialId);
                                           const commercialNom = commercial ? `${commercial.prenom} ${commercial.nom}` : undefined;
                                           const { blob, fileName } = await generateAttestationPaiement(inscription, examen, commercialNom);
-                                          downloadBlob(blob, fileName);
                                           const urlRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
