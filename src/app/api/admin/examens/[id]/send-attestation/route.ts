@@ -30,16 +30,26 @@ function buildEmailHtml(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Attestation de paiement</title>
+  <!--[if !mso]><!-->
+  <style>
+    @media only screen and (max-width: 620px) {
+      .email-container { width: 100% !important; }
+      .email-padding { padding-left: 24px !important; padding-right: 24px !important; }
+      .email-header { padding: 24px 24px !important; }
+      .cta-btn { padding: 14px 24px !important; font-size: 14px !important; }
+    }
+  </style>
+  <!--<![endif]-->
 </head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;padding:40px 0;">
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;padding:40px 16px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <table role="presentation" class="email-container" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
 
           <!-- Header -->
           <tr>
-            <td style="background-color:#1e1e1e;padding:32px 40px;text-align:center;">
+            <td class="email-header" style="background-color:#1e1e1e;padding:32px 40px;text-align:center;">
               <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:0.5px;">MyStoryFormation</h1>
               <p style="margin:6px 0 0;font-size:13px;color:#a1a1aa;">Centre de formation et d'examens</p>
             </td>
@@ -47,7 +57,7 @@ function buildEmailHtml(
 
           <!-- Body -->
           <tr>
-            <td style="padding:36px 40px 20px;">
+            <td class="email-padding" style="padding:36px 40px 20px;">
               <p style="margin:0 0 20px;font-size:16px;color:#1e1e1e;">Bonjour <strong>${prenom} ${nom}</strong>,</p>
               <p style="margin:0 0 24px;font-size:15px;color:#3f3f46;line-height:1.6;">
                 Veuillez trouver ci-dessous votre attestation de paiement concernant votre inscription à l'examen.
@@ -79,7 +89,7 @@ function buildEmailHtml(
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   <td align="center">
-                    <a href="${attestationUrl}" target="_blank" style="display:inline-block;background-color:#1e1e1e;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:8px;letter-spacing:0.3px;">
+                    <a href="${attestationUrl}" target="_blank" class="cta-btn" style="display:inline-block;background-color:#1e1e1e;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:8px;letter-spacing:0.3px;">
                       Télécharger l'attestation
                     </a>
                   </td>
@@ -94,16 +104,22 @@ function buildEmailHtml(
 
           <!-- Divider -->
           <tr>
-            <td style="padding:0 40px;">
+            <td class="email-padding" style="padding:0 40px;">
               <hr style="border:none;border-top:1px solid #e4e4e7;margin:12px 0;">
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td style="padding:20px 40px 32px;text-align:center;">
-              <p style="margin:0 0 4px;font-size:12px;color:#a1a1aa;">MyStoryFormation</p>
-              <p style="margin:0;font-size:11px;color:#d4d4d8;">contact@mystoryformation.fr</p>
+            <td class="email-padding" style="padding:20px 40px 32px;text-align:center;">
+              <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#3f3f46;">MyStoryFormation</p>
+              <p style="margin:0 0 4px;font-size:12px;color:#71717a;">01 43 09 15 40</p>
+              <p style="margin:0 0 4px;font-size:12px;color:#71717a;">
+                <a href="mailto:contact@mystoryformation.fr" style="color:#71717a;text-decoration:underline;">contact@mystoryformation.fr</a>
+              </p>
+              <p style="margin:0;font-size:12px;color:#71717a;">
+                <a href="https://mystoryformation.fr" style="color:#71717a;text-decoration:underline;">mystoryformation.fr</a>
+              </p>
             </td>
           </tr>
 

@@ -88,6 +88,48 @@ function formatDateSlash(date: string | null | undefined): string {
   return `${day} / ${month} / ${year}`;
 }
 
+// Cache pour l'image Google Maps
+let mapsImageCache: Record<string, string> = {};
+
+async function loadGoogleMapsImage(lat: number, lng: number): Promise<string | null> {
+  const cacheKey = `${lat},${lng}`;
+  if (mapsImageCache[cacheKey]) return mapsImageCache[cacheKey];
+
+  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+
+  if (!key) return null;
+
+  try {
+    const url = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=15&size=640x320&scale=2&markers=color:red%7C${lat},${lng}&key=${key}`;
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        mapsImageCache[cacheKey] = result;
+        resolve(result);
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+function formatDateLong(date: string | null | undefined): string {
+  if (!date) return '—';
+  const d = new Date(date);
+  return d.toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
 // Caractères pour les cases à cocher
 const CHECKBOX_EMPTY = '☐';
 const CHECKBOX_CHECKED = '☑';
@@ -98,6 +140,109 @@ const COMPANY_ADDRESS = '123 Rue de la Formation, 75001 Paris';
 const COMPANY_PHONE = '01 23 45 67 89';
 const COMPANY_EMAIL = 'contact@mystoryformation.fr';
 const COMPANY_SIRET = '123 456 789 00012';
+
+// Centres d'examen
+const EXAM_LOCATIONS: Record<string, {
+  name: string;
+  address: string;
+  codePostal: string;
+  ville: string;
+  fullAddress: string;
+  coordinates: { lat: number; lng: number };
+  transport: { rer?: string; bus?: string; metro?: string; parking?: string };
+  accessNotes?: string;
+}> = {
+  gagny: {
+    name: 'Centre d\'examen de Gagny',
+    address: '1 Avenue du Chemin de Fer',
+    codePostal: '93220',
+    ville: 'Gagny',
+    fullAddress: '1 Avenue du Chemin de Fer, 93220 Gagny',
+    coordinates: { lat: 48.8834, lng: 2.5354 },
+    transport: {
+      rer: 'RER E — Arrêt Gagny (5 min à pied)',
+      bus: 'Bus 643, 621 — Arrêt Gagny Centre',
+      parking: 'Parking gratuit disponible à proximité du centre',
+    },
+    accessNotes: 'Entrée principale par l\'avenue du Chemin de Fer. Accueil au rez-de-chaussée.',
+  },
+  sarcelles: {
+    name: 'Centre d\'examen de Sarcelles',
+    address: '15 Boulevard de la Gare',
+    codePostal: '95200',
+    ville: 'Sarcelles',
+    fullAddress: '15 Boulevard de la Gare, 95200 Sarcelles',
+    coordinates: { lat: 48.9955, lng: 2.3808 },
+    transport: {
+      rer: 'RER D — Arrêt Garges-Sarcelles (10 min à pied)',
+      bus: 'Bus 268, 252 — Arrêt Sarcelles Gare',
+      parking: 'Parking public disponible Boulevard de la Gare',
+    },
+    accessNotes: 'Entrée par le boulevard de la Gare. Salle d\'examen au 1er étage.',
+  },
+};
+
+// Détails des épreuves par type d'examen
+const EXAM_EPREUVES: Record<string, {
+  titre: string;
+  description: string;
+  epreuves: { nom: string; code: string; duree: string; description: string }[];
+  consignesGenerales: string[];
+}> = {
+  TEF_IRN: {
+    titre: 'Test d\'Évaluation de Français — Intégration, Résidence et Nationalité',
+    description: 'Le TEF IRN évalue vos compétences en français dans le cadre d\'une demande de carte de résident ou de nationalité française. L\'examen se déroule sur ordinateur.',
+    epreuves: [
+      {
+        code: 'CO',
+        nom: 'Compréhension Orale',
+        duree: '40 min',
+        description: 'Écoute de documents sonores (dialogues, annonces, extraits radio) suivie de questions à choix multiples.',
+      },
+      {
+        code: 'CE',
+        nom: 'Compréhension Écrite',
+        duree: '60 min',
+        description: 'Lecture de textes (articles, courriers, annonces) suivie de questions à choix multiples.',
+      },
+      {
+        code: 'EE',
+        nom: 'Expression Écrite',
+        duree: '60 min',
+        description: 'Rédaction de textes : rédiger un message, un courriel ou un texte argumentatif selon le niveau visé.',
+      },
+      {
+        code: 'EO',
+        nom: 'Expression Orale',
+        duree: '15 min',
+        description: 'Entretien individuel face à un examinateur : présentation personnelle, discussion sur un sujet donné.',
+      },
+    ],
+    consignesGenerales: [
+      'L\'examen se déroule intégralement sur ordinateur (sauf Expression Orale).',
+      'Un casque audio vous sera fourni pour la Compréhension Orale.',
+      'Aucun brouillon n\'est autorisé sauf feuille fournie par le centre.',
+      'Les résultats sont disponibles sous 4 à 6 semaines après l\'examen.',
+    ],
+  },
+  CIVIQUE: {
+    titre: 'Test de Connaissances Civiques',
+    description: 'L\'examen civique évalue vos connaissances sur les valeurs et principes de la République française, dans le cadre d\'une demande de titre de séjour ou de naturalisation.',
+    epreuves: [
+      {
+        code: 'QCM',
+        nom: 'Valeurs et Principes de la République',
+        duree: '30 min',
+        description: 'Questionnaire à choix multiples portant sur l\'histoire de France, les institutions, les droits et devoirs des citoyens, et les valeurs de la République.',
+      },
+    ],
+    consignesGenerales: [
+      'L\'examen se déroule sur ordinateur sous forme de QCM.',
+      'Les questions portent sur les valeurs de la République, l\'histoire et les institutions françaises.',
+      'Les résultats sont communiqués à l\'issue de l\'examen.',
+    ],
+  },
+};
 
 function addHeader(doc: jsPDF, title: string) {
   // En-tête entreprise
@@ -388,7 +533,9 @@ export async function generateAttestationPaiement(
   doc.text("Cachet de l'organisme", margin + signatureBoxWidth / 2, y + 4, { align: 'center' });
 
   if (tampon) {
-    doc.addImage(tampon, 'PNG', margin + 4, y + 7, 38, 28);
+    const tamponWidth = 38;
+    const tamponX = margin + (signatureBoxWidth - tamponWidth) / 2;
+    doc.addImage(tampon, 'PNG', tamponX, y + 7, tamponWidth, 28);
   }
 
   y += signatureBoxHeight + 10;
@@ -696,7 +843,9 @@ export async function generateFicheInscription(
 
   // Tampon
   if (tampon) {
-    doc.addImage(tampon, 'PNG', margin + 4, y + 7, 38, 28);
+    const tamponWidth = 38;
+    const tamponX = margin + (signatureBoxWidth - tamponWidth) / 2;
+    doc.addImage(tampon, 'PNG', tamponX, y + 7, tamponWidth, 28);
   }
 
   // ===== FOOTER =====
@@ -711,130 +860,491 @@ export async function generateFicheInscription(
   return { blob, fileName };
 }
 
-export function generateConvocation(
+export async function generateConvocation(
   inscription: Inscription,
   examen: Examen
-): { blob: Blob; fileName: string } {
-  const doc = new jsPDF();
+): Promise<{ blob: Blob; fileName: string }> {
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 15;
+  const contentWidth = pageWidth - margin * 2;
+  const totalPages = 3;
 
-  addHeader(doc, 'CONVOCATION À L\'EXAMEN');
+  // Couleurs du thème
+  const primaryColor: [number, number, number] = [30, 30, 30];
+  const secondaryColor: [number, number, number] = [60, 60, 60];
+  const darkText: [number, number, number] = [20, 20, 20];
+  const lightText: [number, number, number] = [100, 100, 100];
+  const bgLight: [number, number, number] = [240, 240, 240];
 
-  let y = 85;
+  // Charger les assets
+  const logo = await loadLogo();
+  const tampon = await loadTampon(examen.lieuConfiguration || '');
 
-  // Informations du candidat
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Destinataire :', 20, y);
+  // Lookup lieu
+  const lieuKey = (examen.lieuConfiguration || examen.lieu || '').toLowerCase();
+  const locationInfo = EXAM_LOCATIONS[lieuKey] || null;
 
-  doc.setFont('helvetica', 'normal');
-  y += 8;
-  doc.text(`${inscription.civilite} ${inscription.prenom} ${inscription.nom}`, 20, y);
-  y += 6;
-  doc.text(`${inscription.adresse}`, 20, y);
-  y += 6;
-  doc.text(`${inscription.codePostal} ${inscription.ville}`, 20, y);
+  // Charger la carte Google Maps si on a les coordonnées
+  let mapsImage: string | null = null;
+  if (locationInfo) {
+    mapsImage = await loadGoogleMapsImage(locationInfo.coordinates.lat, locationInfo.coordinates.lng);
+  }
 
-  y += 20;
+  // Lookup épreuves
+  const diplomeCode = (examen.diplome || '').split(':')[0];
+  const epreuvesInfo = EXAM_EPREUVES[diplomeCode] || null;
 
-  // Objet
-  doc.setFont('helvetica', 'bold');
-  doc.text('Objet : Convocation à l\'examen', 20, y);
-
-  y += 15;
-
-  // Corps de la convocation
-  doc.setFont('helvetica', 'normal');
-  doc.text(`${inscription.civilite} ${inscription.prenom} ${inscription.nom},`, 20, y);
-
-  y += 10;
-  doc.text('Nous avons le plaisir de vous informer que vous êtes convoqué(e) pour passer votre examen', 20, y, { maxWidth: 170 });
-  y += 6;
-  doc.text('selon les modalités suivantes :', 20, y);
-
-  y += 15;
-
-  // Encadré avec les informations de l'examen
-  doc.setFillColor(245, 250, 255);
-  doc.setDrawColor(59, 130, 246);
-  doc.setLineWidth(0.5);
-  doc.rect(20, y, 170, 55, 'FD');
-
-  y += 10;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('INFORMATIONS DE L\'EXAMEN', 105, y, { align: 'center' });
-
-  y += 12;
-  doc.setFontSize(11);
-
-  const addInfoLine = (label: string, value: string) => {
-    doc.setFont('helvetica', 'bold');
-    doc.text(`${label} :`, 30, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(value || '-', 80, y);
-    y += 8;
+  // Parse diplome labels
+  const examTypeLabels: Record<string, string> = { 'TEF_IRN': 'TEF IRN', 'CIVIQUE': 'Examen Civique' };
+  const optionLabels: Record<string, string> = {
+    'A1': 'Niveau A1', 'A2': 'Niveau A2', 'B1': 'Niveau B1', 'B2': 'Niveau B2',
+    'carte_pluriannuelle': 'Carte pluriannuelle', 'carte_residence': 'Carte de résident', 'naturalisation': 'Naturalisation',
   };
-
-  // Parse le diplome pour la convocation
-  let convocationExamText = '';
-  const convocDiplome = examen.diplome || '';
-  const convocExamTypeLabels: Record<string, string> = { 'TEF_IRN': 'TEF IRN', 'CIVIQUE': 'Examen Civique' };
-  const convocOptionLabels: Record<string, string> = { 'A1': 'Niveau A1', 'A2': 'Niveau A2', 'B1': 'Niveau B1', 'B2': 'Niveau B2' };
-
-  if (convocDiplome) {
-    const parts = convocDiplome.split(':');
+  let examTypeName = '';
+  let mentionText = '';
+  if (examen.diplome) {
+    const parts = examen.diplome.split(':');
     if (parts.length === 2) {
-      const typeName = convocExamTypeLabels[parts[0]] || parts[0];
-      const optionName = convocOptionLabels[parts[1]] || parts[1];
-      convocationExamText = `${typeName} - ${optionName}`;
+      examTypeName = examTypeLabels[parts[0]] || parts[0];
+      mentionText = optionLabels[parts[1]] || parts[1];
     } else {
-      convocationExamText = convocDiplome;
+      examTypeName = examTypeLabels[examen.diplome.toUpperCase()] || examen.diplome;
     }
   }
 
-  addInfoLine('Examen', convocationExamText || 'Non défini');
-  addInfoLine('Date', formatDate(examen.dateExamen));
-  addInfoLine('Heure', examen.heureExamen || '-');
-  addInfoLine('Lieu', examen.lieu || '-');
+  // ===== HELPER: draw page header =====
+  const drawPageHeader = (title: string) => {
+    // Bande noire + grise
+    doc.setFillColor(...primaryColor);
+    doc.rect(0, 0, pageWidth, 5, 'F');
+    doc.setFillColor(...secondaryColor);
+    doc.rect(0, 5, pageWidth, 1, 'F');
 
-  y += 15;
+    let hY = 10;
+    if (logo) {
+      const logoWidth = 45;
+      const logoHeight = logoWidth / 3.59;
+      doc.addImage(logo, 'PNG', (pageWidth - logoWidth) / 2, hY, logoWidth, logoHeight);
+      hY += logoHeight + 5;
+    } else {
+      hY += 8;
+    }
 
-  // Instructions
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...darkText);
+    doc.text(title, pageWidth / 2, hY, { align: 'center' });
+    hY += 3;
+    doc.setDrawColor(...primaryColor);
+    doc.setLineWidth(0.6);
+    doc.line(pageWidth / 2 - 35, hY, pageWidth / 2 + 35, hY);
+
+    return hY + 8;
+  };
+
+  // ===== HELPER: draw section header bar =====
+  const drawSectionHeader = (title: string, yPos: number): number => {
+    doc.setFillColor(...primaryColor);
+    doc.roundedRect(margin, yPos, contentWidth, 6, 1, 1, 'F');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text(title, margin + 3, yPos + 4.2);
+    return yPos + 9;
+  };
+
+  // ===== HELPER: draw footer =====
+  const drawFooter = (pageNum: number) => {
+    doc.setFillColor(40, 40, 40);
+    doc.rect(0, pageHeight - 5, pageWidth, 5, 'F');
+    doc.setFontSize(6);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`MyStoryFormation - Convocation - Page ${pageNum}/${totalPages}`, pageWidth / 2, pageHeight - 1.5, { align: 'center' });
+  };
+
+  // ================================================================
+  // PAGE 1 — CONVOCATION
+  // ================================================================
+  let y = drawPageHeader('CONVOCATION À L\'EXAMEN');
+
+  // Section CANDIDAT
+  y = drawSectionHeader('CANDIDAT', y);
+  const nomComplet = `${inscription.civilite || ''} ${inscription.prenom || ''} ${inscription.nom || ''}`.trim();
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('Documents à apporter :', 20, y);
-
-  y += 8;
+  doc.setTextColor(...darkText);
+  doc.text(nomComplet || '—', margin, y + 1);
+  y += 7;
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('• Une pièce d\'identité en cours de validité (carte d\'identité ou passeport)', 25, y);
-  y += 6;
-  doc.text('• Cette convocation imprimée', 25, y);
-  y += 6;
-  doc.text('• De quoi écrire (stylo noir)', 25, y);
+  doc.setTextColor(...lightText);
+  const adresseCandidat = inscription.adresse
+    ? `${inscription.adresse}, ${inscription.codePostal || ''} ${inscription.ville || ''}`.trim()
+    : '';
+  if (adresseCandidat) {
+    doc.text(adresseCandidat, margin, y);
+    y += 5;
+  }
+  doc.text(`Tél: ${inscription.telephone || '—'}     Email: ${inscription.email || '—'}`, margin, y);
+  y += 10;
 
-  y += 15;
+  // Section DÉTAILS DE L'EXAMEN
+  y = drawSectionHeader('DÉTAILS DE L\'EXAMEN', y);
 
-  doc.setFont('helvetica', 'bold');
-  doc.text('Important :', 20, y);
-  y += 8;
+  const col3 = contentWidth / 3;
+
+  // Examen + Mention
+  doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
-  doc.text('• Veuillez vous présenter 15 minutes avant l\'heure de convocation', 25, y);
-  y += 6;
-  doc.text('• Tout retard pourra entraîner l\'impossibilité de passer l\'examen', 25, y);
-  y += 6;
-  doc.text('• Les téléphones portables doivent être éteints pendant l\'examen', 25, y);
-
-  y += 20;
-
-  // Formule de politesse
-  doc.text('Nous vous souhaitons bonne réussite pour votre examen.', 20, y);
-  y += 10;
-  doc.text('Cordialement,', 20, y);
-  y += 10;
+  doc.setTextColor(...lightText);
+  doc.text('EXAMEN', margin, y);
+  doc.text('MENTION', margin + col3, y);
+  y += 4;
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('L\'équipe MyStoryFormation', 20, y);
+  doc.setTextColor(...darkText);
+  doc.text(examTypeName || '—', margin, y);
+  doc.text(mentionText || '—', margin + col3, y);
+  y += 8;
 
-  addFooter(doc);
+  // Date / Heure / Lieu
+  doc.setFontSize(6);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...lightText);
+  doc.text('DATE', margin, y);
+  doc.text('HEURE', margin + col3, y);
+  doc.text('LIEU', margin + col3 * 2, y);
+  y += 4;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...darkText);
+  doc.text(examen.dateExamen ? formatDateLong(examen.dateExamen) : '—', margin, y, { maxWidth: col3 - 5 });
+  doc.text(examen.heureExamen || '—', margin + col3, y);
+  doc.text(examen.lieu || '—', margin + col3 * 2, y);
+  y += 8;
+
+  // Adresse complète du centre
+  if (locationInfo) {
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...lightText);
+    doc.text('ADRESSE DU CENTRE', margin, y);
+    y += 4;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...darkText);
+    doc.text(locationInfo.fullAddress, margin, y);
+    y += 8;
+  } else {
+    y += 4;
+  }
+
+  y += 2;
+
+  // Section DOCUMENTS À APPORTER
+  y = drawSectionHeader('DOCUMENTS À APPORTER', y);
+  const documents = [
+    'Une pièce d\'identité en cours de validité (carte d\'identité ou passeport)',
+    'Cette convocation imprimée',
+    'Un stylo noir',
+  ];
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...darkText);
+  documents.forEach((item) => {
+    doc.text(`•  ${item}`, margin + 2, y);
+    y += 6;
+  });
+  y += 4;
+
+  // Section INFORMATIONS IMPORTANTES
+  y = drawSectionHeader('INFORMATIONS IMPORTANTES', y);
+  const infos = [
+    'Veuillez vous présenter 15 minutes avant l\'heure de convocation.',
+    'Tout retard pourra entraîner l\'exclusion de l\'examen.',
+    'Les téléphones portables doivent être éteints et rangés.',
+    'Aucun matériel non autorisé ne sera toléré dans la salle d\'examen.',
+  ];
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...darkText);
+  infos.forEach((item) => {
+    doc.text(`•  ${item}`, margin + 2, y, { maxWidth: contentWidth - 5 });
+    y += 6;
+  });
+  y += 6;
+
+  // Signature — Fait à + cachet
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.3);
+  doc.line(margin, y, margin + contentWidth, y);
+  y += 6;
+
+  const lieuFait = examen.lieuConfiguration || examen.lieu || '..............';
+  const today = formatDateSlash(new Date().toISOString());
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...darkText);
+  doc.text(`Fait à ${lieuFait}, le ${today}`, margin, y);
+  y += 8;
+
+  const signatureBoxWidth = contentWidth / 2;
+  const signatureBoxHeight = 30;
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(margin, y, signatureBoxWidth, signatureBoxHeight, 1.5, 1.5, 'S');
+  doc.setFontSize(7);
+  doc.setTextColor(...lightText);
+  doc.text("Cachet de l'organisme", margin + signatureBoxWidth / 2, y + 4, { align: 'center' });
+
+  if (tampon) {
+    const tamponWidth = 34;
+    const tamponX = margin + (signatureBoxWidth - tamponWidth) / 2;
+    doc.addImage(tampon, 'PNG', tamponX, y + 6, tamponWidth, 22);
+  }
+
+  y += signatureBoxHeight + 8;
+
+  // Avertissement rouge
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(220, 38, 38);
+  doc.text('EXAMEN SUR ORDINATEUR', pageWidth / 2, y, { align: 'center' });
+  y += 7;
+  doc.text('NON REMBOURSABLE', pageWidth / 2, y, { align: 'center' });
+
+  // Footer page 1
+  drawFooter(1);
+
+  // ================================================================
+  // PAGE 2 — LIEU DE L'EXAMEN & ACCÈS
+  // ================================================================
+  doc.addPage('a4', 'p');
+  y = drawPageHeader('LIEU DE L\'EXAMEN & ACCÈS');
+
+  // Section ADRESSE DU CENTRE
+  y = drawSectionHeader('ADRESSE DU CENTRE D\'EXAMEN', y);
+
+  if (locationInfo) {
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...darkText);
+    doc.text(locationInfo.name, margin, y + 1);
+    y += 7;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(locationInfo.fullAddress, margin, y);
+    y += 10;
+  } else {
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...darkText);
+    doc.text(examen.lieu || 'Lieu non précisé', margin, y + 1);
+    y += 10;
+  }
+
+  // Carte Google Maps
+  if (mapsImage) {
+    const mapWidth = 160;
+    const mapHeight = 80;
+    const mapX = (pageWidth - mapWidth) / 2;
+    doc.addImage(mapsImage, 'PNG', mapX, y, mapWidth, mapHeight);
+    y += mapHeight + 8;
+  } else {
+    // Placeholder gris
+    const mapWidth = 160;
+    const mapHeight = 80;
+    const mapX = (pageWidth - mapWidth) / 2;
+    doc.setFillColor(230, 230, 230);
+    doc.roundedRect(mapX, y, mapWidth, mapHeight, 2, 2, 'F');
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(150, 150, 150);
+    doc.text('Carte non disponible', pageWidth / 2, y + mapHeight / 2, { align: 'center' });
+    doc.setFontSize(8);
+    doc.text('Consultez l\'adresse sur Google Maps pour vous repérer', pageWidth / 2, y + mapHeight / 2 + 8, { align: 'center' });
+    y += mapHeight + 8;
+  }
+
+  // Section ACCÈS & TRANSPORTS
+  if (locationInfo) {
+    y = drawSectionHeader('ACCÈS & TRANSPORTS', y);
+
+    const transportEntries: { label: string; value: string }[] = [];
+    if (locationInfo.transport.rer) transportEntries.push({ label: 'RER / TRAIN', value: locationInfo.transport.rer });
+    if (locationInfo.transport.metro) transportEntries.push({ label: 'MÉTRO', value: locationInfo.transport.metro });
+    if (locationInfo.transport.bus) transportEntries.push({ label: 'BUS', value: locationInfo.transport.bus });
+    if (locationInfo.transport.parking) transportEntries.push({ label: 'PARKING', value: locationInfo.transport.parking });
+
+    transportEntries.forEach((entry) => {
+      // Pastille grise avec label
+      doc.setFillColor(...bgLight);
+      doc.roundedRect(margin, y - 3, contentWidth, 12, 1.5, 1.5, 'F');
+
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...primaryColor);
+      doc.text(entry.label, margin + 3, y + 1);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...darkText);
+      doc.text(entry.value, margin + 3, y + 6);
+
+      y += 15;
+    });
+
+    // Note d'accès
+    if (locationInfo.accessNotes) {
+      y += 2;
+      // Encadré jaune
+      doc.setFillColor(255, 251, 235);
+      doc.setDrawColor(234, 179, 8);
+      doc.setLineWidth(0.5);
+      doc.roundedRect(margin, y, contentWidth, 16, 1.5, 1.5, 'FD');
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(161, 98, 7);
+      doc.text('NOTE D\'ACCÈS', margin + 3, y + 5);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120, 53, 15);
+      doc.text(locationInfo.accessNotes, margin + 3, y + 11, { maxWidth: contentWidth - 6 });
+    }
+  } else {
+    // Pas d'info de lieu
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(...lightText);
+    doc.text('Les informations de transport ne sont pas disponibles pour ce centre d\'examen.', margin, y);
+    doc.text('Veuillez consulter l\'adresse ci-dessus pour planifier votre trajet.', margin, y + 5);
+  }
+
+  // Footer page 2
+  drawFooter(2);
+
+  // ================================================================
+  // PAGE 3 — ÉPREUVES & RÈGLEMENT
+  // ================================================================
+  doc.addPage('a4', 'p');
+  y = drawPageHeader('ÉPREUVES & RÈGLEMENT');
+
+  // Section DÉROULEMENT DES ÉPREUVES
+  y = drawSectionHeader('DÉROULEMENT DES ÉPREUVES', y);
+
+  if (epreuvesInfo) {
+    // Titre de l'examen
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...darkText);
+    doc.text(epreuvesInfo.titre, margin, y, { maxWidth: contentWidth });
+    y += 7;
+
+    // Description
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...lightText);
+    const descLines = doc.splitTextToSize(epreuvesInfo.description, contentWidth);
+    doc.text(descLines, margin, y);
+    y += descLines.length * 4.5 + 5;
+
+    // Cartes d'épreuves
+    epreuvesInfo.epreuves.forEach((epreuve) => {
+      // Carte grise
+      const cardHeight = 20;
+      doc.setFillColor(...bgLight);
+      doc.roundedRect(margin, y, contentWidth, cardHeight, 1.5, 1.5, 'F');
+
+      // Badge code noir
+      const badgeWidth = 12;
+      doc.setFillColor(...primaryColor);
+      doc.roundedRect(margin + 3, y + 3, badgeWidth, 6, 1, 1, 'F');
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text(epreuve.code, margin + 3 + badgeWidth / 2, y + 7, { align: 'center' });
+
+      // Nom + durée
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...darkText);
+      doc.text(epreuve.nom, margin + badgeWidth + 6, y + 7);
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...lightText);
+      doc.text(epreuve.duree, margin + contentWidth - 3, y + 7, { align: 'right' });
+
+      // Description de l'épreuve
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80, 80, 80);
+      doc.text(epreuve.description, margin + 5, y + 14, { maxWidth: contentWidth - 10 });
+
+      y += cardHeight + 4;
+    });
+
+    // Consignes générales
+    if (epreuvesInfo.consignesGenerales.length > 0) {
+      y += 2;
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...darkText);
+      doc.text('Consignes générales :', margin, y);
+      y += 5;
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...lightText);
+      epreuvesInfo.consignesGenerales.forEach((consigne) => {
+        doc.text(`•  ${consigne}`, margin + 2, y, { maxWidth: contentWidth - 5 });
+        y += 5;
+      });
+    }
+  } else {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(...lightText);
+    doc.text('Les détails des épreuves ne sont pas disponibles pour ce type d\'examen.', margin, y);
+    y += 8;
+  }
+
+  y += 6;
+
+  // Section RÈGLEMENT INTÉRIEUR & ANTI-FRAUDE
+  y = drawSectionHeader('RÈGLEMENT INTÉRIEUR & ANTI-FRAUDE', y);
+
+  const regles = [
+    'Présentation d\'une pièce d\'identité valide obligatoire à l\'entrée de la salle.',
+    'Téléphones portables, montres connectées et tout appareil électronique doivent être éteints et déposés dans la zone prévue.',
+    'Toute tentative de fraude ou de communication entre candidats entraînera l\'exclusion immédiate et l\'annulation de l\'examen sans remboursement.',
+    'Aucun document, note ou support non autorisé ne peut être introduit dans la salle d\'examen.',
+    'Il est interdit de quitter la salle d\'examen avant la fin de l\'épreuve sans autorisation du surveillant.',
+    'Toute réclamation relative au déroulement de l\'examen doit être formulée par écrit dans un délai de 30 jours.',
+  ];
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...darkText);
+
+  regles.forEach((regle, index) => {
+    // Numéro
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...primaryColor);
+    doc.text(`${index + 1}.`, margin + 1, y);
+
+    // Texte
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...darkText);
+    const regleLines = doc.splitTextToSize(regle, contentWidth - 10);
+    doc.text(regleLines, margin + 8, y);
+    y += regleLines.length * 4.5 + 3;
+  });
+
+  // Footer page 3
+  drawFooter(3);
 
   const fileName = `convocation_${inscription.nom}_${inscription.prenom}_${formatDate(examen.dateExamen).replace(/\//g, '-')}.pdf`;
   const blob = doc.output('blob');
