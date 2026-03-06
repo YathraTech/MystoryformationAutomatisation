@@ -1672,11 +1672,13 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({ docType: 'convocation', fileName }),
                                           });
-                                          if (urlRes.ok) {
-                                            const { signedUrl, token } = await urlRes.json();
-                                            await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: blob });
-                                            void token;
+                                          if (!urlRes.ok) {
+                                            console.error('Erreur upload convocation');
+                                            return;
                                           }
+                                          const { signedUrl, token } = await urlRes.json();
+                                          await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: blob });
+                                          void token;
                                           await fetchExamens(inscription.clientId, inscription.email);
                                         }
                                         setGeneratingDoc(null);
@@ -1751,11 +1753,13 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({ docType: 'fiche_inscription', fileName }),
                                           });
-                                          if (urlRes.ok) {
-                                            const { signedUrl, token } = await urlRes.json();
-                                            await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: blob });
-                                            void token;
+                                          if (!urlRes.ok) {
+                                            console.error('Erreur upload fiche');
+                                            return;
                                           }
+                                          const { signedUrl, token } = await urlRes.json();
+                                          await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: blob });
+                                          void token;
                                           await fetchExamens(inscription.clientId, inscription.email);
                                         }
                                         setGeneratingDoc(null);
@@ -1832,11 +1836,13 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({ docType: 'attestation_paiement', fileName }),
                                           });
-                                          if (urlRes.ok) {
-                                            const { signedUrl, token } = await urlRes.json();
-                                            await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: blob });
-                                            void token;
+                                          if (!urlRes.ok) {
+                                            console.error('Erreur upload attestation');
+                                            return;
                                           }
+                                          const { signedUrl, token } = await urlRes.json();
+                                          await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: blob });
+                                          void token;
                                           await fetchExamens(inscription.clientId, inscription.email);
                                         }
                                         setGeneratingDoc(null);
