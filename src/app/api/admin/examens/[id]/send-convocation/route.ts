@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getExamenById } from '@/lib/data/examens';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { buildAttestationEmail } from '@/lib/utils/email-templates';
+import { buildConvocationEmail } from '@/lib/utils/email-templates';
 
 export async function POST(
   _request: NextRequest,
@@ -15,9 +15,9 @@ export async function POST(
       return NextResponse.json({ error: 'Examen introuvable' }, { status: 404 });
     }
 
-    if (!examen.pdfAttestationPaiement) {
+    if (!examen.pdfConvocation) {
       return NextResponse.json(
-        { error: 'Aucune attestation de paiement générée pour cet examen' },
+        { error: 'Aucune convocation générée pour cet examen' },
         { status: 400 }
       );
     }
@@ -25,22 +25,23 @@ export async function POST(
     const supabase = createAdminClient();
     const { data, error: storageError } = await supabase.storage
       .from('documents')
-      .createSignedUrl(examen.pdfAttestationPaiement, 604800);
+      .createSignedUrl(examen.pdfConvocation, 604800);
 
     if (storageError || !data?.signedUrl) {
-      console.error('[Send Attestation] Signed URL error:', storageError);
+      console.error('[Send Convocation] Signed URL error:', storageError);
       return NextResponse.json(
         { error: 'Erreur lors de la création du lien signé' },
         { status: 500 }
       );
     }
 
-    const emailHtml = buildAttestationEmail(
+    const emailHtml = buildConvocationEmail(
       examen.prenom,
       examen.nom,
       examen.typeExamen,
       examen.dateExamen,
-      examen.prix,
+      examen.heureExamen,
+      examen.lieu,
       data.signedUrl,
     );
 
@@ -51,7 +52,7 @@ export async function POST(
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            type: 'attestation_paiement',
+            type: 'convocation',
             timestamp: new Date().toISOString(),
             candidat: {
               email: examen.email,
@@ -59,7 +60,7 @@ export async function POST(
               nom: examen.nom,
             },
             document_url: data.signedUrl,
-            email_subject: `MyStoryFormation - Votre attestation de paiement - ${examen.typeExamen || 'Examen'}`,
+            email_subject: `MyStoryFormation - Votre convocation - ${examen.typeExamen || 'Examen'}`,
             email_html: emailHtml,
           }),
         });
@@ -70,12 +71,12 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: `Attestation envoyée par email à ${examen.email}`,
+      message: `Convocation envoyée par email à ${examen.email}`,
     });
   } catch (error) {
-    console.error('[Send Attestation Error]', error);
+    console.error('[Send Convocation Error]', error);
     return NextResponse.json(
-      { error: "Erreur lors de l'envoi de l'attestation" },
+      { error: "Erreur lors de l'envoi de la convocation" },
       { status: 500 }
     );
   }

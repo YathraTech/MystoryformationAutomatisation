@@ -367,8 +367,8 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
   const [piecesIdentite, setPiecesIdentite] = useState<{ path: string; url: string | null; name: string }[]>([]);
   const [loadingPieces, setLoadingPieces] = useState(false);
   const [deletingPiecePath, setDeletingPiecePath] = useState<string | null>(null);
-  const [sendingAttestationId, setSendingAttestationId] = useState<number | null>(null);
-  const [attestationSentId, setAttestationSentId] = useState<number | null>(null);
+  const [sendingDocId, setSendingDocId] = useState<string | null>(null);
+  const [docSentId, setDocSentId] = useState<string | null>(null);
 
   // Charger les pièces d'identité pour un examen
   const loadPiecesIdentite = useCallback(async (examenId: number) => {
@@ -1655,20 +1655,17 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                 <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">(Version actuelle)</span>
                               )}
                               <div className="flex flex-wrap items-center gap-2 mt-1">
-                                {/* Convocation */}
+                                {/* Envoie de la convocation */}
                                 <div className="flex items-center gap-1">
                                   <button
-                                    disabled={generatingDoc !== null}
+                                    disabled={generatingDoc !== null || sendingDocId === `convocation_${examen.id}`}
                                     onClick={async () => {
                                       if (!inscription) return;
                                       const docKey = `convocation_${examen.id}`;
                                       setGeneratingDoc(docKey);
+                                      setDocSentId(null);
                                       try {
-                                        if (examen.pdfConvocation) {
-                                          const res = await fetch(`/api/admin/examens/${examen.id}/download-pdf?path=${encodeURIComponent(examen.pdfConvocation)}`);
-                                          const data = await res.json();
-                                          if (data.url) window.open(data.url, '_blank');
-                                        } else {
+                                        if (!examen.pdfConvocation) {
                                           const { blob, fileName } = await generateConvocation(inscription, examen);
                                           downloadBlob(blob, fileName);
                                           const urlRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, {
@@ -1683,13 +1680,23 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                           }
                                           await fetchExamens(inscription.clientId, inscription.email);
                                         }
+                                        setGeneratingDoc(null);
+                                        setSendingDocId(docKey);
+                                        const res = await fetch(`/api/admin/examens/${examen.id}/send-convocation`, { method: 'POST' });
+                                        if (res.ok) {
+                                          setDocSentId(docKey);
+                                          setTimeout(() => setDocSentId(null), 4000);
+                                        } else {
+                                          const errData = await res.json();
+                                          console.error('Erreur envoi convocation:', errData.error);
+                                        }
                                       } catch (err) { console.error('Erreur document:', err); }
-                                      finally { setGeneratingDoc(null); }
+                                      finally { setGeneratingDoc(null); setSendingDocId(null); }
                                     }}
                                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors disabled:opacity-50"
                                   >
-                                    {generatingDoc === `convocation_${examen.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                                    {examen.pdfConvocation ? 'Télécharger Convocation' : 'Convocation'}
+                                    {(generatingDoc === `convocation_${examen.id}` || sendingDocId === `convocation_${examen.id}`) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                                    {docSentId === `convocation_${examen.id}` ? 'Envoyé !' : 'Envoie de la convocation'}
                                   </button>
                                   {examen.pdfConvocation && (
                                     <button
@@ -1708,20 +1715,17 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                   )}
                                 </div>
 
-                                {/* Fiche d'inscription */}
+                                {/* Envoie de la fiche d'inscription */}
                                 <div className="flex items-center gap-1">
                                   <button
-                                    disabled={generatingDoc !== null}
+                                    disabled={generatingDoc !== null || sendingDocId === `fiche_${examen.id}`}
                                     onClick={async () => {
                                       if (!inscription) return;
                                       const docKey = `fiche_${examen.id}`;
                                       setGeneratingDoc(docKey);
+                                      setDocSentId(null);
                                       try {
-                                        if (examen.pdfFicheInscription) {
-                                          const res = await fetch(`/api/admin/examens/${examen.id}/download-pdf?path=${encodeURIComponent(examen.pdfFicheInscription)}`);
-                                          const data = await res.json();
-                                          if (data.url) window.open(data.url, '_blank');
-                                        } else {
+                                        if (!examen.pdfFicheInscription) {
                                           const motLabels = Object.fromEntries(examObjectifs.map(o => [o.value, o.label]));
                                           const { blob, fileName } = await generateFicheInscription(inscription, examen, motLabels);
                                           downloadBlob(blob, fileName);
@@ -1737,13 +1741,23 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                           }
                                           await fetchExamens(inscription.clientId, inscription.email);
                                         }
+                                        setGeneratingDoc(null);
+                                        setSendingDocId(docKey);
+                                        const res = await fetch(`/api/admin/examens/${examen.id}/send-fiche`, { method: 'POST' });
+                                        if (res.ok) {
+                                          setDocSentId(docKey);
+                                          setTimeout(() => setDocSentId(null), 4000);
+                                        } else {
+                                          const errData = await res.json();
+                                          console.error('Erreur envoi fiche:', errData.error);
+                                        }
                                       } catch (err) { console.error('Erreur document:', err); }
-                                      finally { setGeneratingDoc(null); }
+                                      finally { setGeneratingDoc(null); setSendingDocId(null); }
                                     }}
                                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
                                   >
-                                    {generatingDoc === `fiche_${examen.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                                    {examen.pdfFicheInscription ? 'Télécharger Fiche' : 'Fiche d\'inscription'}
+                                    {(generatingDoc === `fiche_${examen.id}` || sendingDocId === `fiche_${examen.id}`) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                                    {docSentId === `fiche_${examen.id}` ? 'Envoyé !' : 'Envoie de la fiche d\'inscription'}
                                   </button>
                                   {examen.pdfFicheInscription && (
                                     <button
@@ -1765,14 +1779,13 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                 {/* Envoie de l'attestation de paiement */}
                                 <div className="flex items-center gap-1">
                                   <button
-                                    disabled={generatingDoc !== null || sendingAttestationId === examen.id}
+                                    disabled={generatingDoc !== null || sendingDocId === `attestation_${examen.id}`}
                                     onClick={async () => {
                                       if (!inscription) return;
                                       const docKey = `attestation_${examen.id}`;
                                       setGeneratingDoc(docKey);
-                                      setAttestationSentId(null);
+                                      setDocSentId(null);
                                       try {
-                                        // Générer le PDF si pas encore fait
                                         if (!examen.pdfAttestationPaiement) {
                                           const commercial = staffMembers.find(s => s.id === examen.commercialId);
                                           const commercialNom = commercial ? `${commercial.prenom} ${commercial.nom}` : undefined;
@@ -1791,23 +1804,22 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                           await fetchExamens(inscription.clientId, inscription.email);
                                         }
                                         setGeneratingDoc(null);
-                                        // Envoyer par email
-                                        setSendingAttestationId(examen.id);
+                                        setSendingDocId(docKey);
                                         const res = await fetch(`/api/admin/examens/${examen.id}/send-attestation`, { method: 'POST' });
                                         if (res.ok) {
-                                          setAttestationSentId(examen.id);
-                                          setTimeout(() => setAttestationSentId(null), 4000);
+                                          setDocSentId(docKey);
+                                          setTimeout(() => setDocSentId(null), 4000);
                                         } else {
                                           const errData = await res.json();
                                           console.error('Erreur envoi attestation:', errData.error);
                                         }
                                       } catch (err) { console.error('Erreur document:', err); }
-                                      finally { setGeneratingDoc(null); setSendingAttestationId(null); }
+                                      finally { setGeneratingDoc(null); setSendingDocId(null); }
                                     }}
                                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
                                   >
-                                    {(generatingDoc === `attestation_${examen.id}` || sendingAttestationId === examen.id) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                                    {attestationSentId === examen.id ? 'Envoyé !' : 'Envoie de l\'attestation de paiement'}
+                                    {(generatingDoc === `attestation_${examen.id}` || sendingDocId === `attestation_${examen.id}`) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                                    {docSentId === `attestation_${examen.id}` ? 'Envoyé !' : 'Envoie de l\'attestation de paiement'}
                                   </button>
                                   {examen.pdfAttestationPaiement && (
                                     <button
