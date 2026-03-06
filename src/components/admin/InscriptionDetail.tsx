@@ -1698,21 +1698,40 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                     {(generatingDoc === `convocation_${examen.id}` || sendingDocId === `convocation_${examen.id}`) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                                     {docSentId === `convocation_${examen.id}` ? 'Envoyé !' : 'Envoie de la convocation'}
                                   </button>
-                                  {examen.pdfConvocation && (
-                                    <button
-                                      onClick={async () => {
-                                        try {
-                                          const res = await fetch(`/api/admin/examens/${examen.id}/download-pdf?path=${encodeURIComponent(examen.pdfConvocation!)}`);
+                                  <button
+                                    disabled={generatingDoc === `dl_convocation_${examen.id}`}
+                                    onClick={async () => {
+                                      if (!inscription) return;
+                                      const docKey = `dl_convocation_${examen.id}`;
+                                      setGeneratingDoc(docKey);
+                                      try {
+                                        if (examen.pdfConvocation) {
+                                          const res = await fetch(`/api/admin/examens/${examen.id}/download-pdf?path=${encodeURIComponent(examen.pdfConvocation)}`);
                                           const data = await res.json();
                                           if (data.url) window.open(data.url, '_blank');
-                                        } catch (err) { console.error('Erreur téléchargement:', err); }
-                                      }}
-                                      className="p-1.5 text-purple-500 hover:bg-purple-100 rounded-md transition-colors"
-                                      title="Télécharger le PDF"
-                                    >
-                                      <Download className="h-3.5 w-3.5" />
-                                    </button>
-                                  )}
+                                        } else {
+                                          const { blob, fileName } = await generateConvocation(inscription, examen);
+                                          downloadBlob(blob, fileName);
+                                          const urlRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ docType: 'convocation', fileName }),
+                                          });
+                                          if (urlRes.ok) {
+                                            const { signedUrl, token } = await urlRes.json();
+                                            await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: blob });
+                                            void token;
+                                          }
+                                          await fetchExamens(inscription.clientId, inscription.email);
+                                        }
+                                      } catch (err) { console.error('Erreur téléchargement:', err); }
+                                      finally { setGeneratingDoc(null); }
+                                    }}
+                                    className="p-1.5 text-purple-500 hover:bg-purple-100 rounded-md transition-colors disabled:opacity-50"
+                                    title="Télécharger le PDF"
+                                  >
+                                    {generatingDoc === `dl_convocation_${examen.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                                  </button>
                                 </div>
 
                                 {/* Envoie de la fiche d'inscription */}
@@ -1759,21 +1778,41 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                     {(generatingDoc === `fiche_${examen.id}` || sendingDocId === `fiche_${examen.id}`) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                                     {docSentId === `fiche_${examen.id}` ? 'Envoyé !' : 'Envoie de la fiche d\'inscription'}
                                   </button>
-                                  {examen.pdfFicheInscription && (
-                                    <button
-                                      onClick={async () => {
-                                        try {
-                                          const res = await fetch(`/api/admin/examens/${examen.id}/download-pdf?path=${encodeURIComponent(examen.pdfFicheInscription!)}`);
+                                  <button
+                                    disabled={generatingDoc === `dl_fiche_${examen.id}`}
+                                    onClick={async () => {
+                                      if (!inscription) return;
+                                      const docKey = `dl_fiche_${examen.id}`;
+                                      setGeneratingDoc(docKey);
+                                      try {
+                                        if (examen.pdfFicheInscription) {
+                                          const res = await fetch(`/api/admin/examens/${examen.id}/download-pdf?path=${encodeURIComponent(examen.pdfFicheInscription)}`);
                                           const data = await res.json();
                                           if (data.url) window.open(data.url, '_blank');
-                                        } catch (err) { console.error('Erreur téléchargement:', err); }
-                                      }}
-                                      className="p-1.5 text-blue-500 hover:bg-blue-100 rounded-md transition-colors"
-                                      title="Télécharger le PDF"
-                                    >
-                                      <Download className="h-3.5 w-3.5" />
-                                    </button>
-                                  )}
+                                        } else {
+                                          const motLabels = Object.fromEntries(examObjectifs.map(o => [o.value, o.label]));
+                                          const { blob, fileName } = await generateFicheInscription(inscription, examen, motLabels);
+                                          downloadBlob(blob, fileName);
+                                          const urlRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ docType: 'fiche_inscription', fileName }),
+                                          });
+                                          if (urlRes.ok) {
+                                            const { signedUrl, token } = await urlRes.json();
+                                            await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: blob });
+                                            void token;
+                                          }
+                                          await fetchExamens(inscription.clientId, inscription.email);
+                                        }
+                                      } catch (err) { console.error('Erreur téléchargement:', err); }
+                                      finally { setGeneratingDoc(null); }
+                                    }}
+                                    className="p-1.5 text-blue-500 hover:bg-blue-100 rounded-md transition-colors disabled:opacity-50"
+                                    title="Télécharger le PDF"
+                                  >
+                                    {generatingDoc === `dl_fiche_${examen.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                                  </button>
                                 </div>
 
                                 {/* Envoie de l'attestation de paiement */}
@@ -1821,21 +1860,42 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                     {(generatingDoc === `attestation_${examen.id}` || sendingDocId === `attestation_${examen.id}`) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                                     {docSentId === `attestation_${examen.id}` ? 'Envoyé !' : 'Envoie de l\'attestation de paiement'}
                                   </button>
-                                  {examen.pdfAttestationPaiement && (
-                                    <button
-                                      onClick={async () => {
-                                        try {
-                                          const res = await fetch(`/api/admin/examens/${examen.id}/download-pdf?path=${encodeURIComponent(examen.pdfAttestationPaiement!)}`);
+                                  <button
+                                    disabled={generatingDoc === `dl_attestation_${examen.id}`}
+                                    onClick={async () => {
+                                      if (!inscription) return;
+                                      const docKey = `dl_attestation_${examen.id}`;
+                                      setGeneratingDoc(docKey);
+                                      try {
+                                        if (examen.pdfAttestationPaiement) {
+                                          const res = await fetch(`/api/admin/examens/${examen.id}/download-pdf?path=${encodeURIComponent(examen.pdfAttestationPaiement)}`);
                                           const data = await res.json();
                                           if (data.url) window.open(data.url, '_blank');
-                                        } catch (err) { console.error('Erreur téléchargement:', err); }
-                                      }}
-                                      className="p-1.5 text-emerald-500 hover:bg-emerald-100 rounded-md transition-colors"
-                                      title="Télécharger le PDF"
-                                    >
-                                      <Download className="h-3.5 w-3.5" />
-                                    </button>
-                                  )}
+                                        } else {
+                                          const commercial = staffMembers.find(s => s.id === examen.commercialId);
+                                          const commercialNom = commercial ? `${commercial.prenom} ${commercial.nom}` : undefined;
+                                          const { blob, fileName } = await generateAttestationPaiement(inscription, examen, commercialNom);
+                                          downloadBlob(blob, fileName);
+                                          const urlRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ docType: 'attestation_paiement', fileName }),
+                                          });
+                                          if (urlRes.ok) {
+                                            const { signedUrl, token } = await urlRes.json();
+                                            await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: blob });
+                                            void token;
+                                          }
+                                          await fetchExamens(inscription.clientId, inscription.email);
+                                        }
+                                      } catch (err) { console.error('Erreur téléchargement:', err); }
+                                      finally { setGeneratingDoc(null); }
+                                    }}
+                                    className="p-1.5 text-emerald-500 hover:bg-emerald-100 rounded-md transition-colors disabled:opacity-50"
+                                    title="Télécharger le PDF"
+                                  >
+                                    {generatingDoc === `dl_attestation_${examen.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                                  </button>
                                 </div>
                               </div>
                             </div>
