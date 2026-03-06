@@ -797,7 +797,7 @@ export async function generateFicheInscription(
   y += 9;
 
   const moyenPaiementLabels: Record<string, string> = {
-    'carte_bancaire': 'Carte bancaire', 'especes': 'Espèces', 'cpf': 'CPF', 'autre': 'Autre',
+    'carte_bancaire': 'Carte bancaire', 'lien_paiement': 'Lien de paiement', 'especes': 'Espèces', 'cpf': 'CPF', 'autre': 'Autre',
   };
 
   // Box montant
