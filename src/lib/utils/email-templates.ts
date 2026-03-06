@@ -6,32 +6,37 @@ import { createAdminClient } from '@/lib/supabase/admin';
 export async function resolveDiplomeLabel(diplome: string | null): Promise<string> {
   if (!diplome) return '-';
 
-  const supabase = createAdminClient();
-  const parts = diplome.split(':');
-  const typeCode = parts[0];
-  const optionCode = parts.length > 1 ? parts[1] : null;
+  try {
+    const supabase = createAdminClient();
+    const parts = diplome.split(':');
+    const typeCode = parts[0];
+    const optionCode = parts.length > 1 ? parts[1] : null;
 
-  // Récupérer le label du type d'examen
-  const { data: typeData } = await supabase
-    .from('exam_types')
-    .select('label')
-    .eq('code', typeCode)
-    .single();
+    // Récupérer le label du type d'examen
+    const { data: typeData } = await supabase
+      .from('exam_types')
+      .select('label')
+      .eq('code', typeCode)
+      .maybeSingle();
 
-  const typeLabel = typeData?.label || typeCode;
+    const typeLabel = typeData?.label || typeCode;
 
-  if (!optionCode) return typeLabel;
+    if (!optionCode) return typeLabel;
 
-  // Récupérer le label de l'option
-  const { data: optionData } = await supabase
-    .from('exam_options')
-    .select('label')
-    .eq('code', optionCode)
-    .single();
+    // Récupérer le label de l'option
+    const { data: optionData } = await supabase
+      .from('exam_options')
+      .select('label')
+      .eq('code', optionCode)
+      .maybeSingle();
 
-  const optionLabel = optionData?.label || optionCode;
+    const optionLabel = optionData?.label || optionCode;
 
-  return `${typeLabel} - ${optionLabel}`;
+    return `${typeLabel} - ${optionLabel}`;
+  } catch (err) {
+    console.error('[resolveDiplomeLabel] Error:', err);
+    return diplome;
+  }
 }
 
 function formatDate(date: string | null): string {
