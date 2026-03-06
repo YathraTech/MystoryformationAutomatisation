@@ -44,6 +44,7 @@ function parseRow(headers: string[], row: string[], rowIndex: number): Inscripti
     codePostal: obj.codePostal || '',
     ville: obj.ville || '',
     numeroCPF: obj.numeroCPF || '',
+    numeroDossierCPF: obj.numeroDossierCPF || '',
     numeroSecuriteSociale: obj.numeroSecuriteSociale || '',
     modeFinancement: obj.modeFinancement || '',
     langue: obj.langue || '',

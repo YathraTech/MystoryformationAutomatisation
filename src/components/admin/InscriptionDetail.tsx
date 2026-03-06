@@ -1129,6 +1129,7 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
         {/* CPF & Financement */}
         <CollapsibleSection title="CPF & Financement" icon={CreditCard}>
           <EditableField icon={CreditCard} label="Numéro CPF" value={inscription.numeroCPF} fieldKey="numeroCPF" {...fieldProps} />
+          <EditableField icon={CreditCard} label="Numéro de dossier CPF" value={inscription.numeroDossierCPF} fieldKey="numeroDossierCPF" {...fieldProps} />
           <EditableField icon={FileText} label="Numéro Sécurité Sociale" value={inscription.numeroSecuriteSociale} fieldKey="numeroSecuriteSociale" {...fieldProps} />
           <EditableField icon={CreditCard} label="Mode de financement" value={inscription.modeFinancement} fieldKey="modeFinancement" {...fieldProps} />
         </CollapsibleSection>

@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
       codePostal: data.codePostal,
       ville: data.ville,
       numeroCPF: data.numeroCPF || '',
+      numeroDossierCPF: '',
       numeroSecuriteSociale: data.numeroSecuriteSociale || '',
       modeFinancement: data.modeFinancement,
       langue: data.langue,

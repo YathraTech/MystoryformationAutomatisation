@@ -24,6 +24,7 @@ interface DbInscription {
   code_postal: string;
   ville: string;
   numero_cpf: string;
+  numero_dossier_cpf: string | null;
   numero_securite_sociale: string;
   mode_financement: string;
   langue: string;
@@ -63,6 +64,7 @@ function dbToInscription(row: DbInscription): Inscription {
     codePostal: row.code_postal || '',
     ville: row.ville || '',
     numeroCPF: row.numero_cpf || '',
+    numeroDossierCPF: row.numero_dossier_cpf || '',
     numeroSecuriteSociale: row.numero_securite_sociale || '',
     modeFinancement: row.mode_financement || '',
     langue: row.langue || '',
@@ -104,6 +106,7 @@ function inscriptionToDb(
     code_postal: data.codePostal,
     ville: data.ville,
     numero_cpf: data.numeroCPF,
+    numero_dossier_cpf: data.numeroDossierCPF || null,
     numero_securite_sociale: data.numeroSecuriteSociale,
     mode_financement: data.modeFinancement,
     langue: data.langue,
@@ -322,6 +325,7 @@ export async function updateInscriptionFields(
     codePostal: 'code_postal',
     ville: 'ville',
     numeroCPF: 'numero_cpf',
+    numeroDossierCPF: 'numero_dossier_cpf',
     numeroSecuriteSociale: 'numero_securite_sociale',
     modeFinancement: 'mode_financement',
     langue: 'langue',

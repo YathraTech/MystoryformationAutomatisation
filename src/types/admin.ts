@@ -18,6 +18,7 @@ export interface Inscription {
   codePostal: string;
   ville: string;
   numeroCPF: string;
+  numeroDossierCPF: string;
   numeroSecuriteSociale: string;
   modeFinancement: string;
   langue: string;
