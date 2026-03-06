@@ -11,7 +11,7 @@ function syncExamenToSheets(fn: () => Promise<void>): void {
 }
 
 export type ExamenResultat = 'a_venir' | 'reussi' | 'echoue' | 'absent';
-export type MoyenPaiement = 'carte_bancaire' | 'lien_paiement' | 'especes' | 'cpf' | 'autre';
+export type MoyenPaiement = 'carte_bancaire' | 'lien_paiement' | 'especes' | 'cpf' | 'mixte' | 'autre';
 export type TypeExamen = 'TEF IRN' | 'Civique' | 'PrepMyFuture';
 
 export interface PdfVersion {
@@ -50,6 +50,8 @@ export interface Examen {
   resultat: ExamenResultat;
   prix: number | null;
   moyenPaiement: MoyenPaiement | null;
+  montantEspeces: number | null;
+  montantCb: number | null;
   formateurId: string | null;
   typeExamen: TypeExamen | null;
   lieu: string | null;
@@ -100,6 +102,8 @@ interface DbExamen {
   resultat: string;
   prix: number | null;
   moyen_paiement: string | null;
+  montant_especes: number | null;
+  montant_cb: number | null;
   formateur_id: string | null;
   type_examen: string | null;
   lieu: string | null;
@@ -151,6 +155,8 @@ function dbToExamen(row: DbExamen): Examen {
     resultat: (row.resultat as ExamenResultat) || 'a_venir',
     prix: row.prix,
     moyenPaiement: row.moyen_paiement as MoyenPaiement | null,
+    montantEspeces: row.montant_especes,
+    montantCb: row.montant_cb,
     formateurId: row.formateur_id,
     typeExamen: row.type_examen as TypeExamen | null,
     lieu: row.lieu,
@@ -240,6 +246,8 @@ export interface UpdateExamenFields {
   resultat?: ExamenResultat;
   prix?: number | null;
   moyenPaiement?: MoyenPaiement | null;
+  montantEspeces?: number | null;
+  montantCb?: number | null;
   typeExamen?: TypeExamen | null;
   lieu?: string | null;
   remises?: string | null;
@@ -267,6 +275,8 @@ export async function updateExamenFields(
   if (fields.resultat !== undefined) dbFields.resultat = fields.resultat;
   if (fields.prix !== undefined) dbFields.prix = fields.prix;
   if (fields.moyenPaiement !== undefined) dbFields.moyen_paiement = fields.moyenPaiement;
+  if (fields.montantEspeces !== undefined) dbFields.montant_especes = fields.montantEspeces;
+  if (fields.montantCb !== undefined) dbFields.montant_cb = fields.montantCb;
   if (fields.typeExamen !== undefined) dbFields.type_examen = fields.typeExamen;
   if (fields.lieu !== undefined) dbFields.lieu = fields.lieu;
   if (fields.remises !== undefined) dbFields.remises = fields.remises;

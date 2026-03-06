@@ -100,6 +100,7 @@ const MOYENS_PAIEMENT: { value: MoyenPaiement; label: string }[] = [
   { value: 'carte_bancaire', label: 'Carte bancaire' },
   { value: 'lien_paiement', label: 'Lien de paiement' },
   { value: 'especes', label: 'Espèces' },
+  { value: 'mixte', label: 'Mixte (Espèces + CB)' },
   { value: 'cpf', label: 'CPF' },
   { value: 'autre', label: 'Autre' },
 ];
@@ -347,6 +348,8 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
   const [examenForm, setExamenForm] = useState({
     prix: '',
     moyenPaiement: '' as MoyenPaiement | '',
+    montantEspeces: '',
+    montantCb: '',
     commercialId: '' as string,
     typeExamen: '' as TypeExamen | '',
     lieu: '',
@@ -691,6 +694,8 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
     setExamenForm({
       prix: examen.prix?.toString() || '',
       moyenPaiement: examen.moyenPaiement || '',
+      montantEspeces: examen.montantEspeces?.toString() || '',
+      montantCb: examen.montantCb?.toString() || '',
       commercialId: examen.commercialId || '',
       typeExamen: examen.typeExamen || '',
       lieu: examen.lieu || '',
@@ -711,6 +716,8 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
     setExamenForm({
       prix: '',
       moyenPaiement: '',
+      montantEspeces: '',
+      montantCb: '',
       commercialId: '',
       typeExamen: '',
       lieu: '',
@@ -753,8 +760,12 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prix: prixFinal,
+          prix: examenForm.moyenPaiement === 'mixte'
+            ? (parseFloat(examenForm.montantEspeces || '0') + parseFloat(examenForm.montantCb || '0')) || prixFinal
+            : prixFinal,
           moyenPaiement: examenForm.moyenPaiement || null,
+          montantEspeces: examenForm.moyenPaiement === 'mixte' ? (parseFloat(examenForm.montantEspeces) || null) : null,
+          montantCb: examenForm.moyenPaiement === 'mixte' ? (parseFloat(examenForm.montantCb) || null) : null,
           commercialId: examenForm.commercialId || null,
           typeExamen: examenForm.typeExamen || null,
           lieu: examenForm.lieu || null,
@@ -1462,6 +1473,47 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                             </select>
                           </div>
 
+                          {/* Montants mixtes (Espèces + CB) */}
+                          {examenForm.moyenPaiement === 'mixte' && (
+                            <div className="col-span-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                              <p className="text-xs font-semibold text-blue-700 mb-2">Détail du paiement mixte</p>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-xs font-medium text-slate-600 mb-1">Montant espèces (€)</label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={examenForm.montantEspeces}
+                                    onChange={(e) => setExamenForm({ ...examenForm, montantEspeces: e.target.value })}
+                                    placeholder="0.00"
+                                    className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-slate-600 mb-1">Montant CB (€)</label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={examenForm.montantCb}
+                                    onChange={(e) => setExamenForm({ ...examenForm, montantCb: e.target.value })}
+                                    placeholder="0.00"
+                                    className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+                                  />
+                                </div>
+                              </div>
+                              {(examenForm.montantEspeces || examenForm.montantCb) && (
+                                <div className="mt-2 pt-2 border-t border-blue-200 flex items-center justify-between">
+                                  <span className="text-xs text-blue-600">Total :</span>
+                                  <span className="text-sm font-bold text-blue-800">
+                                    {((parseFloat(examenForm.montantEspeces) || 0) + (parseFloat(examenForm.montantCb) || 0)).toFixed(2)} €
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
                           {/* Date de paiement */}
                           <div>
                             <label className="block text-xs font-medium text-slate-600 mb-1">Date du paiement</label>
@@ -1630,7 +1682,15 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                               <div><span className="text-slate-500">Prix:</span> <span className="font-medium">{examen.prix}€</span></div>
                             )}
                             {examen.moyenPaiement && (
-                              <div><span className="text-slate-500">Paiement:</span> <span className="font-medium">{MOYENS_PAIEMENT.find(m => m.value === examen.moyenPaiement)?.label}</span></div>
+                              <div>
+                                <span className="text-slate-500">Paiement:</span>{' '}
+                                <span className="font-medium">{MOYENS_PAIEMENT.find(m => m.value === examen.moyenPaiement)?.label}</span>
+                                {examen.moyenPaiement === 'mixte' && (examen.montantEspeces || examen.montantCb) && (
+                                  <span className="text-xs text-slate-500 ml-1">
+                                    ({examen.montantEspeces ? `${examen.montantEspeces}€ espèces` : ''}{examen.montantEspeces && examen.montantCb ? ' + ' : ''}{examen.montantCb ? `${examen.montantCb}€ CB` : ''})
+                                  </span>
+                                )}
+                              </div>
                             )}
                             {examen.commercialId && (
                               <div><span className="text-slate-500">Commercial:</span> <span className="font-medium">{staffMembers.find(s => s.id === examen.commercialId)?.prenom} {staffMembers.find(s => s.id === examen.commercialId)?.nom}</span></div>
