@@ -811,7 +811,18 @@ export async function generateFicheInscription(
   doc.setTextColor(...darkText);
   doc.text(examen.prix !== null && examen.prix !== undefined ? `${examen.prix} €` : '— €', margin + 3, y + 8);
 
-  drawField('Moyen de paiement', moyenPaiementLabels[examen.moyenPaiement || ''] || '', margin + contentWidth / 2, contentWidth / 2);
+  // Box moyen de paiement (même hauteur, à droite)
+  const mpX = margin + contentWidth / 2;
+  doc.setFillColor(...bgLight);
+  doc.roundedRect(mpX, y - 1, contentWidth / 2, 12, 1.5, 1.5, 'F');
+  doc.setFontSize(6);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...lightText);
+  doc.text('MOYEN DE PAIEMENT', mpX + 3, y + 2);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...darkText);
+  doc.text(moyenPaiementLabels[examen.moyenPaiement || ''] || '—', mpX + 3, y + 8);
   y += 14;
 
   // ===== SIGNATURES =====
