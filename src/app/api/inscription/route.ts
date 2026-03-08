@@ -4,6 +4,7 @@ import { getFormationById } from '@/lib/data/formations';
 import { addInscription } from '@/lib/data/inscriptions';
 import { createClient } from '@/lib/supabase/server';
 import { getSessionUser } from '@/lib/auth/session';
+import { buildPreinscriptionFormationEmail } from '@/lib/utils/email-templates';
 
 export async function POST(request: NextRequest) {
   try {
@@ -94,38 +95,36 @@ export async function POST(request: NextRequest) {
     });
 
     // Envoi webhook Make.com — Confirmation de pré-inscription
-    const webhookPreinscription = process.env.MAKE_WEBHOOK_PREINSCRIPTION;
-    if (webhookPreinscription) {
+    const webhookUrl = process.env.MAKE_ATTESTATION_WEBHOOK_URL;
+    if (webhookUrl) {
       try {
-        await fetch(webhookPreinscription, {
+        const formationDuree = formation?.dureeHeures ? `${formation.dureeHeures}h` : '';
+        const formationPrix = formation?.prix ? `${formation.prix} €` : '';
+
+        const emailHtml = buildPreinscriptionFormationEmail(
+          data.prenom,
+          data.nom.toUpperCase(),
+          formation?.nom || '',
+          formationDuree,
+          formationPrix,
+          data.modeFinancement,
+          data.langue,
+          data.niveauActuel,
+        );
+
+        await fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             type: 'confirmation_preinscription',
             timestamp: new Date().toISOString(),
-            civilite: data.civilite,
-            nom: data.nom.toUpperCase(),
-            prenom: data.prenom,
-            email: data.email.toLowerCase(),
-            telephone: data.telephone,
-            date_naissance: data.dateNaissance,
-            adresse: data.adresse,
-            code_postal: data.codePostal,
-            ville: data.ville,
-            numero_cpf: data.numeroCPF || '',
-            numero_securite_sociale: data.numeroSecuriteSociale || '',
-            mode_financement: data.modeFinancement,
-            langue: data.langue,
-            niveau_actuel: data.niveauActuel,
-            objectif: data.objectif,
-            formation_id: data.formationId,
-            formation_nom: formation?.nom || '',
-            formation_duree: formation?.dureeHeures || 0,
-            formation_prix: formation?.prix || 0,
-            jours_disponibles: (data.joursDisponibles || []).join(', '),
-            creneaux_horaires: (data.creneauxHoraires || []).join(', '),
-            date_debut_souhaitee: data.dateDebutSouhaitee || '',
-            commentaires: data.commentaires || '',
+            candidat: {
+              email: data.email.toLowerCase(),
+              prenom: data.prenom,
+              nom: data.nom.toUpperCase(),
+            },
+            email_subject: `MyStoryFormation - Confirmation de pré-inscription - ${formation?.nom || 'Formation'}`,
+            email_html: emailHtml,
           }),
         });
       } catch (webhookError) {

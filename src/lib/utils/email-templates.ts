@@ -156,6 +156,62 @@ function ctaButton(url: string, label: string): string {
   </p>`;
 }
 
+export function buildPreinscriptionFormationEmail(
+  prenom: string,
+  nom: string,
+  formationNom: string,
+  formationDuree: string,
+  formationPrix: string,
+  modeFinancement: string,
+  langue: string,
+  niveauActuel: string,
+): string {
+  const body = `
+    <p style="margin:0 0 20px;font-size:16px;color:#1e1e1e;">Bonjour <strong>${prenom} ${nom}</strong>,</p>
+    <p style="margin:0 0 24px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      Nous avons bien reçu votre demande de pré-inscription. Voici un récapitulatif de votre demande :
+    </p>
+    ${recapTable(
+      recapRow('Formation', formationNom || '-', true) +
+      recapRow('Durée', formationDuree || '-', false) +
+      recapRow('Prix', formationPrix || '-', false) +
+      recapRow('Financement', modeFinancement || '-', false) +
+      recapRow('Langue', langue || '-', false) +
+      recapRow('Niveau actuel', niveauActuel || '-', false)
+    )}
+    <p style="margin:0 0 8px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      Notre équipe vous contactera prochainement pour finaliser votre inscription.
+    </p>
+    <p style="margin:0;font-size:14px;color:#71717a;line-height:1.5;">
+      Si vous avez des questions, n'hésitez pas à nous contacter par email ou par téléphone.
+    </p>`;
+  return emailLayout('Confirmation de pré-inscription', body);
+}
+
+export function buildPreinscriptionExamenEmail(
+  prenom: string,
+  nom: string,
+  diplomeLabel: string,
+  lieu: string,
+): string {
+  const body = `
+    <p style="margin:0 0 20px;font-size:16px;color:#1e1e1e;">Bonjour <strong>${prenom} ${nom}</strong>,</p>
+    <p style="margin:0 0 24px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      Nous avons bien reçu votre inscription à l'examen. Voici un récapitulatif :
+    </p>
+    ${recapTable(
+      recapRow("Examen", diplomeLabel || '-', true) +
+      recapRow("Centre", lieu || '-', false)
+    )}
+    <p style="margin:0 0 8px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      Vous recevrez prochainement votre convocation avec la date et l'heure de passage.
+    </p>
+    <p style="margin:0;font-size:14px;color:#71717a;line-height:1.5;">
+      Si vous avez des questions, n'hésitez pas à nous contacter par email ou par téléphone.
+    </p>`;
+  return emailLayout("Confirmation d'inscription à l'examen", body);
+}
+
 export function buildAttestationEmail(
   prenom: string,
   nom: string,
