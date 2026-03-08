@@ -7,6 +7,7 @@ import {
   AlertCircle,
   Shield,
   Briefcase,
+  Building2,
   Mail,
   Check,
   Lock,
@@ -16,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 
-type UserRole = 'admin' | 'commercial';
+type UserRole = 'admin' | 'commercial' | 'partenaire';
 
 interface StaffUser {
   id: string;
@@ -25,6 +26,7 @@ interface StaffUser {
   prenom: string;
   role: UserRole;
   lieu: string;
+  organisation: string | null;
   objectifCa: number | null;
   createdAt: string;
 }
@@ -32,6 +34,7 @@ interface StaffUser {
 const ROLES: { value: UserRole; label: string; icon: typeof Shield; color: string }[] = [
   { value: 'admin', label: 'Administrateur', icon: Shield, color: 'bg-purple-50 text-purple-700' },
   { value: 'commercial', label: 'Commercial', icon: Briefcase, color: 'bg-green-50 text-green-700' },
+  { value: 'partenaire', label: 'Partenaire', icon: Building2, color: 'bg-violet-50 text-violet-700' },
 ];
 
 const LIEUX = [
@@ -67,6 +70,7 @@ export default function StaffPage() {
     prenom: '',
     role: 'commercial' as UserRole,
     lieu: 'Gagny' as UserLieu,
+    organisation: '',
     definePassword: false,
   });
 
@@ -100,6 +104,7 @@ export default function StaffPage() {
         prenom: form.prenom,
         role: form.role,
         lieu: form.lieu,
+        ...(form.role === 'partenaire' && form.organisation ? { organisation: form.organisation } : {}),
         ...(form.definePassword && form.password ? { password: form.password } : {}),
       };
 
@@ -110,7 +115,7 @@ export default function StaffPage() {
       });
 
       if (res.ok) {
-        setForm({ email: '', password: '', nom: '', prenom: '', role: 'commercial', lieu: 'Gagny', definePassword: false });
+        setForm({ email: '', password: '', nom: '', prenom: '', role: 'commercial', lieu: 'Gagny', organisation: '', definePassword: false });
         setShowForm(false);
         await fetchUsers();
       } else {
@@ -349,7 +354,23 @@ export default function StaffPage() {
               <p className="mt-2 text-xs text-slate-500">
                 {form.role === 'admin' && 'Accès complet à toutes les fonctionnalités'}
                 {form.role === 'commercial' && 'Gestion des inscriptions et des relances'}
+                {form.role === 'partenaire' && 'Accès à l\'espace partenaire (planning, inscription, suivi)'}
               </p>
+
+              {form.role === 'partenaire' && (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Organisation
+                  </label>
+                  <input
+                    type="text"
+                    value={form.organisation}
+                    onChange={(e) => setForm({ ...form, organisation: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                    placeholder="Nom de l'organisation partenaire"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Sélection du lieu */}
@@ -459,7 +480,7 @@ export default function StaffPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-slate-600">
-                      {user.lieu || '-'}
+                      {user.role === 'partenaire' ? (user.organisation || '-') : (user.lieu || '-')}
                     </td>
                     <td className="px-5 py-3.5">
                       {user.role === 'commercial' ? (

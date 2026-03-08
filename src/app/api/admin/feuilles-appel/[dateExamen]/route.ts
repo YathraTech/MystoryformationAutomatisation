@@ -3,7 +3,6 @@ import { getExamensByDate, archiveExamensByDate } from '@/lib/data/examens';
 import { getAllInscriptions } from '@/lib/data/inscriptions';
 import { getSessionUser } from '@/lib/auth/session';
 import type { FeuilleAppelExamen, FeuilleAppelSummary } from '@/types/admin';
-import { computeFeuilleDeadline } from '@/lib/utils/feuille-deadline';
 
 export async function GET(
   request: NextRequest,
@@ -44,10 +43,6 @@ export async function GET(
       }
     }
 
-    // Deadline dynamique basée sur les heures d'examen
-    const deadlineDate = computeFeuilleDeadline(examens, dateExamen);
-    const deadlineIso = deadlineDate.toISOString();
-
     const feuilleExamens: FeuilleAppelExamen[] = examens.map((ex) => ({
       id: ex.id,
       nom: ex.nom,
@@ -60,6 +55,7 @@ export async function GET(
       resultat: ex.resultat as FeuilleAppelExamen['resultat'],
       lieu: ex.lieu,
       inscriptionId: emailToInscriptionId.get(ex.email.toLowerCase()) || null,
+      resultatEmailSent: ex.resultatEmailSent,
     }));
 
     // Summary
@@ -83,7 +79,6 @@ export async function GET(
     return NextResponse.json({
       examens: feuilleExamens,
       dateExamen,
-      deadline: deadlineIso,
       summary,
     });
   } catch (error) {

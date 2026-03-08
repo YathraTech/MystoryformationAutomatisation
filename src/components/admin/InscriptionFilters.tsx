@@ -9,6 +9,8 @@ interface InscriptionFiltersProps {
   onFilterChange: (key: keyof Filters, value: string) => void;
   formations: string[];
   commercials: { id: string; nom: string }[];
+  lieux: string[];
+  examTypes: { value: string; label: string }[];
   totalCount: number;
   filteredCount: number;
 }
@@ -18,6 +20,8 @@ export default function InscriptionFilters({
   onFilterChange,
   formations,
   commercials,
+  lieux,
+  examTypes,
   totalCount,
   filteredCount,
 }: InscriptionFiltersProps) {
@@ -30,7 +34,7 @@ export default function InscriptionFilters({
         </span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
         {/* Search */}
         <div className="relative sm:col-span-2 lg:col-span-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -81,6 +85,34 @@ export default function InscriptionFilters({
           {commercials.map((c) => (
             <option key={c.id} value={c.id}>
               {c.nom}
+            </option>
+          ))}
+        </select>
+
+        {/* Agence */}
+        <select
+          value={filters.lieu}
+          onChange={(e) => onFilterChange('lieu', e.target.value)}
+          className="text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+        >
+          <option value="all">Toutes les agences</option>
+          {lieux.map((l) => (
+            <option key={l} value={l}>
+              {l}
+            </option>
+          ))}
+        </select>
+
+        {/* Examen */}
+        <select
+          value={filters.examen}
+          onChange={(e) => onFilterChange('examen', e.target.value)}
+          className="text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+        >
+          <option value="all">Tous les examens</option>
+          {examTypes.map((t) => (
+            <option key={t.value} value={t.value}>
+              {t.label}
             </option>
           ))}
         </select>

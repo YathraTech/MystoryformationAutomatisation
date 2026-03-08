@@ -44,11 +44,12 @@ interface Agent {
 
 interface StepPersonalInfoProps {
   hideAgence?: boolean;
+  hideAgentSelector?: boolean;
   pendingFiles: File[];
   onFilesChange: (files: File[]) => void;
 }
 
-export function StepPersonalInfo({ hideAgence, pendingFiles, onFilesChange }: StepPersonalInfoProps) {
+export function StepPersonalInfo({ hideAgence, hideAgentSelector, pendingFiles, onFilesChange }: StepPersonalInfoProps) {
   const {
     register,
     setValue,
@@ -809,13 +810,15 @@ export function StepPersonalInfo({ hideAgence, pendingFiles, onFilesChange }: St
             </div>
 
             {/* Agent inscripteur */}
-            <Select
-              label="Inscrit par"
-              placeholder="Sélectionnez l'agent..."
-              options={agents.map((a) => ({ value: a.id, label: `${a.prenom} ${a.nom}` }))}
-              error={errors.agentId?.message}
-              {...register('agentId')}
-            />
+            {!hideAgentSelector && (
+              <Select
+                label="Inscrit par"
+                placeholder="Sélectionnez l'agent..."
+                options={agents.map((a) => ({ value: a.id, label: `${a.prenom} ${a.nom}` }))}
+                error={errors.agentId?.message}
+                {...register('agentId')}
+              />
+            )}
 
             {/* Comment nous avez-vous connu (optionnel) */}
             <Select

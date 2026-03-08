@@ -31,6 +31,7 @@ const examenSchema = z.object({
   motivationAutre: z.string().optional(),
   langue: z.string().min(1),
   agentId: z.string().optional(),
+  partenaireId: z.string().uuid().optional(),
 });
 
 export async function POST(request: Request) {
@@ -142,6 +143,7 @@ export async function POST(request: Request) {
         motivation_autre: data.motivationAutre || null,
         langue: data.langue,
         commercial_id: data.agentId || null,
+        partenaire_id: data.partenaireId || null,
       })
       .select('id, token')
       .single();

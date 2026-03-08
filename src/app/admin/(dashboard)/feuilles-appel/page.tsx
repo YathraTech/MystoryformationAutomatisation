@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
-import { ClipboardCheck, Clock, ChevronRight, Loader2, CheckCircle2 } from 'lucide-react';
+import { ClipboardCheck, Clock, ChevronRight, Loader2, CheckCircle2, Send, Mail, RefreshCw, Check } from 'lucide-react';
 import type { FeuilleAppelExamen, FeuilleAppelSummary } from '@/types/admin';
 
 function CentreBadge({ lieu }: { lieu: string | null | undefined }) {
@@ -38,43 +38,26 @@ function formatDateShort(date: string) {
 // ===================== Feuille du jour =====================
 function FeuilleActuelle({
   examens: initialExamens,
-  deadline,
   dateExamen,
   isAdmin,
 }: {
   examens: FeuilleAppelExamen[];
-  deadline: string;
   dateExamen: string;
   isAdmin: boolean;
 }) {
   const [examens, setExamens] = useState<FeuilleAppelExamen[]>(initialExamens);
-  const [countdown, setCountdown] = useState('');
+  const [validating, setValidating] = useState(false);
   const [validated, setValidated] = useState(false);
+  const [resendingId, setResendingId] = useState<number | null>(null);
+  const [resendResult, setResendResult] = useState<{ id: number; success: boolean } | null>(null);
 
   useEffect(() => {
     setExamens(initialExamens);
   }, [initialExamens]);
 
-  useEffect(() => {
-    const updateCountdown = () => {
-      const now = new Date();
-      const dl = new Date(deadline);
-      const diff = dl.getTime() - now.getTime();
-      if (diff <= 0) {
-        setCountdown('Deadline dépassée');
-        return;
-      }
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      setCountdown(`${hours}h${String(minutes).padStart(2, '0')} restantes`);
-    };
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 60000);
-    return () => clearInterval(interval);
-  }, [deadline]);
-
   const filled = examens.filter((e) => e.resultat !== 'a_venir').length;
-  const aVenir = examens.length - filled;
+  const allFilled = examens.length > 0 && examens.every((e) => e.resultat !== 'a_venir');
+  const allEmailsSent = examens.length > 0 && examens.every((e) => e.resultatEmailSent);
 
   const handleResultat = useCallback(async (id: number, resultat: FeuilleAppelExamen['resultat']) => {
     const previous = examens.map((e) => ({ ...e }));
@@ -92,6 +75,48 @@ function FeuilleActuelle({
     }
   }, [examens]);
 
+  const handleValidate = useCallback(async () => {
+    setValidating(true);
+    try {
+      const res = await fetch(`/api/admin/feuilles-appel/${dateExamen}/send-resultats`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (res.ok) {
+        setValidated(true);
+        setExamens((prev) => prev.map((e) => ({ ...e, resultatEmailSent: true })));
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setValidating(false);
+    }
+  }, [dateExamen]);
+
+  const handleResend = useCallback(async (examenId: number) => {
+    setResendingId(examenId);
+    setResendResult(null);
+    try {
+      const res = await fetch(`/api/admin/feuilles-appel/${dateExamen}/send-resultats`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ examenIds: [examenId] }),
+      });
+      if (res.ok) {
+        setExamens((prev) => prev.map((e) => e.id === examenId ? { ...e, resultatEmailSent: true } : e));
+        setResendResult({ id: examenId, success: true });
+      } else {
+        setResendResult({ id: examenId, success: false });
+      }
+    } catch {
+      setResendResult({ id: examenId, success: false });
+    } finally {
+      setResendingId(null);
+      setTimeout(() => setResendResult(null), 3000);
+    }
+  }, [dateExamen]);
+
   return (
     <div className="bg-white rounded-xl border-2 border-orange-200 overflow-hidden">
       {/* Header */}
@@ -108,9 +133,12 @@ function FeuilleActuelle({
             <span className="text-sm font-medium text-orange-700">
               {filled}/{examens.length} rempli{filled > 1 ? 's' : ''}
             </span>
-            <span className="text-xs bg-orange-100 text-orange-700 rounded-full px-3 py-1 font-medium">
-              {countdown}
-            </span>
+            {allEmailsSent && (
+              <span className="text-xs bg-emerald-100 text-emerald-700 rounded-full px-3 py-1 font-medium flex items-center gap-1">
+                <Mail className="h-3 w-3" />
+                Emails envoyés
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -139,6 +167,41 @@ function FeuilleActuelle({
             </div>
 
             {isAdmin && examen.lieu && <CentreBadge lieu={examen.lieu} />}
+
+            {/* Indicateur email + bouton renvoyer */}
+            {examen.resultat !== 'a_venir' && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                {examen.resultatEmailSent ? (
+                  <>
+                    <span className="text-xs text-emerald-600 flex items-center gap-1">
+                      <Mail className="h-3 w-3" />
+                    </span>
+                    <button
+                      onClick={() => handleResend(examen.id)}
+                      disabled={resendingId === examen.id}
+                      className="text-xs text-slate-400 hover:text-blue-600 transition-colors disabled:opacity-50"
+                      title="Renvoyer le résultat par email"
+                    >
+                      {resendingId === examen.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                    {resendResult?.id === examen.id && (
+                      <span className={`text-[10px] ${resendResult.success ? 'text-emerald-600' : 'text-red-500'}`}>
+                        {resendResult.success ? 'Envoyé !' : 'Erreur'}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-xs text-slate-400 flex items-center gap-1">
+                    <Mail className="h-3 w-3" />
+                    <span className="text-[10px]">Non envoyé</span>
+                  </span>
+                )}
+              </div>
+            )}
 
             <div className="flex items-center gap-1.5 shrink-0">
               <button
@@ -176,29 +239,29 @@ function FeuilleActuelle({
         ))}
       </div>
 
-      {/* Bandeau de validation */}
-      {validated && (
-        <div className="flex items-center gap-2 bg-green-50 border-t border-green-200 px-5 py-3">
-          <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-          <span className="text-sm font-medium text-green-700">Feuille d&apos;appel validée</span>
+      {/* Bouton Valider — envoie les emails */}
+      {allFilled && !validated && !allEmailsSent && (
+        <div className="px-5 py-4 border-t border-orange-200 bg-orange-50/50">
+          <button
+            onClick={handleValidate}
+            disabled={validating}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-60"
+          >
+            {validating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+            {validating ? 'Envoi des résultats...' : 'Valider l\u2019appel et envoyer les résultats'}
+          </button>
         </div>
       )}
-
-      {/* Bouton Valider */}
-      {!validated && (
-        <div className="px-5 py-4 border-t border-slate-100">
-          <button
-            disabled={aVenir > 0}
-            onClick={() => setValidated(true)}
-            title={aVenir > 0 ? 'Tous les résultats doivent être remplis' : undefined}
-            className={`w-full rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
-              aVenir > 0
-                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                : 'bg-green-600 text-white hover:bg-green-700'
-            }`}
-          >
-            Valider la feuille d&apos;appel
-          </button>
+      {(validated || allEmailsSent) && (
+        <div className="px-5 py-4 border-t border-emerald-200 bg-emerald-50 text-center">
+          <p className="text-sm font-medium text-emerald-700 flex items-center justify-center gap-2">
+            <Check className="h-4 w-4" />
+            Feuille d&apos;appel validée — résultats envoyés par email
+          </p>
         </div>
       )}
     </div>
@@ -252,7 +315,6 @@ function HistoriqueSection({ history }: { history: FeuilleAppelSummary[] }) {
 interface FeuilleAppelResponse {
   current: {
     examens: FeuilleAppelExamen[];
-    deadline: string;
     dateExamen: string;
     summary: FeuilleAppelSummary;
   } | null;
@@ -309,7 +371,6 @@ export default function FeuillesAppelPage() {
       {data?.current ? (
         <FeuilleActuelle
           examens={data.current.examens}
-          deadline={data.current.deadline}
           dateExamen={data.current.dateExamen}
           isAdmin={isAdmin}
         />

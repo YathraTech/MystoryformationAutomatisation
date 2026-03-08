@@ -20,6 +20,7 @@ interface InscriptionsTableProps {
   onPageChange: (page: number) => void;
   onUpdated: () => void;
   showLieu?: boolean;
+  examStatuses?: Record<string, ExamStatusInfo[]>;
 }
 
 const RESULTAT_STYLES: Record<string, { bg: string; text: string; ring: string; label: string }> = {
@@ -74,17 +75,21 @@ export default function InscriptionsTable({
   onPageChange,
   onUpdated,
   showLieu = false,
+  examStatuses: examStatusesProp,
 }: InscriptionsTableProps) {
   const router = useRouter();
   const [archiving, setArchiving] = useState<number | null>(null);
-  const [examStatuses, setExamStatuses] = useState<Record<string, ExamStatusInfo[]>>({});
+  const [localExamStatuses, setLocalExamStatuses] = useState<Record<string, ExamStatusInfo[]>>({});
 
   useEffect(() => {
+    if (examStatusesProp) return;
     fetch('/api/admin/inscriptions/exam-statuses')
       .then((res) => res.json())
-      .then((data) => setExamStatuses(data.statuses ?? {}))
-      .catch(() => setExamStatuses({}));
-  }, [inscriptions]);
+      .then((data) => setLocalExamStatuses(data.statuses ?? {}))
+      .catch(() => setLocalExamStatuses({}));
+  }, [inscriptions, examStatusesProp]);
+
+  const examStatuses = examStatusesProp ?? localExamStatuses;
 
   const handleRowClick = (rowIndex: number) => {
     router.push(`/admin/clients/${rowIndex}`);

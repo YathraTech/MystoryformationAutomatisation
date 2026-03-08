@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
-import { ArrowLeft, ClipboardCheck, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, ClipboardCheck, Trash2, Loader2, Send, Mail, RefreshCw, Check } from 'lucide-react';
 import type { FeuilleAppelExamen, FeuilleAppelSummary } from '@/types/admin';
 
 function CentreBadge({ lieu }: { lieu: string | null | undefined }) {
@@ -31,7 +31,6 @@ function formatDateFr(date: string) {
 interface FeuilleDetailData {
   examens: FeuilleAppelExamen[];
   dateExamen: string;
-  deadline: string;
   summary: FeuilleAppelSummary;
 }
 
@@ -49,6 +48,10 @@ export default function FeuilleAppelDetailPage() {
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [validated, setValidated] = useState(false);
+  const [resendingId, setResendingId] = useState<number | null>(null);
+  const [resendResult, setResendResult] = useState<{ id: number; success: boolean } | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -89,6 +92,51 @@ export default function FeuilleAppelDetailPage() {
       setExamens(previous);
     }
   }, [examens]);
+
+  const allFilled = examens.length > 0 && examens.every((e) => e.resultat !== 'a_venir');
+  const allEmailsSent = examens.length > 0 && examens.every((e) => e.resultatEmailSent);
+
+  const handleValidate = useCallback(async () => {
+    setValidating(true);
+    try {
+      const res = await fetch(`/api/admin/feuilles-appel/${dateExamen}/send-resultats`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (res.ok) {
+        setValidated(true);
+        setExamens((prev) => prev.map((e) => ({ ...e, resultatEmailSent: true })));
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setValidating(false);
+    }
+  }, [dateExamen]);
+
+  const handleResend = useCallback(async (examenId: number) => {
+    setResendingId(examenId);
+    setResendResult(null);
+    try {
+      const res = await fetch(`/api/admin/feuilles-appel/${dateExamen}/send-resultats`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ examenIds: [examenId] }),
+      });
+      if (res.ok) {
+        setExamens((prev) => prev.map((e) => e.id === examenId ? { ...e, resultatEmailSent: true } : e));
+        setResendResult({ id: examenId, success: true });
+      } else {
+        setResendResult({ id: examenId, success: false });
+      }
+    } catch {
+      setResendResult({ id: examenId, success: false });
+    } finally {
+      setResendingId(null);
+      setTimeout(() => setResendResult(null), 3000);
+    }
+  }, [dateExamen]);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -222,6 +270,35 @@ export default function FeuilleAppelDetailPage() {
 
               {isAdmin && examen.lieu && <CentreBadge lieu={examen.lieu} />}
 
+              {/* Indicateur email + bouton renvoyer */}
+              {examen.resultat !== 'a_venir' && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {examen.resultatEmailSent ? (
+                    <>
+                      <span className="text-xs text-emerald-600"><Mail className="h-3 w-3" /></span>
+                      <button
+                        onClick={() => handleResend(examen.id)}
+                        disabled={resendingId === examen.id}
+                        className="text-xs text-slate-400 hover:text-blue-600 transition-colors disabled:opacity-50"
+                        title="Renvoyer le résultat par email"
+                      >
+                        {resendingId === examen.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                      </button>
+                      {resendResult?.id === examen.id && (
+                        <span className={`text-[10px] ${resendResult.success ? 'text-emerald-600' : 'text-red-500'}`}>
+                          {resendResult.success ? 'Envoyé !' : 'Erreur'}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-xs text-slate-400 flex items-center gap-1">
+                      <Mail className="h-3 w-3" />
+                      <span className="text-[10px]">Non envoyé</span>
+                    </span>
+                  )}
+                </div>
+              )}
+
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => handleResultat(examen.id, examen.resultat === 'reussi' ? 'a_venir' : 'reussi')}
@@ -257,6 +334,32 @@ export default function FeuilleAppelDetailPage() {
             </div>
           ))}
         </div>
+
+        {/* Bouton Valider — envoie les emails */}
+        {allFilled && !validated && !allEmailsSent && (
+          <div className="px-5 py-4 border-t border-slate-200 bg-slate-50/50">
+            <button
+              onClick={handleValidate}
+              disabled={validating}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-60"
+            >
+              {validating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              {validating ? 'Envoi des résultats...' : 'Valider et envoyer les résultats par email'}
+            </button>
+          </div>
+        )}
+        {(validated || allEmailsSent) && (
+          <div className="px-5 py-4 border-t border-emerald-200 bg-emerald-50 text-center">
+            <p className="text-sm font-medium text-emerald-700 flex items-center justify-center gap-2">
+              <Check className="h-4 w-4" />
+              Résultats envoyés par email
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

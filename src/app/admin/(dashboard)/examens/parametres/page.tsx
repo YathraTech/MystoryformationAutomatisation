@@ -39,6 +39,14 @@ const COLORS = [
   { value: 'purple', label: 'Violet', bgClass: 'bg-purple-100', textClass: 'text-purple-600' },
   { value: 'orange', label: 'Orange', bgClass: 'bg-orange-100', textClass: 'text-orange-600' },
   { value: 'red', label: 'Rouge', bgClass: 'bg-red-100', textClass: 'text-red-600' },
+  { value: 'teal', label: 'Turquoise', bgClass: 'bg-teal-100', textClass: 'text-teal-600' },
+  { value: 'rose', label: 'Rose', bgClass: 'bg-rose-100', textClass: 'text-rose-600' },
+  { value: 'amber', label: 'Ambre', bgClass: 'bg-amber-100', textClass: 'text-amber-600' },
+  { value: 'slate', label: 'Ardoise', bgClass: 'bg-slate-100', textClass: 'text-slate-600' },
+  { value: 'cyan', label: 'Cyan', bgClass: 'bg-cyan-100', textClass: 'text-cyan-600' },
+  { value: 'indigo', label: 'Indigo', bgClass: 'bg-indigo-100', textClass: 'text-indigo-600' },
+  { value: 'pink', label: 'Pink', bgClass: 'bg-pink-100', textClass: 'text-pink-600' },
+  { value: 'lime', label: 'Lime', bgClass: 'bg-lime-100', textClass: 'text-lime-600' },
 ];
 
 const JOURS = [

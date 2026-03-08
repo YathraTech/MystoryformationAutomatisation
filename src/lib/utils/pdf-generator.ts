@@ -468,6 +468,7 @@ export async function generateAttestationPaiement(
     'especes': 'Espèces',
     'cpf': 'CPF',
     'lien_paiement': 'Lien de paiement',
+    'mixte': 'Mixte (Espèces + CB)',
     'autre': 'Autre',
   };
   doc.setFontSize(6);
@@ -480,6 +481,23 @@ export async function generateAttestationPaiement(
   doc.setTextColor(20, 20, 20);
   doc.text(modePaiementLabels[examen.moyenPaiement || ''] || '—', margin, y);
   y += 8;
+
+  // Détail paiement mixte
+  if (examen.moyenPaiement === 'mixte' && (examen.montantEspeces || examen.montantCb)) {
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('DÉTAIL DU PAIEMENT', margin, y);
+    y += 5;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(20, 20, 20);
+    const parts: string[] = [];
+    if (examen.montantEspeces) parts.push(`${examen.montantEspeces} € en espèces`);
+    if (examen.montantCb) parts.push(`${examen.montantCb} € par carte bancaire`);
+    doc.text(parts.join(' + '), margin, y);
+    y += 8;
+  }
 
   // Date du paiement
   const datePaiement = examen.datePaiement
@@ -797,7 +815,7 @@ export async function generateFicheInscription(
   y += 9;
 
   const moyenPaiementLabels: Record<string, string> = {
-    'carte_bancaire': 'Carte bancaire', 'lien_paiement': 'Lien de paiement', 'especes': 'Espèces', 'cpf': 'CPF', 'autre': 'Autre',
+    'carte_bancaire': 'Carte bancaire', 'lien_paiement': 'Lien de paiement', 'especes': 'Espèces', 'cpf': 'CPF', 'mixte': 'Mixte (Espèces + CB)', 'autre': 'Autre',
   };
 
   // Box montant
@@ -824,6 +842,24 @@ export async function generateFicheInscription(
   doc.setTextColor(...darkText);
   doc.text(moyenPaiementLabels[examen.moyenPaiement || ''] || '—', mpX + 3, y + 8);
   y += 14;
+
+  // Détail paiement mixte
+  if (examen.moyenPaiement === 'mixte' && (examen.montantEspeces || examen.montantCb)) {
+    doc.setFillColor(...bgLight);
+    doc.roundedRect(margin, y - 1, contentWidth, 10, 1.5, 1.5, 'F');
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...lightText);
+    doc.text('DÉTAIL DU PAIEMENT', margin + 3, y + 2);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...darkText);
+    const parts: string[] = [];
+    if (examen.montantEspeces) parts.push(`${examen.montantEspeces} € en espèces`);
+    if (examen.montantCb) parts.push(`${examen.montantCb} € par CB`);
+    doc.text(parts.join(' + '), margin + 3, y + 7);
+    y += 12;
+  }
 
   // ===== SIGNATURES =====
   doc.setDrawColor(200, 200, 200);

@@ -19,7 +19,8 @@ export async function getSessionUser() {
     email: profile.email,
     nom: profile.nom,
     prenom: profile.prenom,
-    role: profile.role as 'admin' | 'staff' | 'commercial',
+    role: profile.role as 'admin' | 'staff' | 'commercial' | 'partenaire',
     lieu: (profile.lieu as 'Gagny' | 'Sarcelles') || null,
+    organisation: profile.organisation ?? null,
   };
 }

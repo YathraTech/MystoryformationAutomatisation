@@ -112,11 +112,11 @@ export interface FeuilleAppelExamen {
   resultat: 'a_venir' | 'reussi' | 'echoue' | 'absent';
   lieu: string | null;
   inscriptionId: number | null;
+  resultatEmailSent: boolean;
 }
 
 export interface FeuilleAppelData {
   examens: FeuilleAppelExamen[];
-  deadline: string;       // ISO de la deadline (lendemain 15:30 Paris)
   dateExamen: string;     // Date de l'examen concerné
 }
 
@@ -153,6 +153,8 @@ export interface InscriptionFilters {
   formation: string | 'all';
   commercial: string | 'all';
   date: string;
+  lieu: string | 'all';
+  examen: string | 'all';
 }
 
 export interface Formation {

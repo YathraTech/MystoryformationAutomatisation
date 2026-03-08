@@ -4,8 +4,17 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Inscription, InscriptionFilters } from '@/types/admin';
 import { ITEMS_PER_PAGE } from '@/lib/utils/admin-constants';
 
+interface ExamStatusInfo {
+  id: number;
+  resultat: 'a_venir' | 'reussi' | 'echoue' | 'absent';
+  diplome: string | null;
+  dateExamen: string | null;
+  lieu: string | null;
+}
+
 export function useInscriptions() {
   const [allInscriptions, setAllInscriptions] = useState<Inscription[]>([]);
+  const [examStatuses, setExamStatuses] = useState<Record<string, ExamStatusInfo[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
@@ -15,16 +24,26 @@ export function useInscriptions() {
     formation: 'all',
     commercial: 'all',
     date: '',
+    lieu: 'all',
+    examen: 'all',
   });
 
   const fetchInscriptions = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/admin/inscriptions');
-      if (!res.ok) throw new Error('Erreur réseau');
-      const data = await res.json();
-      setAllInscriptions(data.inscriptions);
+      const [insRes, examRes] = await Promise.all([
+        fetch('/api/admin/inscriptions'),
+        fetch('/api/admin/inscriptions/exam-statuses'),
+      ]);
+      if (!insRes.ok) throw new Error('Erreur réseau');
+      const insData = await insRes.json();
+      setAllInscriptions(insData.inscriptions);
+
+      if (examRes.ok) {
+        const examData = await examRes.json();
+        setExamStatuses(examData.statuses ?? {});
+      }
     } catch {
       setError('Impossible de charger les inscriptions');
     } finally {
@@ -69,8 +88,21 @@ export function useInscriptions() {
       result = result.filter((ins) => ins.timestamp.startsWith(filters.date));
     }
 
+    if (filters.lieu !== 'all') {
+      result = result.filter((ins) => ins.lieu === filters.lieu);
+    }
+
+    if (filters.examen !== 'all') {
+      result = result.filter((ins) => {
+        const examens = examStatuses[ins.email.toLowerCase()] || [];
+        return examens.some((ex) =>
+          ex.diplome ? ex.diplome.startsWith(filters.examen) : false
+        );
+      });
+    }
+
     return result;
-  }, [allInscriptions, filters]);
+  }, [allInscriptions, filters, examStatuses]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginated = filtered.slice(
@@ -95,6 +127,42 @@ export function useInscriptions() {
       .sort((a, b) => a.nom.localeCompare(b.nom));
   }, [allInscriptions]);
 
+  const lieux = useMemo(() => {
+    const set = new Set(allInscriptions.map((i) => i.lieu).filter(Boolean) as string[]);
+    return Array.from(set).sort();
+  }, [allInscriptions]);
+
+  const examTypes = useMemo(() => {
+    const labels: Record<string, string> = {
+      'CIVIQUE:carte_pluriannuelle': 'Civique CSP',
+      'CIVIQUE:carte_residence': 'Civique CR',
+      'CIVIQUE:naturalisation': 'Civique Naturalisation',
+      'TEF_IRN': 'TEF IRN',
+    };
+
+    const seen = new Set<string>();
+    const result: { value: string; label: string }[] = [];
+
+    for (const examens of Object.values(examStatuses)) {
+      for (const ex of examens) {
+        if (!ex.diplome) continue;
+        // Try exact match first (for CIVIQUE variants)
+        if (labels[ex.diplome] && !seen.has(ex.diplome)) {
+          seen.add(ex.diplome);
+          result.push({ value: ex.diplome, label: labels[ex.diplome] });
+        }
+        // Also extract the type prefix (e.g. TEF_IRN from TEF_IRN:A1)
+        const prefix = ex.diplome.split(':')[0];
+        if (labels[prefix] && !seen.has(prefix)) {
+          seen.add(prefix);
+          result.push({ value: prefix, label: labels[prefix] });
+        }
+      }
+    }
+
+    return result.sort((a, b) => a.label.localeCompare(b.label));
+  }, [examStatuses]);
+
   const updateFilter = useCallback(
     (key: keyof InscriptionFilters, value: string) => {
       setFilters((prev) => ({ ...prev, [key]: value }));
@@ -116,6 +184,9 @@ export function useInscriptions() {
     updateFilter,
     formations,
     commercials,
+    lieux,
+    examTypes,
+    examStatuses,
     refetch: fetchInscriptions,
   };
 }

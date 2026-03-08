@@ -88,7 +88,7 @@ const step1Schema = z.object({
   motivation: z.string().min(1, 'Motivation requise'),
   motivationAutre: z.string().optional(),
   langue: z.string().min(1, 'Langue requise'),
-  agentId: z.string().min(1, 'Agent requis'),
+  agentId: z.string().optional(),
 });
 
 // Schéma complet (étape 2 = récap, pas de champs supplémentaires)
@@ -140,9 +140,10 @@ interface SubmissionResult {
 
 interface ExamenFormProps {
   forcedAgence?: string;
+  partenaireId?: string;
 }
 
-export function ExamenForm({ forcedAgence }: ExamenFormProps = {}) {
+export function ExamenForm({ forcedAgence, partenaireId }: ExamenFormProps = {}) {
   const { currentStep, totalSteps, isFirstStep, isLastStep, nextStep, prevStep, reset: resetStep } =
     useMultiStepForm({ totalSteps: 2 }); // 2 étapes : Infos, Récap
 
@@ -240,7 +241,7 @@ export function ExamenForm({ forcedAgence }: ExamenFormProps = {}) {
       const res = await fetch('/api/examen/inscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, ...(partenaireId ? { partenaireId } : {}) }),
       });
 
       if (!res.ok) {
@@ -493,6 +494,7 @@ export function ExamenForm({ forcedAgence }: ExamenFormProps = {}) {
             {currentStep === 1 && (
               <StepPersonalInfo
                 hideAgence={!!forcedAgence}
+                hideAgentSelector={!!partenaireId}
                 pendingFiles={pendingFiles}
                 onFilesChange={setPendingFiles}
               />

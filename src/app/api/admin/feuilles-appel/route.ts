@@ -3,7 +3,6 @@ import { getAllExamens } from '@/lib/data/examens';
 import { getAllInscriptions } from '@/lib/data/inscriptions';
 import { getSessionUser } from '@/lib/auth/session';
 import type { FeuilleAppelExamen, FeuilleAppelSummary } from '@/types/admin';
-import { computeFeuilleDeadline } from '@/lib/utils/feuille-deadline';
 
 function computeSummary(examens: { resultat: string }[], dateExamen: string): FeuilleAppelSummary {
   let reussi = 0, echoue = 0, absent = 0, aVenir = 0;
@@ -60,21 +59,13 @@ export async function GET() {
     const parisNow = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
     const todayStr = parisNow.toISOString().split('T')[0];
 
-    // Trouver la feuille courante : date dont la deadline n'est pas encore passée
+    // Feuille courante : aujourd'hui s'il y a des examens, sinon la date la plus récente avec des résultats à remplir
     let currentDateExamen: string | null = null;
 
-    const candidateDates = Array.from(grouped.keys())
-      .filter((d) => {
-        const exs = grouped.get(d)!;
-        const dl = computeFeuilleDeadline(exs, d);
-        return dl > parisNow;
-      })
-      .sort();
-
-    if (candidateDates.length > 0) {
-      currentDateExamen = candidateDates[candidateDates.length - 1];
+    if (grouped.has(todayStr)) {
+      currentDateExamen = todayStr;
     } else {
-      // Sinon prendre la date la plus récente <= aujourd'hui qui a encore des a_venir
+      // Prendre la date la plus récente <= aujourd'hui qui a encore des a_venir
       const pastDates = Array.from(grouped.keys())
         .filter((d) => d <= todayStr)
         .sort();
@@ -90,15 +81,12 @@ export async function GET() {
     // Construire la feuille courante
     let current: {
       examens: FeuilleAppelExamen[];
-      deadline: string;
       dateExamen: string;
       summary: FeuilleAppelSummary;
     } | null = null;
 
     if (currentDateExamen && grouped.has(currentDateExamen)) {
       const currentExamens = grouped.get(currentDateExamen)!;
-      const deadlineDate = computeFeuilleDeadline(currentExamens, currentDateExamen);
-      const deadlineIso = deadlineDate.toISOString();
 
       current = {
         examens: currentExamens.map((ex) => ({
@@ -113,8 +101,8 @@ export async function GET() {
           resultat: ex.resultat as FeuilleAppelExamen['resultat'],
           lieu: ex.lieu,
           inscriptionId: emailToInscriptionId.get(ex.email.toLowerCase()) || null,
+          resultatEmailSent: ex.resultatEmailSent,
         })),
-        deadline: deadlineIso,
         dateExamen: currentDateExamen,
         summary: computeSummary(currentExamens, currentDateExamen),
       };

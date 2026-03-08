@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
-export type UserRole = 'admin' | 'staff' | 'commercial';
+export type UserRole = 'admin' | 'staff' | 'commercial' | 'partenaire';
 export type UserLieu = 'Gagny' | 'Sarcelles';
 
 export interface SafeUser {
@@ -11,6 +11,7 @@ export interface SafeUser {
   prenom: string;
   role: UserRole;
   lieu: UserLieu | null;
+  organisation: string | null;
   objectifCa: number | null;
   createdAt: string;
 }
@@ -31,6 +32,7 @@ export async function getSafeUsers(): Promise<SafeUser[]> {
     prenom: p.prenom,
     role: p.role as UserRole,
     lieu: p.lieu as UserLieu | null,
+    organisation: p.organisation ?? null,
     objectifCa: p.objectif_ca ?? null,
     createdAt: p.created_at,
   }));
@@ -53,6 +55,7 @@ export async function getUserByEmail(email: string): Promise<SafeUser | null> {
     prenom: data.prenom,
     role: data.role as UserRole,
     lieu: data.lieu as UserLieu | null,
+    organisation: data.organisation ?? null,
     objectifCa: data.objectif_ca ?? null,
     createdAt: data.created_at,
   };
@@ -75,6 +78,7 @@ export async function getUserById(id: string): Promise<SafeUser | null> {
     prenom: data.prenom,
     role: data.role as UserRole,
     lieu: data.lieu as UserLieu | null,
+    organisation: data.organisation ?? null,
     objectifCa: data.objectif_ca ?? null,
     createdAt: data.created_at,
   };
@@ -87,6 +91,7 @@ export async function createUser(data: {
   prenom: string;
   role: UserRole;
   lieu?: UserLieu | null;
+  organisation?: string | null;
 }): Promise<SafeUser> {
   const admin = createAdminClient();
   const emailLower = data.email.toLowerCase();
@@ -102,6 +107,7 @@ export async function createUser(data: {
         prenom: data.prenom,
         role: data.role,
         lieu: data.lieu || null,
+        organisation: data.organisation || null,
       },
     });
 
@@ -116,6 +122,7 @@ export async function createUser(data: {
       prenom: data.prenom,
       role: data.role,
       lieu: data.lieu || null,
+      organisation: data.organisation || null,
       objectifCa: null,
       createdAt: authData.user.created_at,
     };
@@ -129,6 +136,7 @@ export async function createUser(data: {
         prenom: data.prenom,
         role: data.role,
         lieu: data.lieu || null,
+        organisation: data.organisation || null,
       },
     });
 
@@ -148,6 +156,7 @@ export async function createUser(data: {
       prenom: data.prenom,
       role: data.role,
       lieu: data.lieu || null,
+      organisation: data.organisation || null,
       objectifCa: null,
       createdAt: authData.user.created_at,
     };

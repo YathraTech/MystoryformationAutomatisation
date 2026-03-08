@@ -1,54 +1,26 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, GraduationCap, ClipboardCheck, AlertCircle, Users } from 'lucide-react';
-import Link from 'next/link';
-import type { Inscription } from '@/types/admin';
-import type { Examen } from '@/lib/data/examens';
-import { getPlanningColorForExamType, type PlanningColorSet } from '@/lib/utils/exam-colors';
+import { ChevronLeft, ChevronRight, ClipboardCheck, AlertCircle, Users } from 'lucide-react';
+import { getPlanningColorForExamType } from '@/lib/utils/exam-colors';
 
-interface PlanningEvent {
+interface PlanningExamen {
   id: number;
-  type: 'formation' | 'tef' | 'civique';
-  nom: string;
-  prenom: string;
-  email: string;
-  telephone: string;
-  date: string;
+  date: string | null;
   heure: string | null;
-  details: string;
   diplome: string | null;
-  inscriptionId: number | null;
-  isPartenaireCandidat: boolean;
-}
-
-const FORMATION_COLOR: PlanningColorSet = { bg: 'bg-emerald-50', border: 'border-emerald-200', icon: 'text-emerald-600', legendBg: 'bg-emerald-100', legendBorder: 'border-emerald-300' };
-const PARTENAIRE_COLOR: PlanningColorSet = { bg: 'bg-violet-50', border: 'border-violet-400', icon: 'text-violet-600', legendBg: 'bg-violet-100', legendBorder: 'border-violet-300' };
-
-interface ExamTypeInfo {
-  code: string;
-  label: string;
-  color: string;
-}
-
-function getEventColor(event: PlanningEvent, examTypes: ExamTypeInfo[]): PlanningColorSet {
-  if (event.isPartenaireCandidat) return PARTENAIRE_COLOR;
-  if (event.type === 'formation') return FORMATION_COLOR;
-
-  const diplome = event.diplome || '';
-  const prefix = diplome.split(':')[0];
-
-  const matchedType = examTypes.find(t => t.code === prefix);
-  if (matchedType) return getPlanningColorForExamType(matchedType.color);
-
-  return getPlanningColorForExamType('blue');
+  typeExamen: string | null;
+  lieu: string | null;
+  isOwnCandidat: boolean;
+  nom: string | null;
+  prenom: string | null;
 }
 
 interface ExamenSlot {
   date: string;
   count: number;
   maxPlaces: number;
-  jour: 'lundi' | 'vendredi';
+  jour: string;
 }
 
 function getWeekDates(date: Date): Date[] {
@@ -67,15 +39,10 @@ function getWeekDates(date: Date): Date[] {
 }
 
 function formatDateISO(date: Date): string {
-  // Use local date to avoid UTC timezone shift
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-}
-
-function formatDateDisplay(date: Date): string {
-  return date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
 function formatWeekRange(dates: Date[]): string {
@@ -84,9 +51,27 @@ function formatWeekRange(dates: Date[]): string {
   return `${start} - ${end}`;
 }
 
-export default function PlanningPage() {
+const OTHER_COLOR = { bg: 'bg-slate-50', border: 'border-slate-200', icon: 'text-slate-400' };
+
+interface ExamTypeInfo {
+  code: string;
+  label: string;
+  color: string;
+}
+
+function getOwnCandidatColor(diplome: string | null, examTypes: ExamTypeInfo[]) {
+  const prefix = (diplome || '').split(':')[0];
+  const matchedType = examTypes.find(t => t.code === prefix);
+  if (matchedType) {
+    const c = getPlanningColorForExamType(matchedType.color);
+    return { bg: c.bg, border: c.border, icon: c.icon };
+  }
+  return { bg: 'bg-violet-50', border: 'border-violet-200', icon: 'text-violet-600' };
+}
+
+export default function PartenairePlanningPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [events, setEvents] = useState<PlanningEvent[]>([]);
+  const [examens, setExamens] = useState<PlanningExamen[]>([]);
   const [examTypes, setExamTypes] = useState<ExamTypeInfo[]>([]);
   const [examenSlots, setExamenSlots] = useState<ExamenSlot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,7 +79,6 @@ export default function PlanningPage() {
 
   const weekDates = getWeekDates(currentDate);
 
-  // Charger les créneaux d'examens
   const fetchExamenSlots = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/examens/slots');
@@ -103,11 +87,10 @@ export default function PlanningPage() {
         setExamenSlots(data.slots || []);
       }
     } catch {
-      console.error('Erreur chargement slots examens');
+      // Slots might not be accessible for partenaire, ignore
     }
   }, []);
 
-  // Obtenir le slot pour une date donnée
   const getSlotForDate = (date: Date): ExamenSlot | undefined => {
     const dateStr = formatDateISO(date);
     return examenSlots.find(s => s.date === dateStr);
@@ -121,61 +104,12 @@ export default function PlanningPage() {
     const endDate = formatDateISO(weekDates[6]);
 
     try {
-      const res = await fetch(`/api/admin/planning?startDate=${startDate}&endDate=${endDate}`);
+      const res = await fetch(`/api/partenaire/planning?startDate=${startDate}&endDate=${endDate}`);
       if (!res.ok) throw new Error('Erreur de chargement');
 
       const data = await res.json();
-
+      setExamens(data.examens || []);
       setExamTypes(data.examTypes || []);
-
-      const planningEvents: PlanningEvent[] = [];
-
-      // Map formations (inscriptions with date_formation)
-      (data.formations as Inscription[]).forEach((ins) => {
-        if (ins.dateFormation) {
-          planningEvents.push({
-            id: ins.rowIndex,
-            type: 'formation',
-            nom: ins.nom,
-            prenom: ins.prenom,
-            email: ins.email,
-            telephone: ins.telephone,
-            date: ins.dateFormation,
-            heure: ins.heureFormation,
-            details: ins.formationNom,
-            diplome: null,
-            inscriptionId: ins.rowIndex,
-            isPartenaireCandidat: false,
-          });
-        }
-      });
-
-      // Map examens (enrichis avec inscriptionId par l'API)
-      (data.examens as (Examen & { inscriptionId?: number | null; isPartenaireCandidat?: boolean })[]).forEach((ex) => {
-        if (ex.dateExamen) {
-          // Déterminer le type d'examen (TEF ou Civique) via le diplome ou typeExamen
-          const diplome = (ex.diplome || '').toUpperCase();
-          const isCivique = diplome.startsWith('CIVIQUE') || ex.typeExamen === 'Civique';
-          const eventType: 'tef' | 'civique' = isCivique ? 'civique' : 'tef';
-
-          planningEvents.push({
-            id: ex.id,
-            type: eventType,
-            nom: ex.nom,
-            prenom: ex.prenom,
-            email: ex.email,
-            telephone: ex.telephone,
-            date: ex.dateExamen,
-            heure: ex.heureExamen,
-            details: ex.diplome || 'Examen',
-            diplome: ex.diplome || null,
-            inscriptionId: ex.inscriptionId || null,
-            isPartenaireCandidat: ex.isPartenaireCandidat || false,
-          });
-        }
-      });
-
-      setEvents(planningEvents);
     } catch {
       setError('Impossible de charger le planning');
     } finally {
@@ -205,9 +139,9 @@ export default function PlanningPage() {
     setCurrentDate(new Date());
   };
 
-  const getEventsForDate = (date: Date) => {
+  const getExamensForDate = (date: Date) => {
     const dateStr = formatDateISO(date);
-    return events.filter((e) => e.date === dateStr);
+    return examens.filter((e) => e.date === dateStr);
   };
 
   const isToday = (date: Date) => {
@@ -259,7 +193,7 @@ export default function PlanningPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="h-8 w-8 border-3 border-blue-200 border-t-blue-700 rounded-full animate-spin" />
+          <div className="h-8 w-8 border-3 border-violet-200 border-t-violet-700 rounded-full animate-spin" />
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -274,16 +208,15 @@ export default function PlanningPage() {
                 <div
                   key={i}
                   className={`px-3 py-3 text-center border-r border-slate-200 last:border-r-0 ${
-                    isToday(date) ? 'bg-blue-50' : ''
+                    isToday(date) ? 'bg-violet-50' : ''
                   }`}
                 >
-                  <div className={`text-xs font-medium uppercase ${isToday(date) ? 'text-blue-700' : 'text-slate-500'}`}>
+                  <div className={`text-xs font-medium uppercase ${isToday(date) ? 'text-violet-700' : 'text-slate-500'}`}>
                     {date.toLocaleDateString('fr-FR', { weekday: 'short' })}
                   </div>
-                  <div className={`text-lg font-semibold mt-0.5 ${isToday(date) ? 'text-blue-700' : 'text-slate-800'}`}>
+                  <div className={`text-lg font-semibold mt-0.5 ${isToday(date) ? 'text-violet-700' : 'text-slate-800'}`}>
                     {date.getDate()}
                   </div>
-                  {/* Afficher le compteur pour les jours d'examen (lundi/vendredi) */}
                   {isExamDay && (
                     <div className={`mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 ${
                       isFull ? 'text-red-700' : 'text-amber-700'
@@ -300,51 +233,39 @@ export default function PlanningPage() {
           {/* Body - Events */}
           <div className="grid grid-cols-7 min-h-[400px]">
             {weekDates.map((date, i) => {
-              const dayEvents = getEventsForDate(date);
+              const dayExamens = getExamensForDate(date);
               return (
                 <div
                   key={i}
                   className={`border-r border-slate-200 last:border-r-0 p-2 ${
-                    isToday(date) ? 'bg-blue-50/30' : ''
+                    isToday(date) ? 'bg-violet-50/30' : ''
                   }`}
                 >
                   <div className="space-y-1">
-                    {dayEvents.map((event) => {
-                      const colors = getEventColor(event, examTypes);
-
+                    {dayExamens.map((ex) => {
+                      const colors = ex.isOwnCandidat ? getOwnCandidatColor(ex.diplome, examTypes) : OTHER_COLOR;
                       return (
-                      <div
-                        key={`${event.type}-${event.id}`}
-                        className={`rounded-md px-2 py-1.5 text-xs flex items-center gap-1.5 border ${colors.bg} ${colors.border}`}
-                      >
-                        {event.type === 'formation' ? (
-                          <GraduationCap className={`h-3 w-3 ${colors.icon} shrink-0`} />
-                        ) : (
+                        <div
+                          key={ex.id}
+                          className={`rounded-md px-2 py-1.5 text-xs flex items-center gap-1.5 border ${colors.bg} ${colors.border}`}
+                        >
                           <ClipboardCheck className={`h-3 w-3 ${colors.icon} shrink-0`} />
-                        )}
-
-                        {event.heure && (
-                          <span className="text-slate-500 shrink-0">{event.heure.slice(0, 5)}</span>
-                        )}
-
-                        {event.inscriptionId ? (
-                          <Link
-                            href={`/admin/clients/${event.inscriptionId}`}
-                            className="font-medium text-slate-800 hover:text-blue-600 hover:underline truncate"
-                            title={`${event.prenom} ${event.nom} - Voir fiche`}
-                          >
-                            {event.prenom} {event.nom}
-                          </Link>
-                        ) : (
-                          <span className="font-medium text-slate-800 truncate">
-                            {event.prenom} {event.nom}
-                          </span>
-                        )}
-                      </div>
+                          {ex.heure && (
+                            <span className="text-slate-500 shrink-0">{ex.heure.slice(0, 5)}</span>
+                          )}
+                          {ex.isOwnCandidat ? (
+                            <span className="font-medium text-slate-800 truncate">
+                              {ex.prenom} {ex.nom}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 italic truncate">
+                              Candidat
+                            </span>
+                          )}
+                        </div>
                       );
                     })}
-
-                    {dayEvents.length === 0 && (
+                    {dayExamens.length === 0 && (
                       <div className="text-center text-slate-300 py-4 text-xs">-</div>
                     )}
                   </div>
@@ -358,21 +279,17 @@ export default function PlanningPage() {
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
         {examTypes.map((type) => {
-          const colors = getPlanningColorForExamType(type.color);
+          const c = getPlanningColorForExamType(type.color);
           return (
             <div key={type.code} className="flex items-center gap-2">
-              <div className={`w-4 h-4 rounded ${colors.legendBg} border ${colors.legendBorder}`} />
+              <div className={`w-4 h-4 rounded ${c.legendBg} border ${c.legendBorder}`} />
               <span>{type.label}</span>
             </div>
           );
         })}
         <div className="flex items-center gap-2">
-          <div className={`w-4 h-4 rounded ${FORMATION_COLOR.legendBg} border ${FORMATION_COLOR.legendBorder}`} />
-          <span>Formation</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className={`w-4 h-4 rounded ${PARTENAIRE_COLOR.legendBg} border ${PARTENAIRE_COLOR.legendBorder}`} />
-          <span>Partenaire</span>
+          <div className="w-4 h-4 rounded bg-slate-100 border border-slate-300" />
+          <span>Autres</span>
         </div>
       </div>
     </div>

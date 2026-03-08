@@ -60,6 +60,7 @@ export interface Examen {
   datePaiement: string | null;
   lieuConfiguration: string | null;
   commercialId: string | null;
+  partenaireId: string | null;
   motivation: string | null;
   motivationAutre: string | null;
   serviceSouhaite: string | null;
@@ -112,6 +113,7 @@ interface DbExamen {
   date_paiement: string | null;
   lieu_configuration: string | null;
   commercial_id: string | null;
+  partenaire_id: string | null;
   motivation: string | null;
   motivation_autre: string | null;
   service_souhaite: string | null;
@@ -165,6 +167,7 @@ function dbToExamen(row: DbExamen): Examen {
     datePaiement: row.date_paiement,
     lieuConfiguration: row.lieu_configuration,
     commercialId: row.commercial_id,
+    partenaireId: row.partenaire_id,
     motivation: row.motivation,
     motivationAutre: row.motivation_autre,
     serviceSouhaite: row.service_souhaite,
@@ -255,6 +258,7 @@ export interface UpdateExamenFields {
   datePaiement?: string | null;
   lieuConfiguration?: string | null;
   commercialId?: string | null;
+  partenaireId?: string | null;
   pdfAttestationPaiement?: string | null;
   pdfFicheInscription?: string | null;
   pdfConvocation?: string | null;
@@ -284,6 +288,7 @@ export async function updateExamenFields(
   if (fields.datePaiement !== undefined) dbFields.date_paiement = fields.datePaiement;
   if (fields.lieuConfiguration !== undefined) dbFields.lieu_configuration = fields.lieuConfiguration;
   if (fields.commercialId !== undefined) dbFields.commercial_id = fields.commercialId;
+  if (fields.partenaireId !== undefined) dbFields.partenaire_id = fields.partenaireId;
   if (fields.pdfAttestationPaiement !== undefined) dbFields.pdf_attestation_paiement = fields.pdfAttestationPaiement;
   if (fields.pdfFicheInscription !== undefined) dbFields.pdf_fiche_inscription = fields.pdfFicheInscription;
   if (fields.pdfConvocation !== undefined) dbFields.pdf_convocation = fields.pdfConvocation;

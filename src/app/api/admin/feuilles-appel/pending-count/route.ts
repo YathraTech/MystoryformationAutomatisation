@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAllExamens } from '@/lib/data/examens';
 import { getSessionUser } from '@/lib/auth/session';
-import { computeFeuilleDeadline } from '@/lib/utils/feuille-deadline';
 
 export async function GET() {
   try {
@@ -31,24 +30,16 @@ export async function GET() {
       grouped.get(date)!.push(ex);
     }
 
-    // Calculer l'heure Paris actuelle
+    // Calculer la date Paris
     const now = new Date();
     const parisNow = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
     const todayStr = parisNow.toISOString().split('T')[0];
 
-    // Trouver la feuille courante : date dont la deadline n'est pas encore passée
+    // Feuille courante : aujourd'hui, ou la date la plus récente avec des résultats à remplir
     let currentDateExamen: string | null = null;
 
-    const candidateDates = Array.from(grouped.keys())
-      .filter((d) => {
-        const exs = grouped.get(d)!;
-        const dl = computeFeuilleDeadline(exs, d);
-        return dl > parisNow;
-      })
-      .sort();
-
-    if (candidateDates.length > 0) {
-      currentDateExamen = candidateDates[candidateDates.length - 1];
+    if (grouped.has(todayStr)) {
+      currentDateExamen = todayStr;
     } else {
       const pastDates = Array.from(grouped.keys())
         .filter((d) => d <= todayStr)

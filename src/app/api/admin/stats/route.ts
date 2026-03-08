@@ -386,13 +386,6 @@ export async function GET() {
         .sort()
         .pop()!;
 
-      // Deadline = dateExamen + 1 jour à 15:30 Paris
-      const deadlineDate = new Date(dateExamenRef + 'T15:30:00');
-      deadlineDate.setDate(deadlineDate.getDate() + 1);
-      // Convertir en ISO en tenant compte du fuseau Paris (CET = UTC+1, CEST = UTC+2)
-      // On utilise une approximation: construire l'ISO string manuellement
-      const deadlineIso = `${deadlineDate.toISOString().split('T')[0]}T15:30:00+01:00`;
-
       const feuilleAppelExamens: FeuilleAppelExamen[] = feuilleExamens.map((ex) => ({
         id: ex.id,
         nom: ex.nom,
@@ -405,11 +398,11 @@ export async function GET() {
         resultat: ex.resultat as FeuilleAppelExamen['resultat'],
         lieu: ex.lieu,
         inscriptionId: emailToInscriptionId.get(ex.email.toLowerCase()) || null,
+        resultatEmailSent: ex.resultatEmailSent,
       }));
 
       feuilleAppel = {
         examens: feuilleAppelExamens,
-        deadline: deadlineIso,
         dateExamen: dateExamenRef,
       };
     }

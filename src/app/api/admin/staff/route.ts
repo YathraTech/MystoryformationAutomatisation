@@ -33,8 +33,9 @@ const createUserSchema = z.object({
   password: z.string().min(6, 'Le mot de passe doit contenir au moins 6 caractères').optional(),
   nom: z.string().min(1, 'Le nom est requis'),
   prenom: z.string().min(1, 'Le prénom est requis'),
-  role: z.enum(['admin', 'staff', 'commercial'] as const),
+  role: z.enum(['admin', 'staff', 'commercial', 'partenaire'] as const),
   lieu: z.enum(['Gagny', 'Sarcelles'] as const).nullable().optional(),
+  organisation: z.string().optional(),
 });
 
 export async function POST(request: Request) {
@@ -60,6 +61,7 @@ export async function POST(request: Request) {
       prenom: string;
       role: UserRole;
       lieu?: UserLieu | null;
+      organisation?: string | null;
     });
 
     return NextResponse.json(user, { status: 201 });
