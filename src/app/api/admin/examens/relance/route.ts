@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { buildRelanceEmail } from '@/lib/utils/email-templates';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,37 +19,45 @@ export async function POST(request: NextRequest) {
     }
     const deduplicated = Array.from(unique.values());
 
-    const now = new Date().toISOString();
+    // Envoyer individuellement via Make webhook
+    const webhookUrl = process.env.MAKE_ATTESTATION_WEBHOOK_URL;
+    let sent = 0;
 
-    // Envoyer via Make webhook si configuré
-    const webhookUrl = process.env.MAKE_WEBHOOK_URL;
     if (webhookUrl) {
-      try {
-        await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'relance_partenaire',
-            timestamp: now,
-            total: deduplicated.length,
-            candidats: deduplicated.map((c) => ({
-              email: c.email,
-              prenom: c.prenom,
-              nom: c.nom,
-              resultat: c.resultat,
-            })),
-            message: 'Bonjour {prenom}, suite à votre examen, nous vous proposons de rejoindre notre plateforme partenaire PrepCivique pour bénéficier de promotions et d\'entraînements de qualité. Rendez-vous sur https://prepcivique.fr',
-          }),
-        });
-      } catch (webhookError) {
-        console.error('Make webhook error (non-blocking):', webhookError);
+      for (const c of deduplicated) {
+        try {
+          const emailHtml = buildRelanceEmail(c.prenom, c.nom);
+
+          await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'relance_partenaire',
+              timestamp: new Date().toISOString(),
+              candidat: {
+                email: c.email,
+                prenom: c.prenom,
+                nom: c.nom,
+              },
+              email_subject: 'MyStoryFormation - PrepCivique.fr — Promotions et entraînements',
+              email_html: emailHtml,
+            }),
+          });
+
+          sent++;
+        } catch (webhookError) {
+          console.error(`[relance] Webhook error for ${c.email}:`, webhookError);
+        }
       }
+    } else {
+      console.warn('[relance] MAKE_ATTESTATION_WEBHOOK_URL non configuré');
+      sent = deduplicated.length;
     }
 
     return NextResponse.json({
       success: true,
-      sent: deduplicated.length,
-      message: `Relance envoyée à ${deduplicated.length} candidat(s)`,
+      sent,
+      message: `Relance envoyée à ${sent} candidat(s)`,
     });
   } catch (error) {
     console.error('Erreur relance:', error);

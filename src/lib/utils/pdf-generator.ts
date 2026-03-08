@@ -578,6 +578,201 @@ export async function generateAttestationPaiement(
   return { blob, fileName };
 }
 
+export async function generateAttestationReussite(
+  examen: Examen,
+  diplomeLabel?: string
+): Promise<{ blob: Blob; fileName: string }> {
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 15;
+  const contentWidth = pageWidth - margin * 2;
+
+  // Charger les assets
+  const logo = await loadLogo();
+  const tampon = await loadTampon(examen.lieuConfiguration || '');
+
+  // ===== HEADER =====
+  doc.setFillColor(30, 30, 30);
+  doc.rect(0, 0, pageWidth, 5, 'F');
+  doc.setFillColor(60, 60, 60);
+  doc.rect(0, 5, pageWidth, 1, 'F');
+
+  let headerY = 10;
+  if (logo) {
+    const logoWidth = 45;
+    const logoHeight = logoWidth / 3.59;
+    doc.addImage(logo, 'PNG', (pageWidth - logoWidth) / 2, headerY, logoWidth, logoHeight);
+    headerY += logoHeight + 5;
+  } else {
+    headerY += 8;
+  }
+
+  // Titre
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(20, 20, 20);
+  doc.text('ATTESTATION DE RÉUSSITE', pageWidth / 2, headerY, { align: 'center' });
+  headerY += 3;
+  doc.setDrawColor(30, 30, 30);
+  doc.setLineWidth(0.6);
+  doc.line(pageWidth / 2 - 35, headerY, pageWidth / 2 + 35, headerY);
+
+  let y = headerY + 10;
+
+  // ===== CANDIDAT =====
+  doc.setFillColor(30, 30, 30);
+  doc.roundedRect(margin, y, contentWidth, 6, 1, 1, 'F');
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('CANDIDAT', margin + 3, y + 4.2);
+  y += 10;
+
+  const nomComplet = `${examen.civilite || ''} ${examen.prenom || ''} ${examen.nom || ''}`.trim();
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(20, 20, 20);
+  doc.text(nomComplet || '—', margin, y);
+  y += 7;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(80, 80, 80);
+  doc.text(`Né(e) le : ${examen.dateNaissance ? formatDateSlash(examen.dateNaissance) : '—'}`, margin, y);
+  y += 12;
+
+  // ===== EXAMEN =====
+  doc.setFillColor(30, 30, 30);
+  doc.roundedRect(margin, y, contentWidth, 6, 1, 1, 'F');
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('EXAMEN', margin + 3, y + 4.2);
+  y += 10;
+
+  // Parse diplome
+  const diplome = examen.diplome || '';
+  const attestExamTypeLabels: Record<string, string> = { 'TEF_IRN': 'TEF IRN', 'CIVIQUE': 'Examen Civique' };
+  const attestOptionLabels: Record<string, string> = {
+    'A1': 'Niveau A1', 'A2': 'Niveau A2', 'B1': 'Niveau B1', 'B2': 'Niveau B2',
+    'carte_pluriannuelle': 'Carte pluriannuelle', 'carte_residence': 'Carte de résident', 'naturalisation': 'Naturalisation',
+  };
+  let examTypeName = '';
+  let mentionText = '';
+  if (diplome) {
+    const parts = diplome.split(':');
+    if (parts.length === 2) {
+      examTypeName = attestExamTypeLabels[parts[0]] || parts[0];
+      mentionText = attestOptionLabels[parts[1]] || parts[1];
+    } else {
+      const code = diplome.toUpperCase();
+      if (attestExamTypeLabels[code]) examTypeName = attestExamTypeLabels[code];
+      else examTypeName = diplome;
+    }
+  }
+
+  const col3 = contentWidth / 3;
+
+  // Ligne 1: Examen + Diplôme
+  doc.setFontSize(6);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  doc.text('TYPE D\'EXAMEN', margin, y);
+  doc.text('DIPLÔME / MENTION', margin + col3, y);
+  y += 4;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(20, 20, 20);
+  doc.text(examTypeName || '—', margin, y);
+  doc.text(diplomeLabel || mentionText || '—', margin + col3, y);
+  y += 8;
+
+  // Ligne 2: Date / Lieu
+  doc.setFontSize(6);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  doc.text('DATE DE L\'EXAMEN', margin, y);
+  doc.text('LIEU', margin + col3, y);
+  y += 4;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(20, 20, 20);
+  doc.text(examen.dateExamen ? formatDateSlash(examen.dateExamen) : '—', margin, y);
+  doc.text(examen.lieu || '—', margin + col3, y);
+  y += 12;
+
+  // ===== RÉSULTAT =====
+  doc.setFillColor(30, 30, 30);
+  doc.roundedRect(margin, y, contentWidth, 6, 1, 1, 'F');
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('RÉSULTAT', margin + 3, y + 4.2);
+  y += 10;
+
+  // Bandeau vert réussite
+  doc.setFillColor(240, 253, 244);
+  doc.setDrawColor(34, 197, 94);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(margin, y, contentWidth, 20, 2, 2, 'FD');
+
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(22, 101, 52);
+  doc.text('EXAMEN RÉUSSI', pageWidth / 2, y + 9, { align: 'center' });
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(21, 128, 61);
+  doc.text(
+    `Nous certifions que ${nomComplet} a réussi l'examen mentionné ci-dessus.`,
+    pageWidth / 2,
+    y + 16,
+    { align: 'center', maxWidth: contentWidth - 20 }
+  );
+  y += 30;
+
+  // ===== FAIT À =====
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.3);
+  doc.line(margin, y, margin + contentWidth, y);
+  y += 6;
+
+  const lieuFait = examen.lieuConfiguration || examen.lieu || '..............';
+  const today = formatDateSlash(new Date().toISOString());
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(20, 20, 20);
+  doc.text(`Fait à ${lieuFait}, le ${today}`, margin, y);
+  y += 10;
+
+  // Cachet organisme
+  const signatureBoxWidth = contentWidth / 2;
+  const signatureBoxHeight = 35;
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(margin, y, signatureBoxWidth, signatureBoxHeight, 1.5, 1.5, 'S');
+  doc.setFontSize(7);
+  doc.setTextColor(100, 100, 100);
+  doc.text("Cachet de l'organisme", margin + signatureBoxWidth / 2, y + 4, { align: 'center' });
+
+  if (tampon) {
+    const tamponWidth = 38;
+    const tamponX = margin + (signatureBoxWidth - tamponWidth) / 2;
+    doc.addImage(tampon, 'PNG', tamponX, y + 7, tamponWidth, 28);
+  }
+
+  // ===== FOOTER =====
+  doc.setFillColor(40, 40, 40);
+  doc.rect(0, pageHeight - 5, pageWidth, 5, 'F');
+  doc.setFontSize(6);
+  doc.setTextColor(255, 255, 255);
+  doc.text('MyStoryFormation - Document officiel', pageWidth / 2, pageHeight - 1.5, { align: 'center' });
+
+  const fileName = `attestation_reussite_${examen.nom}_${examen.prenom}.pdf`;
+  const blob = doc.output('blob');
+  return { blob, fileName };
+}
+
 export async function generateFicheInscription(
   inscription: Inscription,
   examen: Examen,

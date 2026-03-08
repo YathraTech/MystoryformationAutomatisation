@@ -332,6 +332,181 @@ export function buildFicheEmail(
   return emailLayout("Fiche d'inscription", body);
 }
 
+export function buildResultatReussiEmail(
+  prenom: string,
+  nom: string,
+  diplomeLabel: string,
+  dateExamen: string | null,
+  downloadUrl: string,
+): string {
+  const body = `
+    <p style="margin:0 0 20px;font-size:16px;color:#1e1e1e;">Bonjour <strong>${prenom} ${nom}</strong>,</p>
+
+    ${confirmationBanner(
+      'Félicitations, vous avez réussi votre examen !',
+      'Nous sommes heureux de vous annoncer que vous avez obtenu votre certification.'
+    )}
+
+    <p style="margin:0 0 24px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      Voici le récapitulatif de votre examen :
+    </p>
+
+    ${recapTable(
+      recapRow('Diplôme', diplomeLabel || '-', true) +
+      recapRow("Date d'examen", formatDate(dateExamen), false) +
+      recapRow('Résultat', 'Réussi', false)
+    )}
+
+    <p style="margin:0 0 24px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      Vous pouvez télécharger votre attestation de réussite en cliquant sur le bouton ci-dessous :
+    </p>
+
+    ${ctaButton(downloadUrl, "Télécharger l'attestation de réussite")}
+
+    <p style="margin:24px 0 0;font-size:14px;color:#71717a;line-height:1.5;">
+      Toute l'équipe MyStoryFormation vous félicite et vous souhaite le meilleur pour la suite de vos démarches.
+    </p>`;
+  return emailLayout('Résultat de votre examen - Réussite', body);
+}
+
+export function buildResultatAbsentEmail(
+  prenom: string,
+  nom: string,
+  diplomeLabel: string,
+  dateExamen: string | null,
+): string {
+  const body = `
+    <p style="margin:0 0 20px;font-size:16px;color:#1e1e1e;">Bonjour <strong>${prenom} ${nom}</strong>,</p>
+
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#fef2f2;border-radius:8px;border:1px solid #fecaca;margin-bottom:16px;">
+      <tr>
+        <td style="padding:20px;text-align:center;">
+          <p style="color:#991b1b;font-size:14px;margin:0;font-weight:600;">Absence constatée à votre examen</p>
+          <p style="color:#b91c1c;font-size:13px;margin:8px 0 0;">Votre absence a été enregistrée pour l'examen ci-dessous.</p>
+        </td>
+      </tr>
+    </table>
+
+    ${recapTable(
+      recapRow('Diplôme', diplomeLabel || '-', true) +
+      recapRow("Date d'examen", formatDate(dateExamen), false) +
+      recapRow('Résultat', 'Absent(e)', false)
+    )}
+
+    <p style="margin:0 0 16px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      <strong style="color:#dc2626;">Il est urgent de reprendre contact avec nous</strong> afin de reprogrammer votre examen dans les meilleurs délais.
+    </p>
+
+    <p style="margin:0 0 8px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      Contactez-nous dès que possible :
+    </p>
+
+    ${recapTable(
+      recapRow('Téléphone', '01 43 09 15 40', true) +
+      recapRow('Email', 'contact@mystoryformation.fr', false)
+    )}
+
+    <p style="margin:0;font-size:14px;color:#71717a;line-height:1.5;">
+      Notre équipe reste à votre disposition pour toute question.
+    </p>`;
+  return emailLayout("Résultat de votre examen - Absence", body);
+}
+
+export function buildResultatEchoueEmail(
+  prenom: string,
+  nom: string,
+  diplomeLabel: string,
+  dateExamen: string | null,
+): string {
+  const body = `
+    <p style="margin:0 0 20px;font-size:16px;color:#1e1e1e;">Bonjour <strong>${prenom} ${nom}</strong>,</p>
+
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#fffbeb;border-radius:8px;border:1px solid #fde68a;margin-bottom:16px;">
+      <tr>
+        <td style="padding:20px;text-align:center;">
+          <p style="color:#92400e;font-size:14px;margin:0;font-weight:600;">Résultat de votre examen</p>
+          <p style="color:#a16207;font-size:13px;margin:8px 0 0;">Malheureusement, vous n'avez pas obtenu le résultat attendu cette fois-ci.</p>
+        </td>
+      </tr>
+    </table>
+
+    ${recapTable(
+      recapRow('Diplôme', diplomeLabel || '-', true) +
+      recapRow("Date d'examen", formatDate(dateExamen), false) +
+      recapRow('Résultat', 'Non obtenu', false)
+    )}
+
+    <p style="margin:0 0 16px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      Ne vous découragez pas ! Avec une bonne préparation, vous pouvez réussir lors de votre prochaine tentative.
+    </p>
+
+    <p style="margin:0 0 16px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      <strong>MyStoryFormation</strong> vous recommande <strong>PrepCivique.fr</strong>, notre plateforme partenaire spécialisée dans la préparation aux examens :
+    </p>
+
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f0f9ff;border-radius:8px;border:1px solid #bae6fd;margin-bottom:24px;">
+      <tr>
+        <td style="padding:20px;">
+          <p style="color:#0c4a6e;font-size:15px;margin:0 0 12px;font-weight:700;">PrepCivique.fr — Préparez votre réussite</p>
+          <p style="color:#0369a1;font-size:13px;margin:0 0 6px;">• <strong>Examens blancs</strong> dans les conditions réelles</p>
+          <p style="color:#0369a1;font-size:13px;margin:0 0 6px;">• <strong>Cours structurés</strong> pour progresser efficacement</p>
+          <p style="color:#0369a1;font-size:13px;margin:0 0 12px;">• <strong>Entraînements illimités</strong> pour s'exercer à son rythme</p>
+          <table role="presentation" cellspacing="0" cellpadding="0">
+            <tr>
+              <td align="center">
+                <a href="https://prepcivique.fr" target="_blank" style="display:inline-block;background-color:#0284c7;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:8px;">
+                  Découvrir PrepCivique.fr
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0;font-size:14px;color:#71717a;line-height:1.5;">
+      N'hésitez pas à nous contacter pour reprogrammer un examen. Nous sommes là pour vous accompagner.
+    </p>`;
+  return emailLayout("Résultat de votre examen", body);
+}
+
+export function buildRelanceEmail(
+  prenom: string,
+  nom: string,
+): string {
+  const body = `
+    <p style="margin:0 0 20px;font-size:16px;color:#1e1e1e;">Bonjour <strong>${prenom} ${nom}</strong>,</p>
+
+    <p style="margin:0 0 20px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      Suite à votre examen, nous souhaitons vous informer que <strong>MyStoryFormation</strong> propose, via sa plateforme partenaire <strong>PrepCivique.fr</strong>, des outils pour vous accompagner dans votre réussite.
+    </p>
+
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f0f9ff;border-radius:8px;border:1px solid #bae6fd;margin-bottom:24px;">
+      <tr>
+        <td style="padding:20px;">
+          <p style="color:#0c4a6e;font-size:15px;margin:0 0 12px;font-weight:700;">PrepCivique.fr — Préparez votre réussite</p>
+          <p style="color:#0369a1;font-size:13px;margin:0 0 6px;">• <strong>Examens blancs</strong> dans les conditions réelles</p>
+          <p style="color:#0369a1;font-size:13px;margin:0 0 6px;">• <strong>Cours structurés</strong> pour progresser efficacement</p>
+          <p style="color:#0369a1;font-size:13px;margin:0 0 12px;">• <strong>Entraînements illimités</strong> pour s'exercer à son rythme</p>
+          <table role="presentation" cellspacing="0" cellpadding="0">
+            <tr>
+              <td align="center">
+                <a href="https://prepcivique.fr" target="_blank" style="display:inline-block;background-color:#0284c7;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:8px;">
+                  Découvrir PrepCivique.fr
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0;font-size:14px;color:#71717a;line-height:1.5;">
+      Si vous avez des questions ou souhaitez reprogrammer un examen, n'hésitez pas à nous contacter.
+    </p>`;
+  return emailLayout('PrepCivique.fr — Promotions et entraînements', body);
+}
+
 export function buildConvocationEmail(
   prenom: string,
   nom: string,

@@ -69,6 +69,7 @@ export interface Examen {
   pdfAttestationPaiement: string | null;
   pdfFicheInscription: string | null;
   pdfConvocation: string | null;
+  pdfAttestationReussite: string | null;
   pdfVersions: PdfVersion[];
   resultatEmailSent: boolean;
   createdAt: string;
@@ -122,6 +123,7 @@ interface DbExamen {
   pdf_attestation_paiement: string | null;
   pdf_fiche_inscription: string | null;
   pdf_convocation: string | null;
+  pdf_attestation_reussite: string | null;
   pdf_versions: PdfVersion[] | null;
   resultat_email_sent: boolean;
   created_at: string;
@@ -176,6 +178,7 @@ function dbToExamen(row: DbExamen): Examen {
     pdfAttestationPaiement: row.pdf_attestation_paiement,
     pdfFicheInscription: row.pdf_fiche_inscription,
     pdfConvocation: row.pdf_convocation,
+    pdfAttestationReussite: row.pdf_attestation_reussite,
     pdfVersions: row.pdf_versions || [],
     resultatEmailSent: row.resultat_email_sent || false,
     createdAt: row.created_at,
@@ -262,6 +265,7 @@ export interface UpdateExamenFields {
   pdfAttestationPaiement?: string | null;
   pdfFicheInscription?: string | null;
   pdfConvocation?: string | null;
+  pdfAttestationReussite?: string | null;
   pieceIdentite?: string[] | null;
   pdfVersions?: PdfVersion[];
   resultatEmailSent?: boolean;
@@ -292,6 +296,7 @@ export async function updateExamenFields(
   if (fields.pdfAttestationPaiement !== undefined) dbFields.pdf_attestation_paiement = fields.pdfAttestationPaiement;
   if (fields.pdfFicheInscription !== undefined) dbFields.pdf_fiche_inscription = fields.pdfFicheInscription;
   if (fields.pdfConvocation !== undefined) dbFields.pdf_convocation = fields.pdfConvocation;
+  if (fields.pdfAttestationReussite !== undefined) dbFields.pdf_attestation_reussite = fields.pdfAttestationReussite;
   if (fields.pieceIdentite !== undefined) dbFields.piece_identite = fields.pieceIdentite ? JSON.stringify(fields.pieceIdentite) : null;
   if (fields.pdfVersions !== undefined) dbFields.pdf_versions = fields.pdfVersions;
   if (fields.resultatEmailSent !== undefined) dbFields.resultat_email_sent = fields.resultatEmailSent;
