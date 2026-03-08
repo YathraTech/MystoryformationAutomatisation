@@ -124,7 +124,7 @@ function emailLayout(title: string, body: string): string {
 function recapRow(label: string, value: string, isFirst: boolean): string {
   const borderStyle = isFirst ? '' : 'border-top:1px solid #e4e4e7;';
   return `<tr>
-    <td style="padding:6px 0;font-size:13px;color:#71717a;${borderStyle}width:140px;">${label}</td>
+    <td style="padding:6px 0;font-size:13px;color:#71717a;${borderStyle}width:35%;">${label}</td>
     <td style="padding:6px 0;font-size:14px;font-weight:600;color:#1e1e1e;${borderStyle}">${value}</td>
   </tr>`;
 }
@@ -402,8 +402,8 @@ export function buildResultatAbsentEmail(
     </p>
 
     ${recapTable(
-      recapRow('Téléphone', '01 43 09 15 40', true) +
-      recapRow('Email', 'contact@mystoryformation.fr', false)
+      recapRow('Téléphone', '<a href="tel:+33143091540" style="color:#1e1e1e;text-decoration:none;font-weight:600;">01 43 09 15 40</a>', true) +
+      recapRow('Email', '<a href="mailto:contact@mystoryformation.fr" style="color:#1e1e1e;text-decoration:underline;font-weight:600;">contact@mystoryformation.fr</a>', false)
     )}
 
     <p style="margin:0;font-size:14px;color:#71717a;line-height:1.5;">
@@ -451,10 +451,10 @@ export function buildResultatEchoueEmail(
           <p style="color:#0369a1;font-size:13px;margin:0 0 6px;">• <strong>Examens blancs</strong> dans les conditions réelles</p>
           <p style="color:#0369a1;font-size:13px;margin:0 0 6px;">• <strong>Cours structurés</strong> pour progresser efficacement</p>
           <p style="color:#0369a1;font-size:13px;margin:0 0 12px;">• <strong>Entraînements illimités</strong> pour s'exercer à son rythme</p>
-          <table role="presentation" cellspacing="0" cellpadding="0">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
             <tr>
               <td align="center">
-                <a href="https://prepcivique.fr" target="_blank" style="display:inline-block;background-color:#0284c7;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:8px;">
+                <a href="https://prepcivique.fr" target="_blank" class="cta-btn" style="display:inline-block;background-color:#0284c7;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:8px;">
                   Découvrir PrepCivique.fr
                 </a>
               </td>
@@ -488,10 +488,10 @@ export function buildRelanceEmail(
           <p style="color:#0369a1;font-size:13px;margin:0 0 6px;">• <strong>Examens blancs</strong> dans les conditions réelles</p>
           <p style="color:#0369a1;font-size:13px;margin:0 0 6px;">• <strong>Cours structurés</strong> pour progresser efficacement</p>
           <p style="color:#0369a1;font-size:13px;margin:0 0 12px;">• <strong>Entraînements illimités</strong> pour s'exercer à son rythme</p>
-          <table role="presentation" cellspacing="0" cellpadding="0">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
             <tr>
               <td align="center">
-                <a href="https://prepcivique.fr" target="_blank" style="display:inline-block;background-color:#0284c7;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:8px;">
+                <a href="https://prepcivique.fr" target="_blank" class="cta-btn" style="display:inline-block;background-color:#0284c7;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:8px;">
                   Découvrir PrepCivique.fr
                 </a>
               </td>
