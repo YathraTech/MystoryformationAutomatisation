@@ -141,6 +141,41 @@ function recapTable(rows: string): string {
   </table>`;
 }
 
+function sectionBlock(title: string, rows: string): string {
+  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-radius:8px;overflow:hidden;margin-bottom:16px;">
+    <tr>
+      <td style="background-color:#1e1e1e;padding:12px 20px;">
+        <h2 style="color:#ffffff;font-size:14px;margin:0;font-weight:600;text-transform:uppercase;letter-spacing:1px;">${title}</h2>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color:#f8fafc;padding:20px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+          ${rows}
+        </table>
+      </td>
+    </tr>
+  </table>`;
+}
+
+function sectionRow(label: string, value: string): string {
+  return `<tr>
+    <td style="padding:6px 0;color:#64748b;font-size:13px;width:40%;">${label}</td>
+    <td style="padding:6px 0;color:#1e1e1e;font-size:13px;font-weight:600;">${value}</td>
+  </tr>`;
+}
+
+function confirmationBanner(message: string, detail: string): string {
+  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;margin-bottom:16px;">
+    <tr>
+      <td style="padding:20px;text-align:center;">
+        <p style="color:#166534;font-size:14px;margin:0;font-weight:600;">${message}</p>
+        <p style="color:#15803d;font-size:13px;margin:8px 0 0;">${detail}</p>
+      </td>
+    </tr>
+  </table>`;
+}
+
 function ctaButton(url: string, label: string): string {
   return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0">
     <tr>
@@ -188,28 +223,71 @@ export function buildPreinscriptionFormationEmail(
   return emailLayout('Confirmation de pré-inscription', body);
 }
 
-export function buildPreinscriptionExamenEmail(
-  prenom: string,
-  nom: string,
-  diplomeLabel: string,
-  lieu: string,
-): string {
+export interface PreinscriptionExamenData {
+  civilite: string;
+  prenom: string;
+  nom: string;
+  email: string;
+  telephone: string;
+  dateNaissance: string;
+  adresse: string;
+  codePostal: string;
+  ville: string;
+  nationalite: string;
+  villeNaissance: string;
+  lieuNaissance: string;
+  langueMaternelle: string;
+  numeroPasseport: string;
+  numeroCni: string;
+  diplomeLabel: string;
+  typeExamen: string;
+  lieu: string;
+  motivation: string;
+  motivationAutre: string;
+}
+
+export function buildPreinscriptionExamenEmail(data: PreinscriptionExamenData): string {
+  // Informations personnelles
+  let personalRows =
+    sectionRow('Civilité', data.civilite) +
+    sectionRow('Nom', data.nom) +
+    sectionRow('Prénom', data.prenom) +
+    sectionRow('Email', data.email) +
+    sectionRow('Téléphone', data.telephone) +
+    sectionRow('Date de naissance', data.dateNaissance) +
+    sectionRow('Adresse', `${data.adresse}, ${data.codePostal} ${data.ville}`);
+
+  if (data.nationalite) personalRows += sectionRow('Nationalité', data.nationalite);
+  if (data.villeNaissance) personalRows += sectionRow('Ville de naissance', data.villeNaissance);
+  if (data.lieuNaissance) personalRows += sectionRow('Pays de naissance', data.lieuNaissance);
+  if (data.langueMaternelle) personalRows += sectionRow('Langue maternelle', data.langueMaternelle);
+
+  // Examen
+  let examRows = '';
+  if (data.typeExamen) examRows += sectionRow("Type d'examen", data.typeExamen);
+  examRows += sectionRow('Diplôme / Option', data.diplomeLabel || '-');
+  if (data.lieu) examRows += sectionRow("Centre d'examen", data.lieu);
+  if (data.motivation) examRows += sectionRow('Motivation', data.motivation);
+  if (data.motivationAutre) examRows += sectionRow('Précision', data.motivationAutre);
+
+  // Pièce d'identité
+  let idRows = '';
+  if (data.numeroPasseport) idRows += sectionRow('N° Passeport', data.numeroPasseport);
+  if (data.numeroCni) idRows += sectionRow('N° CNI', data.numeroCni);
+
   const body = `
-    <p style="margin:0 0 20px;font-size:16px;color:#1e1e1e;">Bonjour <strong>${prenom} ${nom}</strong>,</p>
+    <p style="margin:0 0 20px;font-size:16px;color:#1e1e1e;">Bonjour <strong>${data.civilite} ${data.prenom} ${data.nom}</strong>,</p>
     <p style="margin:0 0 24px;font-size:15px;color:#3f3f46;line-height:1.6;">
-      Nous avons bien reçu votre inscription à l'examen. Voici un récapitulatif :
+      Nous avons bien reçu votre pré-inscription à l'examen. Voici le récapitulatif de vos informations.
     </p>
-    ${recapTable(
-      recapRow("Examen", diplomeLabel || '-', true) +
-      recapRow("Centre", lieu || '-', false)
-    )}
-    <p style="margin:0 0 8px;font-size:15px;color:#3f3f46;line-height:1.6;">
-      Vous recevrez prochainement votre convocation avec la date et l'heure de passage.
-    </p>
-    <p style="margin:0;font-size:14px;color:#71717a;line-height:1.5;">
-      Si vous avez des questions, n'hésitez pas à nous contacter par email ou par téléphone.
-    </p>`;
-  return emailLayout("Confirmation d'inscription à l'examen", body);
+    ${sectionBlock('Informations personnelles', personalRows)}
+    ${sectionBlock('Examen sélectionné', examRows)}
+    ${idRows ? sectionBlock("Pièce d'identité", idRows) : ''}
+    ${confirmationBanner(
+      "Votre pré-inscription à l'examen a bien été enregistrée",
+      "Vous recevrez prochainement votre convocation avec la date, l'heure et le lieu de votre examen."
+    )}`;
+  return emailLayout("Confirmation de pré-inscription à l'examen", body);
 }
 
 export function buildAttestationEmail(

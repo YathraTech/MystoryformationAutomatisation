@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
-import { buildPreinscriptionExamenEmail, resolveDiplomeLabel } from '@/lib/utils/email-templates';
+import { buildPreinscriptionExamenEmail, resolveDiplomeLabel, type PreinscriptionExamenData } from '@/lib/utils/email-templates';
 
 const diplomeSchema = z.object({
   diplome: z.string().min(1),
@@ -307,12 +307,30 @@ export async function PATCH(
         try {
           const diplomeLabel = await resolveDiplomeLabel(fullExamen.diplome);
 
-          const emailHtml = buildPreinscriptionExamenEmail(
-            fullExamen.prenom || '',
-            fullExamen.nom || '',
+          const emailData: PreinscriptionExamenData = {
+            civilite: fullExamen.civilite || '',
+            prenom: fullExamen.prenom || '',
+            nom: fullExamen.nom || '',
+            email: fullExamen.email || '',
+            telephone: fullExamen.telephone || '',
+            dateNaissance: fullExamen.date_naissance || '',
+            adresse: fullExamen.adresse || '',
+            codePostal: fullExamen.code_postal || '',
+            ville: fullExamen.ville || '',
+            nationalite: fullExamen.nationalite || '',
+            villeNaissance: fullExamen.ville_naissance || '',
+            lieuNaissance: fullExamen.lieu_naissance || '',
+            langueMaternelle: fullExamen.langue_maternelle || '',
+            numeroPasseport: fullExamen.numero_passeport || '',
+            numeroCni: fullExamen.numero_cni || '',
             diplomeLabel,
-            fullExamen.lieu || '',
-          );
+            typeExamen: fullExamen.type_examen || '',
+            lieu: fullExamen.lieu || '',
+            motivation: fullExamen.motivation || '',
+            motivationAutre: fullExamen.motivation_autre || '',
+          };
+
+          const emailHtml = buildPreinscriptionExamenEmail(emailData);
 
           await fetch(webhookUrl, {
             method: 'POST',
