@@ -47,6 +47,7 @@ export default function ExamensPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<FilterType>('tous');
+  const [staffMap, setStaffMap] = useState<Record<string, string>>({});
 
   const fetchExamens = useCallback(async () => {
     try {
@@ -64,6 +65,14 @@ export default function ExamensPage() {
 
   useEffect(() => {
     fetchExamens();
+    fetch('/api/admin/staff')
+      .then((res) => res.ok ? res.json() : [])
+      .then((data: { id: string; prenom: string; nom: string }[]) => {
+        const map: Record<string, string> = {};
+        (Array.isArray(data) ? data : []).forEach((s) => { map[s.id] = `${s.prenom} ${s.nom}`; });
+        setStaffMap(map);
+      })
+      .catch(() => {});
   }, [fetchExamens]);
 
   const formatDate = (date: string | null) => {
@@ -214,14 +223,28 @@ export default function ExamensPage() {
                     </span>
                   )}
                 </div>
-                <a
-                  href={`aircall://call/${examen.telephone?.replace(/\s/g, '')}`}
-                  className="text-xs text-blue-600 hover:underline"
-                  title="Appeler avec Aircall"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {examen.telephone}
-                </a>
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <a
+                    href={`aircall://call/${examen.telephone?.replace(/\s/g, '')}`}
+                    className="text-blue-600 hover:underline"
+                    title="Appeler avec Aircall"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {examen.telephone}
+                  </a>
+                  {examen.commercialId && staffMap[examen.commercialId] && (
+                    <>
+                      <span className="text-slate-300">|</span>
+                      <span>{staffMap[examen.commercialId]}</span>
+                    </>
+                  )}
+                  {examen.lieu && (
+                    <>
+                      <span className="text-slate-300">|</span>
+                      <span>{examen.lieu}</span>
+                    </>
+                  )}
+                </div>
               </div>
 
               <div className="px-4 py-3.5 text-sm text-slate-600 flex items-center">
