@@ -47,6 +47,10 @@ export default function PartenairesPage() {
   const [createSuccess, setCreateSuccess] = useState('');
   const [form, setForm] = useState({ email: '', password: '', nom: '', prenom: '', organisation: '', lieu: '' });
   const [showPassword, setShowPassword] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [resendingId, setResendingId] = useState<string | null>(null);
+  const [resendResult, setResendResult] = useState<{ id: string; success: boolean } | null>(null);
   const [copied, setCopied] = useState(false);
 
   const fetchPartenaires = useCallback(async () => {
@@ -122,6 +126,41 @@ export default function PartenairesPage() {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const sendCredentialsEmail = async (email: string, password: string, nom: string, prenom: string, organisation?: string) => {
+    try {
+      const res = await fetch('/api/admin/partenaires/send-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, nom, prenom, organisation }),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleSendAfterCreate = async () => {
+    if (!form.email || !form.password) return;
+    setSendingEmail(true);
+    const ok = await sendCredentialsEmail(form.email, form.password, form.nom, form.prenom, form.organisation);
+    if (ok) {
+      setEmailSent(true);
+      setTimeout(() => setEmailSent(false), 3000);
+    }
+    setSendingEmail(false);
+  };
+
+  const handleResendCredentials = async (p: Partenaire) => {
+    const password = prompt(`Entrez le mot de passe à envoyer à ${p.organisation || p.email} :`);
+    if (!password) return;
+    setResendingId(p.id);
+    setResendResult(null);
+    const ok = await sendCredentialsEmail(p.email, password, p.nom, p.prenom, p.organisation || undefined);
+    setResendResult({ id: p.id, success: ok });
+    setResendingId(null);
+    setTimeout(() => setResendResult(null), 3000);
   };
 
   // Totaux
@@ -256,13 +295,23 @@ export default function PartenairesPage() {
               Créer l&apos;accès
             </button>
             {form.email && form.password && (
-              <button
-                onClick={copyCredentials}
-                className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
-              >
-                {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                {copied ? 'Copié !' : 'Copier les identifiants'}
-              </button>
+              <>
+                <button
+                  onClick={copyCredentials}
+                  className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                  {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                  {copied ? 'Copié !' : 'Copier les identifiants'}
+                </button>
+                <button
+                  onClick={handleSendAfterCreate}
+                  disabled={sendingEmail}
+                  className="flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-700 hover:bg-violet-100 transition-colors disabled:opacity-50"
+                >
+                  {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                  {emailSent ? 'Envoyé !' : 'Envoyer par email'}
+                </button>
+              </>
             )}
             <button
               onClick={() => { setShowCreate(false); setCreateError(''); setCreateSuccess(''); }}
@@ -403,15 +452,29 @@ export default function PartenairesPage() {
                   </div>
                 </div>
 
-                <div className="px-4 py-3.5 flex items-center">
+                <div className="px-4 py-3.5 flex items-center gap-2">
                   <a
                     href="/partenaire/login"
                     target="_blank"
                     className="inline-flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 hover:underline"
                   >
                     <ExternalLink className="h-3 w-3" />
-                    Portail
                   </a>
+                  {isAdmin && (
+                    <button
+                      onClick={() => handleResendCredentials(p)}
+                      disabled={resendingId === p.id}
+                      className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                      title="Renvoyer les identifiants par email"
+                    >
+                      {resendingId === p.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
+                    </button>
+                  )}
+                  {resendResult?.id === p.id && (
+                    <span className={`text-[10px] ${resendResult.success ? 'text-emerald-600' : 'text-red-500'}`}>
+                      {resendResult.success ? 'Envoyé !' : 'Erreur'}
+                    </span>
+                  )}
                 </div>
               </div>
             ))}

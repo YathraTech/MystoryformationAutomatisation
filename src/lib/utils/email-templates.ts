@@ -530,3 +530,39 @@ export function buildConvocationEmail(
     ${ctaButton(url, 'Télécharger la convocation')}`;
   return emailLayout('Convocation', body);
 }
+
+export function buildPartenaireCredentialsEmail(
+  prenom: string,
+  nom: string,
+  email: string,
+  password: string,
+  loginUrl: string,
+  organisation?: string,
+): string {
+  const body = `
+    <p style="margin:0 0 20px;font-size:16px;color:#1e1e1e;">Bonjour <strong>${prenom} ${nom}</strong>,</p>
+    <p style="margin:0 0 24px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      Votre accès à l'espace partenaire MyStoryFormation a été créé${organisation ? ` pour <strong>${organisation}</strong>` : ''}. Voici vos identifiants de connexion :
+    </p>
+    ${recapTable(
+      recapRow('Email', email, true) +
+      recapRow('Mot de passe', `<code style="background:#f4f4f5;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:14px;">${password}</code>`, false)
+    )}
+    <p style="margin:0 0 16px;font-size:14px;color:#71717a;line-height:1.5;">
+      Depuis votre espace, vous pouvez :
+    </p>
+    <ul style="margin:0 0 24px;padding-left:20px;font-size:14px;color:#3f3f46;line-height:1.8;">
+      <li>Consulter le planning et les places disponibles</li>
+      <li>Inscrire vos candidats aux sessions d'examen</li>
+      <li>Suivre vos candidats et leurs résultats</li>
+    </ul>
+    <p style="margin:0 0 24px;font-size:13px;color:#ef4444;">
+      Pour des raisons de sécurité, nous vous recommandons de changer votre mot de passe après votre première connexion.
+    </p>
+    <div style="text-align:center;margin-bottom:24px;">
+      <a href="${loginUrl}" style="display:inline-block;background-color:#7c3aed;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600;letter-spacing:0.3px;" class="cta-btn">
+        Se connecter à l'espace partenaire
+      </a>
+    </div>`;
+  return emailLayout('Accès Espace Partenaire', body);
+}
