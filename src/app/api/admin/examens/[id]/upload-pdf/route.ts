@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { updateExamenFields } from '@/lib/data/examens';
 
-type DocType = 'attestation_paiement' | 'fiche_inscription' | 'convocation';
+type DocType = 'attestation_paiement' | 'fiche_inscription' | 'convocation' | 'attestation_reussite';
 
-const DOC_TYPE_FIELD_MAP: Record<DocType, 'pdfAttestationPaiement' | 'pdfFicheInscription' | 'pdfConvocation'> = {
+const DOC_TYPE_FIELD_MAP: Record<DocType, 'pdfAttestationPaiement' | 'pdfFicheInscription' | 'pdfConvocation' | 'pdfAttestationReussite'> = {
   attestation_paiement: 'pdfAttestationPaiement',
   fiche_inscription: 'pdfFicheInscription',
   convocation: 'pdfConvocation',
+  attestation_reussite: 'pdfAttestationReussite',
 };
 
 export async function POST(

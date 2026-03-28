@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
@@ -27,6 +27,8 @@ import {
   Trash2,
   Loader2,
   Send,
+  Upload,
+  Award,
 } from 'lucide-react';
 import type { Inscription, Formation, ExamOption } from '@/types/admin';
 import type { Examen, ExamenResultat, MoyenPaiement, TypeExamen, PdfVersion } from '@/lib/data/examens';
@@ -359,6 +361,175 @@ function EditableExamenField({ icon: Icon, label, value, examenId, fieldKey, onS
             </button>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function ResultatsSection({
+  examens,
+  examOptions,
+  onRefresh,
+}: {
+  examens: Examen[];
+  examOptions: ExamOption[];
+  onRefresh: () => void;
+}) {
+  const [uploadingId, setUploadingId] = useState<number | null>(null);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+
+  const handleUploadAttestation = useCallback(async (examenId: number, file: File) => {
+    setUploadingId(examenId);
+    try {
+      // 1. Get signed upload URL
+      const urlRes = await fetch(`/api/admin/examens/${examenId}/upload-pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docType: 'attestation_reussite', fileName: file.name }),
+      });
+      if (!urlRes.ok) return;
+      const { signedUrl, token } = await urlRes.json();
+
+      // 2. Upload file directly to Supabase Storage
+      await fetch(signedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type, 'x-upsert': 'true' },
+        body: file,
+      });
+
+      // If signed URL uses token-based upload
+      if (token) {
+        await fetch(signedUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': file.type, 'x-upsert': 'true' },
+          body: file,
+        });
+      }
+
+      onRefresh();
+    } catch {
+      // silently fail
+    } finally {
+      setUploadingId(null);
+    }
+  }, [onRefresh]);
+
+  const handleDownload = useCallback(async (examenId: number, path: string) => {
+    setDownloadingId(examenId);
+    try {
+      const res = await fetch(`/api/admin/examens/${examenId}/download-pdf?path=${encodeURIComponent(path)}`);
+      if (res.ok) {
+        const { url } = await res.json();
+        window.open(url, '_blank');
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setDownloadingId(null);
+    }
+  }, []);
+
+  const formatDateFr = (date: string) => {
+    return new Date(date).toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="p-5 border-b border-slate-100">
+        <h2 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+          <Award className="h-4 w-4 text-amber-600" />
+          Résultats d&apos;examens
+        </h2>
+      </div>
+
+      <div className="divide-y divide-slate-100">
+        {examens.map((examen) => {
+          const resultatConfig = RESULTAT_CONFIG[examen.resultat];
+          const diplomeLabel = getDiplomeLabel(examOptions, examen.diplome);
+
+          return (
+            <div key={examen.id} className="flex items-center gap-4 px-5 py-3.5">
+              {/* Date */}
+              <div className="shrink-0 w-24">
+                <p className="text-xs text-slate-500">
+                  {examen.dateExamen ? formatDateFr(examen.dateExamen) : 'Date non définie'}
+                </p>
+              </div>
+
+              {/* Type examen */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-800 truncate">{diplomeLabel}</p>
+              </div>
+
+              {/* Résultat badge */}
+              <span className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${resultatConfig.bg} ${resultatConfig.text}`}>
+                {resultatConfig.label}
+              </span>
+
+              {/* Attestation upload/download */}
+              <div className="shrink-0 flex items-center gap-1.5">
+                {examen.pdfAttestationReussite ? (
+                  <button
+                    onClick={() => handleDownload(examen.id, examen.pdfAttestationReussite!)}
+                    disabled={downloadingId === examen.id}
+                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                    title="Télécharger l'attestation"
+                  >
+                    {downloadingId === examen.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Download className="h-3 w-3" />
+                    )}
+                    Attestation
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => fileInputRefs.current[examen.id]?.click()}
+                    disabled={uploadingId === examen.id}
+                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors disabled:opacity-50"
+                    title="Uploader une attestation"
+                  >
+                    {uploadingId === examen.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Upload className="h-3 w-3" />
+                    )}
+                    Attestation
+                  </button>
+                )}
+                <input
+                  ref={(el) => { fileInputRefs.current[examen.id] = el; }}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleUploadAttestation(examen.id, file);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+                {/* Re-upload button when attestation exists */}
+                {examen.pdfAttestationReussite && (
+                  <button
+                    onClick={() => fileInputRefs.current[examen.id]?.click()}
+                    disabled={uploadingId === examen.id}
+                    className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-50"
+                    title="Remplacer l'attestation"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -1345,6 +1516,15 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
             <p className="text-sm text-blue-700">{inscription.relanceNote}</p>
           )}
         </div>
+      )}
+
+      {/* Section Résultats */}
+      {examens.filter((e) => e.resultat !== 'a_venir').length > 0 && (
+        <ResultatsSection
+          examens={examens.filter((e) => e.resultat !== 'a_venir')}
+          examOptions={examOptions}
+          onRefresh={() => inscription && fetchExamens(inscription.clientId, inscription.email)}
+        />
       )}
 
       {/* Section Examens */}
