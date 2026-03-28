@@ -80,6 +80,7 @@ export interface CommercialRevenue {
   prenom: string;
   role: 'admin' | 'commercial';
   currentMonth: number;
+  nombreVentes: number;
   objectifCa: number | null;
   progression: number;
   byMonth?: { mois: string; label: string; montant: number }[];

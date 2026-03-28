@@ -242,12 +242,14 @@ export async function GET() {
     const commercialRevenues: CommercialRevenue[] = commercialsAndAdmins.map((member) => {
       // Examens attribués à ce membre dans le mois en cours
       let monthCA = 0;
+      let nombreVentes = 0;
       for (const ex of examens) {
         if (ex.commercialId !== member.id) continue;
         if (ex.prix === null || ex.prix <= 0) continue;
         const date = new Date(ex.createdAt);
         if (date.getFullYear() === currentYear && date.getMonth() === currentMonthIdx) {
           monthCA += ex.prix;
+          nombreVentes++;
         }
       }
 
@@ -262,6 +264,7 @@ export async function GET() {
         prenom: member.prenom,
         role: member.role as 'admin' | 'commercial',
         currentMonth: monthCA,
+        nombreVentes,
         objectifCa: objectif,
         progression,
       };
@@ -306,12 +309,14 @@ export async function GET() {
 
         const centreCommercialRevenues: CommercialRevenue[] = centreMembers.map((member) => {
           let monthCA = 0;
+          let centreNombreVentes = 0;
           for (const ex of centreExamens) {
             if (ex.commercialId !== member.id) continue;
             if (ex.prix === null || ex.prix <= 0) continue;
             const date = new Date(ex.createdAt);
             if (date.getFullYear() === currentYear && date.getMonth() === currentMonthIdx) {
               monthCA += ex.prix;
+              centreNombreVentes++;
             }
           }
           const objectif = member.objectifCa;
@@ -324,6 +329,7 @@ export async function GET() {
             prenom: member.prenom,
             role: member.role as 'admin' | 'commercial',
             currentMonth: monthCA,
+            nombreVentes: centreNombreVentes,
             objectifCa: objectif,
             progression: prog,
           };

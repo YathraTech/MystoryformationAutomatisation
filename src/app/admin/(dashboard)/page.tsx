@@ -430,6 +430,9 @@ function CommercialList({ commercials, currentUserId }: { commercials: Commercia
                 <p className={`text-xs font-bold ${atteint ? 'text-emerald-600' : isCurrentUser ? 'text-blue-700' : 'text-slate-800'}`}>
                   {formatEur(cr.currentMonth)}
                 </p>
+                <p className="text-[9px] text-slate-500">
+                  {cr.nombreVentes} vente{cr.nombreVentes > 1 ? 's' : ''}
+                </p>
                 {cr.byMonth && cr.byMonth.length > 0 && (() => {
                   const prevMonth = cr.byMonth![cr.byMonth!.length - 1];
                   const diff = cr.currentMonth - prevMonth.montant;
