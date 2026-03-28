@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import {
   ArrowLeft,
   User,
@@ -574,6 +575,7 @@ function CollapsibleSection({ title, icon: Icon, defaultOpen = false, children }
 
 export default function InscriptionDetail({ id }: InscriptionDetailProps) {
   const router = useRouter();
+  const { lieu: userLieu } = useAdminAuth();
   const [inscription, setInscription] = useState<Inscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -965,7 +967,7 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
       montantCb: examen.montantCb?.toString() || '',
       commercialId: examen.commercialId || '',
       typeExamen: examen.typeExamen || '',
-      lieu: examen.lieu || '',
+      lieu: examen.lieu || userLieu || '',
       dateExamen: examen.dateExamen || '',
       heureExamen: derivedHeure,
       remises: examen.remises || '',
@@ -973,7 +975,7 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
       remiseValeur: '',
       distanciel: examen.distanciel || false,
       datePaiement: examen.datePaiement || '',
-      lieuConfiguration: examen.lieuConfiguration || '',
+      lieuConfiguration: examen.lieuConfiguration || userLieu || '',
       inscriptionType: examen.inscriptionType || '',
       facilites: examen.facilites || '',
       numeroCpf: examen.numeroCpf || '',
@@ -1144,7 +1146,7 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
     const missing: string[] = [];
     if (!examenForm.commercialId) missing.push('Commercial');
     if (!examenForm.dateExamen) missing.push('Date d\'examen');
-    if (!examenForm.lieu) missing.push('Lieu');
+    if (!examenForm.lieu) missing.push('Agence (attribution CA)');
     if (!examenForm.prix) missing.push('Prix');
     if (!examenForm.moyenPaiement) missing.push('Moyen de paiement');
     if (!examenForm.datePaiement) missing.push('Date de paiement');
@@ -1699,18 +1701,19 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                             </p>
                           </div>
 
-                          {/* Lieu */}
+                          {/* Agence (attribution CA) */}
                           <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">Lieu</label>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Agence (attribution CA)</label>
                             <select
                               value={examenForm.lieu}
                               onChange={(e) => setExamenForm({ ...examenForm, lieu: e.target.value })}
                               className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
                             >
-                              <option value="">Sélectionner un lieu...</option>
+                              <option value="">Sélectionner l&apos;agence...</option>
                               <option value="Gagny">Gagny</option>
                               <option value="Sarcelles">Sarcelles</option>
                             </select>
+                            <p className="text-[10px] text-slate-400 mt-0.5">Le CA sera attribué à cette agence</p>
                           </div>
 
                           {/* Mode d'inscription */}
@@ -2000,7 +2003,7 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                               <div><span className="text-slate-500">Date:</span> <span className="font-medium">{new Date(examen.dateExamen).toLocaleDateString('fr-FR')} {examen.heureExamen || ''}</span></div>
                             )}
                             {examen.lieu && (
-                              <div className="col-span-2"><span className="text-slate-500">Lieu:</span> <span className="font-medium">{examen.lieu}</span></div>
+                              <div className="col-span-2"><span className="text-slate-500">Agence (CA):</span> <span className="font-medium">{examen.lieu}</span></div>
                             )}
                             {examen.prix && (
                               <div><span className="text-slate-500">Prix:</span> <span className="font-medium">{examen.prix}€</span></div>
