@@ -51,7 +51,6 @@ function FeuilleAppelSection({ feuilleAppel, isAdmin, onValidated }: { feuilleAp
   }, [feuilleAppel.examens]);
 
   const filled = examens.filter((e) => e.resultat !== 'a_venir').length;
-  const allFilled = examens.length > 0 && examens.every((e) => e.resultat !== 'a_venir');
   const allEmailsSent = examens.length > 0 && examens.every((e) => e.resultatEmailSent);
 
   const handleResultat = useCallback(async (id: number, resultat: FeuilleAppelExamen['resultat']) => {
@@ -174,7 +173,7 @@ function FeuilleAppelSection({ feuilleAppel, isAdmin, onValidated }: { feuilleAp
             {/* Badge centre (admin only) */}
             {isAdmin && examen.lieu && <CentreBadge lieu={examen.lieu} />}
 
-            {/* Indicateur email envoyé + bouton renvoyer */}
+            {/* Bouton envoi individuel / indicateur email */}
             {examen.resultat !== 'a_venir' && (
               <div className="flex items-center gap-1.5 shrink-0">
                 {examen.resultatEmailSent ? (
@@ -194,16 +193,25 @@ function FeuilleAppelSection({ feuilleAppel, isAdmin, onValidated }: { feuilleAp
                         <RefreshCw className="h-3.5 w-3.5" />
                       )}
                     </button>
-                    {resendResult?.id === examen.id && (
-                      <span className={`text-[10px] ${resendResult.success ? 'text-emerald-600' : 'text-red-500'}`}>
-                        {resendResult.success ? 'Envoyé !' : 'Erreur'}
-                      </span>
-                    )}
                   </>
                 ) : (
-                  <span className="text-xs text-slate-400 flex items-center gap-1">
-                    <Mail className="h-3 w-3" />
-                    <span className="text-[10px]">Non envoyé</span>
+                  <button
+                    onClick={() => handleResend(examen.id)}
+                    disabled={resendingId === examen.id}
+                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors disabled:opacity-50"
+                    title="Envoyer le résultat par email"
+                  >
+                    {resendingId === examen.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Send className="h-3 w-3" />
+                    )}
+                    Envoyer
+                  </button>
+                )}
+                {resendResult?.id === examen.id && (
+                  <span className={`text-[10px] ${resendResult.success ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {resendResult.success ? 'Envoyé !' : 'Erreur'}
                   </span>
                 )}
               </div>
@@ -246,8 +254,8 @@ function FeuilleAppelSection({ feuilleAppel, isAdmin, onValidated }: { feuilleAp
         ))}
       </div>
 
-      {/* Bouton Valider l'appel — envoie les emails de résultat */}
-      {allFilled && !validated && !allEmailsSent && (
+      {/* Bouton envoi groupé — envoie les résultats non encore envoyés */}
+      {examens.some((e) => e.resultat !== 'a_venir' && !e.resultatEmailSent) && !validated && (
         <div className="px-5 py-4 border-t border-orange-200 bg-orange-50/50">
           <button
             onClick={handleValidate}
@@ -259,15 +267,17 @@ function FeuilleAppelSection({ feuilleAppel, isAdmin, onValidated }: { feuilleAp
             ) : (
               <Send className="h-4 w-4" />
             )}
-            {validating ? 'Envoi des résultats...' : 'Valider l\u2019appel et envoyer les résultats'}
+            {validating
+              ? 'Envoi des résultats...'
+              : `Envoyer tous les résultats non envoyés (${examens.filter((e) => e.resultat !== 'a_venir' && !e.resultatEmailSent).length})`}
           </button>
         </div>
       )}
-      {(validated || allEmailsSent) && (
+      {allEmailsSent && (
         <div className="px-5 py-4 border-t border-emerald-200 bg-emerald-50 text-center">
           <p className="text-sm font-medium text-emerald-700 flex items-center justify-center gap-2">
             <Check className="h-4 w-4" />
-            Feuille d&apos;appel validée — résultats envoyés par email
+            Tous les résultats ont été envoyés par email
           </p>
         </div>
       )}

@@ -70,6 +70,9 @@ export interface Examen {
   pdfFicheInscription: string | null;
   pdfConvocation: string | null;
   pdfAttestationReussite: string | null;
+  inscriptionType: string | null;
+  facilites: string | null;
+  numeroCpf: string | null;
   pdfVersions: PdfVersion[];
   resultatEmailSent: boolean;
   createdAt: string;
@@ -124,6 +127,9 @@ interface DbExamen {
   pdf_fiche_inscription: string | null;
   pdf_convocation: string | null;
   pdf_attestation_reussite: string | null;
+  inscription_type: string | null;
+  facilites: string | null;
+  numero_cpf: string | null;
   pdf_versions: PdfVersion[] | null;
   resultat_email_sent: boolean;
   created_at: string;
@@ -179,6 +185,9 @@ function dbToExamen(row: DbExamen): Examen {
     pdfFicheInscription: row.pdf_fiche_inscription,
     pdfConvocation: row.pdf_convocation,
     pdfAttestationReussite: row.pdf_attestation_reussite,
+    inscriptionType: row.inscription_type,
+    facilites: row.facilites,
+    numeroCpf: row.numero_cpf,
     pdfVersions: row.pdf_versions || [],
     resultatEmailSent: row.resultat_email_sent || false,
     createdAt: row.created_at,
@@ -269,6 +278,13 @@ export interface UpdateExamenFields {
   pieceIdentite?: string[] | null;
   pdfVersions?: PdfVersion[];
   resultatEmailSent?: boolean;
+  inscriptionType?: string | null;
+  facilites?: string | null;
+  numeroCpf?: string | null;
+  nationalite?: string | null;
+  villeNaissance?: string | null;
+  lieuNaissance?: string | null;
+  langueMaternelle?: string | null;
 }
 
 export async function updateExamenFields(
@@ -300,6 +316,13 @@ export async function updateExamenFields(
   if (fields.pieceIdentite !== undefined) dbFields.piece_identite = fields.pieceIdentite ? JSON.stringify(fields.pieceIdentite) : null;
   if (fields.pdfVersions !== undefined) dbFields.pdf_versions = fields.pdfVersions;
   if (fields.resultatEmailSent !== undefined) dbFields.resultat_email_sent = fields.resultatEmailSent;
+  if (fields.inscriptionType !== undefined) dbFields.inscription_type = fields.inscriptionType;
+  if (fields.facilites !== undefined) dbFields.facilites = fields.facilites;
+  if (fields.numeroCpf !== undefined) dbFields.numero_cpf = fields.numeroCpf;
+  if (fields.nationalite !== undefined) dbFields.nationalite = fields.nationalite;
+  if (fields.villeNaissance !== undefined) dbFields.ville_naissance = fields.villeNaissance;
+  if (fields.lieuNaissance !== undefined) dbFields.lieu_naissance = fields.lieuNaissance;
+  if (fields.langueMaternelle !== undefined) dbFields.langue_maternelle = fields.langueMaternelle;
 
   if (Object.keys(dbFields).length === 0) return;
 

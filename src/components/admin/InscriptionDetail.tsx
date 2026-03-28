@@ -271,6 +271,99 @@ function EditableField({
   );
 }
 
+interface EditableExamenFieldProps {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  examenId: number;
+  fieldKey: string;
+  onSaved: () => void;
+}
+
+function EditableExamenField({ icon: Icon, label, value, examenId, fieldKey, onSaved }: EditableExamenFieldProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentValue, setCurrentValue] = useState(value);
+  const [saving, setSaving] = useState(false);
+
+  const handleConfirm = async () => {
+    if (currentValue === value) {
+      setIsEditing(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/examens/${examenId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [fieldKey]: currentValue || null }),
+      });
+      if (res.ok) {
+        onSaved();
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setSaving(false);
+      setIsEditing(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setCurrentValue(value);
+    setIsEditing(false);
+  };
+
+  return (
+    <div className="flex items-start gap-3 py-2 group">
+      <Icon className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-slate-500">{label}</p>
+        {isEditing ? (
+          <div className="flex items-center gap-2 mt-1">
+            <input
+              type="text"
+              value={currentValue}
+              onChange={(e) => setCurrentValue(e.target.value)}
+              className="flex-1 text-sm text-slate-800 border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleConfirm();
+                if (e.key === 'Escape') handleCancel();
+              }}
+            />
+            <button
+              onClick={handleConfirm}
+              disabled={saving}
+              className="p-1 text-green-600 hover:bg-green-50 rounded"
+              title="Confirmer"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            </button>
+            <button
+              onClick={handleCancel}
+              className="p-1 text-red-600 hover:bg-red-50 rounded"
+              title="Annuler"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-slate-800">{value || '-'}</p>
+            <button
+              onClick={() => setIsEditing(true)}
+              className="p-1 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+              title="Modifier"
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface CollapsibleSectionProps {
   title: string;
   icon: React.ElementType;
@@ -361,6 +454,9 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
     distanciel: false,
     datePaiement: '',
     lieuConfiguration: '',
+    inscriptionType: '',
+    facilites: '',
+    numeroCpf: '',
   });
   const [savingExamen, setSavingExamen] = useState(false);
   const [resendingLinkId, setResendingLinkId] = useState<number | null>(null);
@@ -707,6 +803,9 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
       distanciel: examen.distanciel || false,
       datePaiement: examen.datePaiement || '',
       lieuConfiguration: examen.lieuConfiguration || '',
+      inscriptionType: examen.inscriptionType || '',
+      facilites: examen.facilites || '',
+      numeroCpf: examen.numeroCpf || '',
     });
   };
 
@@ -729,6 +828,9 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
       distanciel: false,
       datePaiement: '',
       lieuConfiguration: '',
+      inscriptionType: '',
+      facilites: '',
+      numeroCpf: '',
     });
   };
 
@@ -775,6 +877,9 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
           distanciel: examenForm.distanciel,
           datePaiement: examenForm.datePaiement || null,
           lieuConfiguration: examenForm.lieuConfiguration || null,
+          inscriptionType: examenForm.inscriptionType || null,
+          facilites: examenForm.facilites || null,
+          numeroCpf: examenForm.numeroCpf || null,
         }),
       });
 
@@ -1035,42 +1140,38 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
           {/* Informations complémentaires issues du formulaire d'examen */}
           {examens.length > 0 && (
             <>
-              {examens[0].nationalite && (
-                <div className="flex items-start gap-3 py-2">
-                  <User className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-500">Nationalité</p>
-                    <p className="text-sm text-slate-800">{examens[0].nationalite}</p>
-                  </div>
-                </div>
-              )}
-              {examens[0].villeNaissance && (
-                <div className="flex items-start gap-3 py-2">
-                  <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-500">Ville de naissance</p>
-                    <p className="text-sm text-slate-800">{examens[0].villeNaissance}</p>
-                  </div>
-                </div>
-              )}
-              {examens[0].lieuNaissance && (
-                <div className="flex items-start gap-3 py-2">
-                  <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-500">Pays de naissance</p>
-                    <p className="text-sm text-slate-800">{examens[0].lieuNaissance}</p>
-                  </div>
-                </div>
-              )}
-              {examens[0].langueMaternelle && (
-                <div className="flex items-start gap-3 py-2">
-                  <BookOpen className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-500">Langue maternelle</p>
-                    <p className="text-sm text-slate-800">{examens[0].langueMaternelle}</p>
-                  </div>
-                </div>
-              )}
+              <EditableExamenField
+                icon={User}
+                label="Nationalité"
+                value={examens[0].nationalite || ''}
+                examenId={examens[0].id}
+                fieldKey="nationalite"
+                onSaved={() => fetchExamens(inscription!.clientId, inscription!.email)}
+              />
+              <EditableExamenField
+                icon={MapPin}
+                label="Ville de naissance"
+                value={examens[0].villeNaissance || ''}
+                examenId={examens[0].id}
+                fieldKey="villeNaissance"
+                onSaved={() => fetchExamens(inscription!.clientId, inscription!.email)}
+              />
+              <EditableExamenField
+                icon={MapPin}
+                label="Pays de naissance"
+                value={examens[0].lieuNaissance || ''}
+                examenId={examens[0].id}
+                fieldKey="lieuNaissance"
+                onSaved={() => fetchExamens(inscription!.clientId, inscription!.email)}
+              />
+              <EditableExamenField
+                icon={BookOpen}
+                label="Langue maternelle"
+                value={examens[0].langueMaternelle || ''}
+                examenId={examens[0].id}
+                fieldKey="langueMaternelle"
+                onSaved={() => fetchExamens(inscription!.clientId, inscription!.email)}
+              />
               {examens[0].numeroPasseport && (
                 <div className="flex items-start gap-3 py-2">
                   <CreditCard className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
@@ -1539,6 +1640,49 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                             </select>
                           </div>
 
+                          {/* Type d'inscription */}
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Inscription</label>
+                            <select
+                              value={examenForm.inscriptionType}
+                              onChange={(e) => setExamenForm({ ...examenForm, inscriptionType: e.target.value })}
+                              className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+                            >
+                              <option value="">Sélectionner...</option>
+                              <option value="standard">Standard</option>
+                              <option value="urgence_72h">Urgence (72h)</option>
+                            </select>
+                          </div>
+
+                          {/* Facilités de paiement */}
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Facilités</label>
+                            <select
+                              value={examenForm.facilites}
+                              onChange={(e) => setExamenForm({ ...examenForm, facilites: e.target.value })}
+                              className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+                            >
+                              <option value="">Sélectionner...</option>
+                              <option value="1x">1x</option>
+                              <option value="3x">3x sans frais</option>
+                              <option value="4x">4x sans frais</option>
+                            </select>
+                          </div>
+
+                          {/* N° dossier CPF (visible si moyenPaiement === 'cpf') */}
+                          {examenForm.moyenPaiement === 'cpf' && (
+                            <div className="col-span-2">
+                              <label className="block text-xs font-medium text-slate-600 mb-1">N° dossier CPF</label>
+                              <input
+                                type="text"
+                                value={examenForm.numeroCpf}
+                                onChange={(e) => setExamenForm({ ...examenForm, numeroCpf: e.target.value })}
+                                placeholder="Numéro de dossier CPF"
+                                className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+                              />
+                            </div>
+                          )}
+
                           {/* Remise calculée */}
                           <div className="col-span-2">
                             <label className="block text-xs font-medium text-slate-600 mb-1">Remise</label>
@@ -1807,7 +1951,9 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                       try {
                                         if (!examen.pdfFicheInscription) {
                                           const motLabels = Object.fromEntries(examObjectifs.map(o => [o.value, o.label]));
-                                          const { blob, fileName } = await generateFicheInscription(inscription, examen, motLabels);
+                                          const ficheCommercial = staffMembers.find(s => s.id === examen.commercialId);
+                                          const ficheCommercialNom = ficheCommercial ? `${ficheCommercial.prenom} ${ficheCommercial.nom}` : undefined;
+                                          const { blob, fileName } = await generateFicheInscription(inscription, examen, motLabels, ficheCommercialNom);
                                           const urlRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
@@ -1853,7 +1999,9 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                                           if (data.url) window.open(data.url, '_blank');
                                         } else {
                                           const motLabels = Object.fromEntries(examObjectifs.map(o => [o.value, o.label]));
-                                          const { blob, fileName } = await generateFicheInscription(inscription, examen, motLabels);
+                                          const ficheCommercial = staffMembers.find(s => s.id === examen.commercialId);
+                                          const ficheCommercialNom = ficheCommercial ? `${ficheCommercial.prenom} ${ficheCommercial.nom}` : undefined;
+                                          const { blob, fileName } = await generateFicheInscription(inscription, examen, motLabels, ficheCommercialNom);
                                           downloadBlob(blob, fileName);
                                           const urlRes = await fetch(`/api/admin/examens/${examen.id}/upload-pdf`, {
                                             method: 'POST',

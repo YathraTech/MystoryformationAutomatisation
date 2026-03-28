@@ -198,10 +198,6 @@ export function StepRecap({ data, pendingFiles }: StepRecapProps) {
               </span>
             </div>
             <div>
-              <span className="text-slate-500">Langue :</span>{' '}
-              <span className="font-medium text-slate-800">{data.langue || '-'}</span>
-            </div>
-            <div>
               <span className="text-slate-500">Motivation :</span>{' '}
               <span className="font-medium text-slate-800">
                 {data.motivation === 'autre' && data.motivationAutre

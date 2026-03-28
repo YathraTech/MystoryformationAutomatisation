@@ -29,7 +29,6 @@ const examenSchema = z.object({
   niveau: z.string().min(1),
   motivation: z.string().min(1),
   motivationAutre: z.string().optional(),
-  langue: z.string().min(1),
   agentId: z.string().optional(),
   partenaireId: z.string().uuid().optional(),
 });
@@ -100,9 +99,11 @@ export async function POST(request: Request) {
           numero_cpf: '',
           numero_securite_sociale: '',
           mode_financement: '',
-          langue: data.langue || '',
+          langue: '',
           niveau_actuel: data.niveau || '',
-          objectif: '',
+          objectif: data.motivation === 'autre' && data.motivationAutre
+            ? data.motivationAutre
+            : data.motivation || '',
           formation_id: '',
           formation_nom: 'Examen uniquement',
           formation_duree: '',
@@ -141,7 +142,7 @@ export async function POST(request: Request) {
         niveau: data.niveau,
         motivation: data.motivation,
         motivation_autre: data.motivationAutre || null,
-        langue: data.langue,
+        langue: null,
         commercial_id: data.agentId || null,
         partenaire_id: data.partenaireId || null,
       })

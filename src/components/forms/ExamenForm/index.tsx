@@ -43,6 +43,7 @@ export const SERVICES_SOUHAITES = [
 
 // Niveaux
 export const NIVEAUX = [
+  { value: 'Non évalué', label: 'Non évalué' },
   { value: 'A1', label: 'A1' },
   { value: 'A2', label: 'A2' },
   { value: 'B1', label: 'B1' },
@@ -87,7 +88,6 @@ const step1Schema = z.object({
   niveau: z.string().min(1, 'Niveau requis'),
   motivation: z.string().min(1, 'Motivation requise'),
   motivationAutre: z.string().optional(),
-  langue: z.string().min(1, 'Langue requise'),
   agentId: z.string().optional(),
 });
 
@@ -127,7 +127,6 @@ const defaultValues: ExamenFormData = {
   niveau: '',
   motivation: '',
   motivationAutre: '',
-  langue: '',
   agentId: '',
 };
 

@@ -21,7 +21,7 @@ import { useFeuilleAppelBadge } from '@/hooks/useFeuilleAppelBadge';
 
 const mainNavItems = [
   { href: '/admin', label: 'Tableau de bord', icon: LayoutDashboard },
-  { href: '/admin/feuilles-appel', label: "Feuille d'appel", icon: ClipboardList },
+  { href: '/admin/feuilles-appel', label: "Suivi des examens", icon: ClipboardList },
   { href: '/admin/clients', label: 'Clients', icon: Users },
   { href: '/admin/formations', label: 'Formations', icon: BookOpen, disabled: true },
   { href: '/admin/examens', label: 'Candidats d\'examens', icon: ClipboardCheck },
