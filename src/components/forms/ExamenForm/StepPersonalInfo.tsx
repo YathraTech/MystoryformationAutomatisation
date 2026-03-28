@@ -6,7 +6,7 @@ import { Mail, Phone, Loader2, MapPin, Upload, X, FileText } from 'lucide-react'
 import { Input, Select, DatePicker, Combobox } from '@/components/ui';
 import { CIVILITES } from '@/lib/utils/constants';
 import type { ExamenFormData } from './index';
-import { SOURCES_CONNAISSANCE, AGENCES, SERVICES_SOUHAITES, NIVEAUX, MOTIVATIONS } from './index';
+import { SOURCES_CONNAISSANCE, AGENCES, SERVICES_SOUHAITES, NIVEAUX } from './index';
 
 interface AddressSuggestion {
   properties: {
@@ -47,9 +47,10 @@ interface StepPersonalInfoProps {
   hideAgentSelector?: boolean;
   pendingFiles: File[];
   onFilesChange: (files: File[]) => void;
+  motivations: readonly { value: string; label: string }[];
 }
 
-export function StepPersonalInfo({ hideAgence, hideAgentSelector, pendingFiles, onFilesChange }: StepPersonalInfoProps) {
+export function StepPersonalInfo({ hideAgence, hideAgentSelector, pendingFiles, onFilesChange, motivations }: StepPersonalInfoProps) {
   const {
     register,
     setValue,
@@ -496,7 +497,7 @@ export function StepPersonalInfo({ hideAgence, hideAgentSelector, pendingFiles, 
             <Select
               label="Motivation"
               placeholder="Sélectionnez..."
-              options={MOTIVATIONS}
+              options={motivations}
               error={errors.motivation?.message}
               {...register('motivation')}
             />

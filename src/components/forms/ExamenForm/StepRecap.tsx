@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, AlertCircle, Globe, Building2, FileText } from 'lucide-react';
 import type { ExamenFormData } from './index';
-import { SOURCES_CONNAISSANCE, AGENCES, SERVICES_SOUHAITES, NIVEAUX, MOTIVATIONS } from './index';
+import { SOURCES_CONNAISSANCE, AGENCES, SERVICES_SOUHAITES, NIVEAUX } from './index';
 
 interface Agent {
   id: string;
@@ -14,6 +14,7 @@ interface Agent {
 interface StepRecapProps {
   data: ExamenFormData;
   pendingFiles?: File[];
+  motivations: readonly { value: string; label: string }[];
 }
 
 const CIVILITE_LABELS: Record<string, string> = {
@@ -26,7 +27,7 @@ function getLabel(options: { value: string; label: string }[], value: string): s
   return options.find(o => o.value === value)?.label || value || '-';
 }
 
-export function StepRecap({ data, pendingFiles }: StepRecapProps) {
+export function StepRecap({ data, pendingFiles, motivations }: StepRecapProps) {
   const [agents, setAgents] = useState<Agent[]>([]);
   useEffect(() => {
     fetch('/api/agents')
@@ -202,7 +203,7 @@ export function StepRecap({ data, pendingFiles }: StepRecapProps) {
               <span className="font-medium text-slate-800">
                 {data.motivation === 'autre' && data.motivationAutre
                   ? `Autres — ${data.motivationAutre}`
-                  : getLabel(MOTIVATIONS, data.motivation)}
+                  : getLabel([...motivations], data.motivation)}
               </span>
             </div>
             <div>

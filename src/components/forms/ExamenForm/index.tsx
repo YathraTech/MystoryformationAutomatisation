@@ -52,8 +52,8 @@ export const NIVEAUX = [
   { value: 'C2', label: 'C2' },
 ];
 
-// Motivations
-export const MOTIVATIONS = [
+// Motivations (fallback si l'API ne répond pas)
+export const MOTIVATIONS_FALLBACK = [
   { value: 'premiere_demande_titre_sejour', label: '1ère demande de titre de séjour' },
   { value: 'carte_sejour_pluriannuelle', label: 'Carte de séjour pluriannuelle' },
   { value: 'carte_resident', label: 'Carte de résident' },
@@ -159,6 +159,27 @@ export function ExamenForm({ forcedAgence, partenaireId }: ExamenFormProps = {})
   const [copied, setCopied] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const [motivations, setMotivations] = useState(MOTIVATIONS_FALLBACK);
+
+  // Charger les motivations depuis la base de données
+  useEffect(() => {
+    fetch('/api/public/exam-objectifs')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.objectifs?.length > 0) {
+          const opts = data.objectifs.map((o: { value: string; label: string }) => ({
+            value: o.value,
+            label: o.label,
+          }));
+          // Ajouter "Autre(s)" à la fin s'il n'existe pas
+          if (!opts.some((o: { value: string }) => o.value === 'autre')) {
+            opts.push({ value: 'autre', label: 'Autres' });
+          }
+          setMotivations(opts);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const formDefaults = forcedAgence
     ? { ...defaultValues, agence: forcedAgence }
@@ -496,9 +517,10 @@ export function ExamenForm({ forcedAgence, partenaireId }: ExamenFormProps = {})
                 hideAgentSelector={!!partenaireId}
                 pendingFiles={pendingFiles}
                 onFilesChange={setPendingFiles}
+                motivations={motivations}
               />
             )}
-            {currentStep === 2 && <StepRecap data={getValues()} pendingFiles={pendingFiles} />}
+            {currentStep === 2 && <StepRecap data={getValues()} pendingFiles={pendingFiles} motivations={motivations} />}
 
             <div className="mt-6">
               <FormNavigation
