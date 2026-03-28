@@ -51,8 +51,6 @@ function formatWeekRange(dates: Date[]): string {
   return `${start} - ${end}`;
 }
 
-const OTHER_COLOR = { bg: 'bg-slate-50', border: 'border-slate-200', icon: 'text-slate-400' };
-
 interface ExamTypeInfo {
   code: string;
   label: string;
@@ -87,7 +85,7 @@ export default function PartenairePlanningPage() {
         setExamenSlots(data.slots || []);
       }
     } catch {
-      // Slots might not be accessible for partenaire, ignore
+      // ignore
     }
   }, []);
 
@@ -202,7 +200,10 @@ export default function PartenairePlanningPage() {
             {weekDates.map((date, i) => {
               const slot = getSlotForDate(date);
               const isExamDay = slot !== undefined;
-              const isFull = slot && slot.count >= slot.maxPlaces;
+              const totalInscrits = slot?.count ?? 0;
+              const maxPlaces = slot?.maxPlaces ?? 15;
+              const isFull = totalInscrits >= maxPlaces;
+              const placesRestantes = Math.max(0, maxPlaces - totalInscrits);
 
               return (
                 <div
@@ -218,11 +219,16 @@ export default function PartenairePlanningPage() {
                     {date.getDate()}
                   </div>
                   {isExamDay && (
-                    <div className={`mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 ${
-                      isFull ? 'text-red-700' : 'text-amber-700'
-                    }`}>
-                      <Users className="h-3 w-3" />
-                      {slot.count}/{slot.maxPlaces}
+                    <div className="mt-1.5 space-y-0.5">
+                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                        isFull ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
+                      }`}>
+                        <Users className="h-3 w-3" />
+                        {totalInscrits}/{maxPlaces}
+                      </div>
+                      <p className={`text-[10px] font-medium ${isFull ? 'text-red-600' : 'text-emerald-600'}`}>
+                        {isFull ? 'Complet' : `${placesRestantes} place${placesRestantes > 1 ? 's' : ''} dispo`}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -230,10 +236,12 @@ export default function PartenairePlanningPage() {
             })}
           </div>
 
-          {/* Body - Events */}
-          <div className="grid grid-cols-7 min-h-[400px]">
+          {/* Body - Only own candidates */}
+          <div className="grid grid-cols-7 min-h-[300px]">
             {weekDates.map((date, i) => {
               const dayExamens = getExamensForDate(date);
+              const ownCandidats = dayExamens.filter((e) => e.isOwnCandidat);
+
               return (
                 <div
                   key={i}
@@ -242,8 +250,8 @@ export default function PartenairePlanningPage() {
                   }`}
                 >
                   <div className="space-y-1">
-                    {dayExamens.map((ex) => {
-                      const colors = ex.isOwnCandidat ? getOwnCandidatColor(ex.diplome, examTypes) : OTHER_COLOR;
+                    {ownCandidats.map((ex) => {
+                      const colors = getOwnCandidatColor(ex.diplome, examTypes);
                       return (
                         <div
                           key={ex.id}
@@ -253,19 +261,13 @@ export default function PartenairePlanningPage() {
                           {ex.heure && (
                             <span className="text-slate-500 shrink-0">{ex.heure.slice(0, 5)}</span>
                           )}
-                          {ex.isOwnCandidat ? (
-                            <span className="font-medium text-slate-800 truncate">
-                              {ex.prenom} {ex.nom}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 italic truncate">
-                              Candidat
-                            </span>
-                          )}
+                          <span className="font-medium text-slate-800 truncate">
+                            {ex.prenom} {ex.nom}
+                          </span>
                         </div>
                       );
                     })}
-                    {dayExamens.length === 0 && (
+                    {ownCandidats.length === 0 && (
                       <div className="text-center text-slate-300 py-4 text-xs">-</div>
                     )}
                   </div>
@@ -287,10 +289,6 @@ export default function PartenairePlanningPage() {
             </div>
           );
         })}
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-slate-100 border border-slate-300" />
-          <span>Autres</span>
-        </div>
       </div>
     </div>
   );
