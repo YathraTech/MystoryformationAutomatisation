@@ -310,9 +310,19 @@ function HistoriqueSection({ history }: { history: FeuilleAppelSummary[] }) {
                 {feuille.reussi > 0 && <span className="text-green-600"> — {feuille.reussi} réussi{feuille.reussi > 1 ? 's' : ''}</span>}
                 {feuille.echoue > 0 && <span className="text-red-600"> — {feuille.echoue} échoué{feuille.echoue > 1 ? 's' : ''}</span>}
                 {feuille.absent > 0 && <span className="text-orange-600"> — {feuille.absent} absent{feuille.absent > 1 ? 's' : ''}</span>}
-                {feuille.aVenir > 0 && <span className="text-slate-400"> — {feuille.aVenir} en attente</span>}
               </p>
             </div>
+            {feuille.aVenir > 0 ? (
+              <span className="shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold bg-orange-100 text-orange-700">
+                <Clock className="h-3 w-3" />
+                {feuille.aVenir} en attente
+              </span>
+            ) : (
+              <span className="shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold bg-green-100 text-green-700">
+                <CheckCircle2 className="h-3 w-3" />
+                Tous corrigés
+              </span>
+            )}
             <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
           </Link>
         ))}
