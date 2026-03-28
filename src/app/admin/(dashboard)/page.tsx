@@ -7,7 +7,7 @@ import StatusBadge from '@/components/admin/StatusBadge';
 import RevenueChart from '@/components/admin/RevenueChart';
 import Link from 'next/link';
 import type { CommercialRevenue, FeuilleAppelData, FeuilleAppelExamen } from '@/types/admin';
-import { GraduationCap, BookOpen, Eye, EyeOff, Trophy, Sparkles, PartyPopper, Users, MapPin, Target, Crown, ShieldCheck, TrendingUp, TrendingDown, ClipboardCheck, RefreshCw, Check, Send, Mail, Loader2 } from 'lucide-react';
+import { GraduationCap, BookOpen, Eye, EyeOff, Trophy, Sparkles, PartyPopper, Users, MapPin, Target, Crown, ShieldCheck, TrendingUp, TrendingDown, ClipboardCheck, RefreshCw, Check, Send, Mail, Loader2, StickyNote, Pencil, Save, X } from 'lucide-react';
 
 // États des examens pour le tableau de bord (2 états uniquement + absent)
 function getExamenEtat(examen: { resultat: string; diplome: string | null; configured?: boolean }): { label: string; color: string } {
@@ -34,6 +34,109 @@ function CentreBadge({ lieu }: { lieu: string | null | undefined }) {
     <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none ${colors}`}>
       {lieu}
     </span>
+  );
+}
+
+// ===================== Note de centre =====================
+function CentreNoteCard({ centre }: { centre: string }) {
+  const [content, setContent] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/admin/centre-notes')
+      .then((res) => res.ok ? res.json() : { notes: [] })
+      .then((data) => {
+        const note = data.notes?.find((n: { centre: string }) => n.centre === centre);
+        if (note) setContent(note.content || '');
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  }, [centre]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/centre-notes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ centre, content: draft }),
+      });
+      if (res.ok) {
+        setContent(draft);
+        setEditing(false);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!loaded) return null;
+
+  const colors = centre === 'Gagny'
+    ? { border: 'border-blue-200', bg: 'bg-blue-50/50', header: 'text-blue-700', icon: 'text-blue-500' }
+    : { border: 'border-purple-200', bg: 'bg-purple-50/50', header: 'text-purple-700', icon: 'text-purple-500' };
+
+  return (
+    <div className={`rounded-xl border ${colors.border} ${colors.bg} overflow-hidden`}>
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
+        <div className="flex items-center gap-2">
+          <StickyNote className={`h-3.5 w-3.5 ${colors.icon}`} />
+          <span className={`text-xs font-semibold ${colors.header}`}>Note — {centre}</span>
+        </div>
+        {!editing ? (
+          <button
+            onClick={() => { setDraft(content); setEditing(true); }}
+            className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors"
+            title="Modifier"
+          >
+            <Pencil className="h-3 w-3" />
+          </button>
+        ) : (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
+              title="Sauvegarder"
+            >
+              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+            </button>
+            <button
+              onClick={() => setEditing(false)}
+              className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+              title="Annuler"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+      </div>
+      <div className="px-4 py-3">
+        {editing ? (
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={3}
+            autoFocus
+            className="w-full text-sm text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 resize-none"
+            placeholder="Écrivez une note pour l'équipe..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSave();
+              if (e.key === 'Escape') setEditing(false);
+            }}
+          />
+        ) : content ? (
+          <p className="text-sm text-slate-700 whitespace-pre-wrap">{content}</p>
+        ) : (
+          <p className="text-xs text-slate-400 italic">Aucune note</p>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -616,6 +719,9 @@ export default function DashboardPage() {
           <FeuilleAppelSection feuilleAppel={stats.feuilleAppel} isAdmin={false} onValidated={refresh} />
         )}
 
+        {/* Note du centre */}
+        {stats.userLieu && <CentreNoteCard centre={stats.userLieu} />}
+
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6 lg:items-start">
           {/* ===== COLONNE GAUCHE — CA + Stats + Commerciaux ===== */}
           <div
@@ -745,6 +851,12 @@ export default function DashboardPage() {
       {stats.feuilleAppel && stats.feuilleAppel.examens.length > 0 && (
         <FeuilleAppelSection feuilleAppel={stats.feuilleAppel} isAdmin={true} onValidated={refresh} />
       )}
+
+      {/* Notes des centres */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <CentreNoteCard centre="Gagny" />
+        <CentreNoteCard centre="Sarcelles" />
+      </div>
 
       {/* Chiffre d'affaires - Section avec flou */}
       {stats.revenue && (
