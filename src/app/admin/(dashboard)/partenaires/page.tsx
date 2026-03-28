@@ -1,0 +1,423 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
+import {
+  Building2, Users, Euro, TrendingUp, Plus, Loader2, Mail, MapPin,
+  Check, Eye, EyeOff, Calendar, ExternalLink, Copy, AlertCircle,
+} from 'lucide-react';
+
+interface Partenaire {
+  id: string;
+  email: string;
+  nom: string;
+  prenom: string;
+  organisation: string | null;
+  lieu: string | null;
+  createdAt: string;
+  totalCandidats: number;
+  caMois: number;
+  ventesMois: number;
+  caTotal: number;
+  reussi: number;
+  echoue: number;
+  absent: number;
+  aVenir: number;
+}
+
+const formatEur = (amount: number) =>
+  new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
+
+function formatDate(d: string) {
+  return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+export default function PartenairesPage() {
+  const { role } = useAdminAuth();
+  const isAdmin = role === 'admin';
+
+  const [partenaires, setPartenaires] = useState<Partenaire[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // Formulaire de création
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [createSuccess, setCreateSuccess] = useState('');
+  const [form, setForm] = useState({ email: '', password: '', nom: '', prenom: '', organisation: '', lieu: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const fetchPartenaires = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/partenaires');
+      if (res.ok) {
+        const data = await res.json();
+        setPartenaires(data.partenaires);
+      } else {
+        setError('Erreur lors du chargement');
+      }
+    } catch {
+      setError('Erreur réseau');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPartenaires();
+  }, [fetchPartenaires]);
+
+  const handleCreate = async () => {
+    setCreateError('');
+    setCreateSuccess('');
+
+    if (!form.email || !form.nom || !form.prenom || !form.password) {
+      setCreateError('Tous les champs obligatoires doivent être remplis');
+      return;
+    }
+    if (form.password.length < 6) {
+      setCreateError('Le mot de passe doit contenir au moins 6 caractères');
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const res = await fetch('/api/admin/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          nom: form.nom,
+          prenom: form.prenom,
+          role: 'partenaire',
+          lieu: form.lieu || null,
+          organisation: form.organisation || null,
+        }),
+      });
+
+      if (res.ok) {
+        setCreateSuccess(`Accès créé pour ${form.email}`);
+        setForm({ email: '', password: '', nom: '', prenom: '', organisation: '', lieu: '' });
+        fetchPartenaires();
+        setTimeout(() => {
+          setShowCreate(false);
+          setCreateSuccess('');
+        }, 3000);
+      } else {
+        const data = await res.json();
+        setCreateError(data.error || 'Erreur lors de la création');
+      }
+    } catch {
+      setCreateError('Erreur réseau');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const copyCredentials = () => {
+    const text = `Email: ${form.email}\nMot de passe: ${form.password}\nURL: ${window.location.origin}/partenaire/login`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Totaux
+  const totalCandidats = partenaires.reduce((s, p) => s + p.totalCandidats, 0);
+  const totalCaMois = partenaires.reduce((s, p) => s + p.caMois, 0);
+  const totalCaGlobal = partenaires.reduce((s, p) => s + p.caTotal, 0);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="h-8 w-8 border-3 border-blue-200 border-t-blue-700 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-800">Partenaires</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Gestion des entreprises partenaires et suivi du CA</p>
+        </div>
+        {isAdmin && (
+          <button
+            onClick={() => setShowCreate(!showCreate)}
+            className="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Nouvel accès partenaire
+          </button>
+        )}
+      </div>
+
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      {/* Formulaire de création */}
+      {showCreate && (
+        <div className="bg-white rounded-xl border-2 border-violet-200 p-6 space-y-4">
+          <h2 className="text-sm font-semibold text-violet-800 flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Créer un accès partenaire
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Nom *</label>
+              <input
+                type="text"
+                value={form.nom}
+                onChange={(e) => setForm({ ...form, nom: e.target.value })}
+                className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                placeholder="Nom du contact"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Prénom *</label>
+              <input
+                type="text"
+                value={form.prenom}
+                onChange={(e) => setForm({ ...form, prenom: e.target.value })}
+                className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                placeholder="Prénom du contact"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Email *</label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                placeholder="email@entreprise.fr"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Mot de passe *</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 pr-10 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                  placeholder="Min. 6 caractères"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Organisation</label>
+              <input
+                type="text"
+                value={form.organisation}
+                onChange={(e) => setForm({ ...form, organisation: e.target.value })}
+                className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                placeholder="Nom de l'entreprise"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Centre rattaché</label>
+              <select
+                value={form.lieu}
+                onChange={(e) => setForm({ ...form, lieu: e.target.value })}
+                className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+              >
+                <option value="">Aucun</option>
+                <option value="Gagny">Gagny</option>
+                <option value="Sarcelles">Sarcelles</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Boutons */}
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              onClick={handleCreate}
+              disabled={creating}
+              className="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 transition-colors disabled:opacity-50"
+            >
+              {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              Créer l&apos;accès
+            </button>
+            {form.email && form.password && (
+              <button
+                onClick={copyCredentials}
+                className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                {copied ? 'Copié !' : 'Copier les identifiants'}
+              </button>
+            )}
+            <button
+              onClick={() => { setShowCreate(false); setCreateError(''); setCreateSuccess(''); }}
+              className="text-sm text-slate-500 hover:text-slate-700"
+            >
+              Annuler
+            </button>
+          </div>
+
+          {createError && (
+            <p className="text-sm text-red-600 flex items-center gap-1">
+              <AlertCircle className="h-3.5 w-3.5" />
+              {createError}
+            </p>
+          )}
+          {createSuccess && (
+            <div className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-700">
+              <Check className="h-4 w-4" />
+              {createSuccess}
+              <a
+                href="/partenaire/login"
+                target="_blank"
+                className="ml-2 inline-flex items-center gap-1 text-green-800 font-medium hover:underline"
+              >
+                <ExternalLink className="h-3 w-3" />
+                Page de connexion
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="flex items-center gap-2 text-slate-500 mb-1">
+            <Building2 className="h-4 w-4" />
+            <span className="text-xs font-medium">Partenaires</span>
+          </div>
+          <p className="text-2xl font-bold text-slate-800">{partenaires.length}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="flex items-center gap-2 text-slate-500 mb-1">
+            <Users className="h-4 w-4" />
+            <span className="text-xs font-medium">Candidats total</span>
+          </div>
+          <p className="text-2xl font-bold text-slate-800">{totalCandidats}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="flex items-center gap-2 text-slate-500 mb-1">
+            <Euro className="h-4 w-4" />
+            <span className="text-xs font-medium">CA ce mois</span>
+          </div>
+          <p className="text-2xl font-bold text-emerald-600">{formatEur(totalCaMois)}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="flex items-center gap-2 text-slate-500 mb-1">
+            <TrendingUp className="h-4 w-4" />
+            <span className="text-xs font-medium">CA total</span>
+          </div>
+          <p className="text-2xl font-bold text-slate-800">{formatEur(totalCaGlobal)}</p>
+        </div>
+      </div>
+
+      {/* Liste des partenaires */}
+      {partenaires.length === 0 ? (
+        <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
+          <Building2 className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+          <p className="text-sm text-slate-500">Aucun partenaire enregistré</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="grid grid-cols-[1fr_120px_100px_100px_100px_80px] border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">
+            <div className="px-4 py-3">Partenaire</div>
+            <div className="px-4 py-3">Candidats</div>
+            <div className="px-4 py-3">CA mois</div>
+            <div className="px-4 py-3">CA total</div>
+            <div className="px-4 py-3">Résultats</div>
+            <div className="px-4 py-3">Accès</div>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {partenaires.map((p) => (
+              <div key={p.id} className="grid grid-cols-[1fr_120px_100px_100px_100px_80px] hover:bg-slate-50 transition-colors">
+                <div className="px-4 py-3.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-slate-800">
+                      {p.organisation || `${p.prenom} ${p.nom}`}
+                    </span>
+                    {p.lieu && (
+                      <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none ${
+                        p.lieu === 'Gagny' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'
+                      }`}>
+                        {p.lieu}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <Mail className="h-3 w-3" />
+                    <span>{p.email}</span>
+                    {!p.organisation && (
+                      <>
+                        <span className="text-slate-300">|</span>
+                        <span>{p.prenom} {p.nom}</span>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+                    <Calendar className="h-2.5 w-2.5" />
+                    Créé le {formatDate(p.createdAt)}
+                  </p>
+                </div>
+
+                <div className="px-4 py-3.5 flex items-center">
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">{p.totalCandidats}</p>
+                    {p.ventesMois > 0 && (
+                      <p className="text-[10px] text-emerald-600">+{p.ventesMois} ce mois</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="px-4 py-3.5 flex items-center">
+                  <p className="text-sm font-bold text-emerald-600">{formatEur(p.caMois)}</p>
+                </div>
+
+                <div className="px-4 py-3.5 flex items-center">
+                  <p className="text-sm font-medium text-slate-700">{formatEur(p.caTotal)}</p>
+                </div>
+
+                <div className="px-4 py-3.5 flex items-center">
+                  <div className="flex gap-1.5 text-[10px] font-medium">
+                    {p.reussi > 0 && <span className="rounded-full bg-green-100 text-green-700 px-1.5 py-0.5">{p.reussi} R</span>}
+                    {p.echoue > 0 && <span className="rounded-full bg-red-100 text-red-700 px-1.5 py-0.5">{p.echoue} E</span>}
+                    {p.absent > 0 && <span className="rounded-full bg-orange-100 text-orange-700 px-1.5 py-0.5">{p.absent} A</span>}
+                    {p.aVenir > 0 && <span className="rounded-full bg-blue-100 text-blue-700 px-1.5 py-0.5">{p.aVenir} V</span>}
+                    {p.totalCandidats === 0 && <span className="text-slate-400">—</span>}
+                  </div>
+                </div>
+
+                <div className="px-4 py-3.5 flex items-center">
+                  <a
+                    href="/partenaire/login"
+                    target="_blank"
+                    className="inline-flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Portail
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

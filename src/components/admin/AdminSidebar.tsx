@@ -15,6 +15,7 @@ import {
   LogOut,
   X,
   Settings,
+  Building2,
 } from 'lucide-react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { useFeuilleAppelBadge } from '@/hooks/useFeuilleAppelBadge';
@@ -26,6 +27,7 @@ const mainNavItems = [
   { href: '/admin/formations', label: 'Formations', icon: BookOpen, disabled: true },
   { href: '/admin/examens', label: 'Candidats d\'examens', icon: ClipboardCheck },
   { href: '/admin/planning', label: 'Planning', icon: Calendar },
+  { href: '/admin/partenaires', label: 'Partenaires', icon: Building2 },
 ];
 
 const secondaryNavItems = [
