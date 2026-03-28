@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { buildPreinscriptionExamenEmail } from '@/lib/utils/email-templates';
 
 const phoneRegex = /^(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}$/;
 const postalCodeRegex = /^\d{5}$/;
@@ -160,6 +161,53 @@ export async function POST(request: Request) {
     // Générer l'URL client
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const clientUrl = `${baseUrl}/examen/${examen.token}`;
+
+    // Envoi email de confirmation via webhook
+    const webhookUrl = process.env.MAKE_ATTESTATION_WEBHOOK_URL;
+    if (webhookUrl) {
+      try {
+        const emailHtml = buildPreinscriptionExamenEmail({
+          civilite: data.civilite,
+          prenom: data.prenom,
+          nom: data.nom,
+          email: data.email,
+          telephone: data.telephone,
+          dateNaissance: data.dateNaissance,
+          adresse: data.adresse,
+          codePostal: data.codePostal,
+          ville: data.ville,
+          nationalite: data.nationalite,
+          villeNaissance: data.villeNaissance || '',
+          lieuNaissance: data.lieuNaissance,
+          langueMaternelle: data.langueMaternelle,
+          numeroPasseport: data.numeroPasseport || '',
+          numeroCni: data.numeroCni || '',
+          diplomeLabel: '',
+          typeExamen: '',
+          lieu: data.agence,
+          motivation: data.motivation,
+          motivationAutre: data.motivationAutre || '',
+        });
+
+        await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'confirmation_preinscription_examen',
+            timestamp: new Date().toISOString(),
+            candidat: {
+              email: data.email.toLowerCase(),
+              prenom: data.prenom,
+              nom: data.nom,
+            },
+            email_subject: `MyStoryFormation - Confirmation de pré-inscription à l'examen`,
+            email_html: emailHtml,
+          }),
+        });
+      } catch (webhookError) {
+        console.error('Make webhook pré-inscription examen error (non-blocking):', webhookError);
+      }
+    }
 
     return NextResponse.json({
       id: examen.id,
