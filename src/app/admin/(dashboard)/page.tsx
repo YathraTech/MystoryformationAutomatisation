@@ -823,6 +823,44 @@ export default function DashboardPage() {
             )}
           </div>
 
+          {/* ===== CA de l'autre centre (compétition) ===== */}
+          {stats.revenueByCentre && stats.revenueByCentre.length > 0 && (() => {
+            const autreCentre = stats.revenueByCentre.find((c) => c.centre !== stats.userLieu);
+            if (!autreCentre) return null;
+            return (
+              <div
+                className="relative select-none rounded-2xl"
+                {...revenueBlurProps}
+              >
+                <div className={`transition-all duration-200 space-y-2 ${!showRevenue ? 'blur-md' : ''}`}>
+                  <div className="flex items-center gap-2">
+                    <Target className="h-3.5 w-3.5 text-purple-600" />
+                    <span className="text-xs font-semibold text-slate-700">Centre de {autreCentre.centre}</span>
+                  </div>
+                  <RevenueChart revenue={autreCentre.revenue} title={`CA ${autreCentre.centre}`} compact />
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <div className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-center">
+                      <p className="text-[9px] font-medium text-slate-400 uppercase tracking-wider">Examens</p>
+                      <p className="text-base font-bold text-slate-800">{autreCentre.examenStats?.totalExamens ?? 0}</p>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-center">
+                      <p className="text-[9px] font-medium text-slate-400 uppercase tracking-wider">Formations</p>
+                      <p className="text-base font-bold text-blue-600">{autreCentre.examenStats?.totalFormations ?? 0}</p>
+                    </div>
+                  </div>
+                </div>
+                {!showRevenue && (
+                  <div className="absolute inset-0 flex items-center justify-center cursor-pointer">
+                    <div className="flex flex-col items-center gap-2 backdrop-blur-sm rounded-xl px-6 py-4 shadow-lg border bg-white/80 border-slate-200">
+                      <EyeOff className="h-6 w-6 text-slate-500" />
+                      <span className="text-xs font-medium text-slate-600">Maintenir pour voir</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {/* ===== COLONNE DROITE — Examens + Formations récents ===== */}
           <div className="space-y-4">
             {recentExamensBlock}

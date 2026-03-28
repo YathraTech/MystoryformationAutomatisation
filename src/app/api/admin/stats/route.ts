@@ -290,9 +290,9 @@ export async function GET() {
       }
     }
 
-    // Pour les admins : calculer le CA par centre (Gagny + Sarcelles séparés)
+    // Calculer le CA par centre (Gagny + Sarcelles séparés) pour tous les utilisateurs
     let revenueByCentre: CentreRevenue[] | null = null;
-    if (!isCommercial) {
+    {
       const centres = ['Gagny', 'Sarcelles'];
       revenueByCentre = centres.map((centre) => {
         const centreExamens = allExamens.filter((ex) => ex.lieu === centre);
