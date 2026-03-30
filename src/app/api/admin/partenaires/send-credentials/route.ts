@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Webhook non configuré' }, { status: 500 });
     }
 
-    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.mystoryformation.fr'}/partenaire/login`;
+    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://mystoryformation-admin.fr'}/partenaire/login`;
 
     const emailHtml = buildPartenaireCredentialsEmail(
       prenom,

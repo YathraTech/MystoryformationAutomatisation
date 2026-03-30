@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import {
   Building2, Users, Euro, TrendingUp, Plus, Loader2, Mail, MapPin,
-  Check, Eye, EyeOff, Calendar, ExternalLink, Copy, AlertCircle,
+  Check, Eye, EyeOff, Calendar, ExternalLink, Copy, AlertCircle, Trash2, X,
 } from 'lucide-react';
 
 interface Partenaire {
@@ -49,8 +49,16 @@ export default function PartenairesPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+
+  // Popup envoi identifiants
+  const [confirmSendId, setConfirmSendId] = useState<string | null>(null);
+  const [sendPassword, setSendPassword] = useState('');
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [resendResult, setResendResult] = useState<{ id: string; success: boolean } | null>(null);
+
+  // Suppression
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const fetchPartenaires = useCallback(async () => {
@@ -152,15 +160,31 @@ export default function PartenairesPage() {
     setSendingEmail(false);
   };
 
-  const handleResendCredentials = async (p: Partenaire) => {
-    const password = prompt(`Entrez le mot de passe à envoyer à ${p.organisation || p.email} :`);
-    if (!password) return;
+  const handleConfirmSend = async (p: Partenaire) => {
+    if (!sendPassword) return;
     setResendingId(p.id);
     setResendResult(null);
-    const ok = await sendCredentialsEmail(p.email, password, p.nom, p.prenom, p.organisation || undefined);
+    const ok = await sendCredentialsEmail(p.email, sendPassword, p.nom, p.prenom, p.organisation || undefined);
     setResendResult({ id: p.id, success: ok });
     setResendingId(null);
+    setConfirmSendId(null);
+    setSendPassword('');
     setTimeout(() => setResendResult(null), 3000);
+  };
+
+  const handleDeletePartenaire = async (id: string) => {
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/admin/staff/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setPartenaires((prev) => prev.filter((p) => p.id !== id));
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setDeletingId(null);
+      setConfirmDeleteId(null);
+    }
   };
 
   // Totaux
@@ -384,18 +408,18 @@ export default function PartenairesPage() {
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <div className="grid grid-cols-[1fr_120px_100px_100px_100px_80px] border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">
+          <div className="grid grid-cols-[1fr_100px_90px_90px_100px_120px] border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">
             <div className="px-4 py-3">Partenaire</div>
             <div className="px-4 py-3">Candidats</div>
             <div className="px-4 py-3">CA mois</div>
             <div className="px-4 py-3">CA total</div>
             <div className="px-4 py-3">Résultats</div>
-            <div className="px-4 py-3">Accès</div>
+            <div className="px-4 py-3">Actions</div>
           </div>
 
           <div className="divide-y divide-slate-100">
             {partenaires.map((p) => (
-              <div key={p.id} className="grid grid-cols-[1fr_120px_100px_100px_100px_80px] hover:bg-slate-50 transition-colors">
+              <div key={p.id} className="grid grid-cols-[1fr_100px_90px_90px_100px_120px] hover:bg-slate-50 transition-colors relative">
                 <div className="px-4 py-3.5">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-slate-800">
@@ -452,23 +476,34 @@ export default function PartenairesPage() {
                   </div>
                 </div>
 
-                <div className="px-4 py-3.5 flex items-center gap-2">
+                <div className="px-4 py-3.5 flex items-center gap-1.5">
                   <a
                     href="/partenaire/login"
                     target="_blank"
-                    className="inline-flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 hover:underline"
+                    className="p-1 text-violet-500 hover:text-violet-700 hover:bg-violet-50 rounded transition-colors"
+                    title="Ouvrir le portail partenaire"
                   >
-                    <ExternalLink className="h-3 w-3" />
+                    <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                   {isAdmin && (
-                    <button
-                      onClick={() => handleResendCredentials(p)}
-                      disabled={resendingId === p.id}
-                      className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                      title="Renvoyer les identifiants par email"
-                    >
-                      {resendingId === p.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
-                    </button>
+                    <>
+                      <button
+                        onClick={() => { setConfirmSendId(p.id); setSendPassword(''); }}
+                        disabled={resendingId === p.id}
+                        className="p-1 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors disabled:opacity-50"
+                        title="Envoyer les identifiants par email"
+                      >
+                        {resendingId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(p.id)}
+                        disabled={deletingId === p.id}
+                        className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                        title="Supprimer le partenaire"
+                      >
+                        {deletingId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                      </button>
+                    </>
                   )}
                   {resendResult?.id === p.id && (
                     <span className={`text-[10px] ${resendResult.success ? 'text-emerald-600' : 'text-red-500'}`}>
@@ -476,6 +511,85 @@ export default function PartenairesPage() {
                     </span>
                   )}
                 </div>
+
+                {/* Popup confirmation envoi email */}
+                {confirmSendId === p.id && (
+                  <div className="absolute right-0 top-full mt-1 z-50 w-80 bg-white rounded-xl border border-slate-200 shadow-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-slate-800">Envoyer les identifiants</h3>
+                      <button onClick={() => setConfirmSendId(null)} className="text-slate-400 hover:text-slate-600">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Envoyer un email à <strong>{p.email}</strong> avec les informations de connexion et le lien du portail partenaire ?
+                    </p>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Mot de passe à envoyer</label>
+                      <input
+                        type="text"
+                        value={sendPassword}
+                        onChange={(e) => setSendPassword(e.target.value)}
+                        className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        placeholder="Saisir le mot de passe..."
+                        autoFocus
+                        onKeyDown={(e) => { if (e.key === 'Enter' && sendPassword) handleConfirmSend(p); }}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleConfirmSend(p)}
+                        disabled={!sendPassword || resendingId === p.id}
+                        className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      >
+                        {resendingId === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                        Envoyer
+                      </button>
+                      <button
+                        onClick={() => setConfirmSendId(null)}
+                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Popup confirmation suppression */}
+                {confirmDeleteId === p.id && (
+                  <div className="absolute right-0 top-full mt-1 z-50 w-72 bg-white rounded-xl border border-red-200 shadow-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-red-700">Supprimer le partenaire</h3>
+                      <button onClick={() => setConfirmDeleteId(null)} className="text-slate-400 hover:text-slate-600">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-600">
+                      Supprimer <strong>{p.organisation || `${p.prenom} ${p.nom}`}</strong> ? Cette action est irréversible.
+                      {p.totalCandidats > 0 && (
+                        <span className="block mt-1 text-orange-600">
+                          Ce partenaire a {p.totalCandidats} candidat{p.totalCandidats > 1 ? 's' : ''} enregistré{p.totalCandidats > 1 ? 's' : ''}.
+                        </span>
+                      )}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleDeletePartenaire(p.id)}
+                        disabled={deletingId === p.id}
+                        className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                      >
+                        {deletingId === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                        Supprimer
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
