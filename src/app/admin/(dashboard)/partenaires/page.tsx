@@ -52,7 +52,6 @@ export default function PartenairesPage() {
 
   // Popup envoi identifiants
   const [confirmSendId, setConfirmSendId] = useState<string | null>(null);
-  const [sendPassword, setSendPassword] = useState('');
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [resendResult, setResendResult] = useState<{ id: string; success: boolean } | null>(null);
 
@@ -161,14 +160,26 @@ export default function PartenairesPage() {
   };
 
   const handleConfirmSend = async (p: Partenaire) => {
-    if (!sendPassword) return;
     setResendingId(p.id);
     setResendResult(null);
-    const ok = await sendCredentialsEmail(p.email, sendPassword, p.nom, p.prenom, p.organisation || undefined);
-    setResendResult({ id: p.id, success: ok });
+    try {
+      const res = await fetch('/api/admin/partenaires/send-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: p.email,
+          nom: p.nom,
+          prenom: p.prenom,
+          organisation: p.organisation,
+          userId: p.id,
+        }),
+      });
+      setResendResult({ id: p.id, success: res.ok });
+    } catch {
+      setResendResult({ id: p.id, success: false });
+    }
     setResendingId(null);
     setConfirmSendId(null);
-    setSendPassword('');
     setTimeout(() => setResendResult(null), 3000);
   };
 
@@ -488,7 +499,7 @@ export default function PartenairesPage() {
                   {isAdmin && (
                     <>
                       <button
-                        onClick={() => { setConfirmSendId(p.id); setSendPassword(''); }}
+                        onClick={() => setConfirmSendId(p.id)}
                         disabled={resendingId === p.id}
                         className="p-1 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors disabled:opacity-50"
                         title="Envoyer les identifiants par email"
@@ -522,28 +533,19 @@ export default function PartenairesPage() {
                       </button>
                     </div>
                     <p className="text-xs text-slate-500">
-                      Envoyer un email à <strong>{p.email}</strong> avec les informations de connexion et le lien du portail partenaire ?
+                      Êtes-vous sûr de vouloir envoyer un email à <strong>{p.email}</strong> avec les informations de connexion ?
                     </p>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Mot de passe à envoyer</label>
-                      <input
-                        type="text"
-                        value={sendPassword}
-                        onChange={(e) => setSendPassword(e.target.value)}
-                        className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        placeholder="Saisir le mot de passe..."
-                        autoFocus
-                        onKeyDown={(e) => { if (e.key === 'Enter' && sendPassword) handleConfirmSend(p); }}
-                      />
-                    </div>
+                    <p className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      Un nouveau mot de passe sera généré automatiquement et envoyé avec l&apos;email et le lien de connexion.
+                    </p>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleConfirmSend(p)}
-                        disabled={!sendPassword || resendingId === p.id}
+                        disabled={resendingId === p.id}
                         className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
                       >
                         {resendingId === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                        Envoyer
+                        Confirmer et envoyer
                       </button>
                       <button
                         onClick={() => setConfirmSendId(null)}
