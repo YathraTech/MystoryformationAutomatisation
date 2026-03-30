@@ -200,7 +200,7 @@ export async function POST(request: Request) {
               prenom: data.prenom,
               nom: data.nom,
             },
-            email_subject: `MyStoryFormation - Confirmation de pré-inscription à l'examen`,
+            email_subject: `MYSTORYFormation - Confirmation de pré-inscription à l'examen`,
             email_html: emailHtml,
           }),
         });

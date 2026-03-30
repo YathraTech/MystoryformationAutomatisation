@@ -113,7 +113,7 @@ export async function POST(
               candidat.dateExamen,
               signedUrl || '',
             );
-            emailSubject = `MyStoryFormation - Félicitations, vous avez réussi votre examen ! - ${diplomeLabel}`;
+            emailSubject = `MYSTORYFormation - Félicitations, vous avez réussi votre examen ! - ${diplomeLabel}`;
             documentUrl = signedUrl || undefined;
           } else if (candidat.resultat === 'absent') {
             emailHtml = buildResultatAbsentEmail(
@@ -122,7 +122,7 @@ export async function POST(
               diplomeLabel,
               candidat.dateExamen,
             );
-            emailSubject = `MyStoryFormation - Absence constatée à votre examen - ${diplomeLabel}`;
+            emailSubject = `MYSTORYFormation - Absence constatée à votre examen - ${diplomeLabel}`;
           } else {
             // echoue
             emailHtml = buildResultatEchoueEmail(
@@ -131,7 +131,7 @@ export async function POST(
               diplomeLabel,
               candidat.dateExamen,
             );
-            emailSubject = `MyStoryFormation - Résultat de votre examen - ${diplomeLabel}`;
+            emailSubject = `MYSTORYFormation - Résultat de votre examen - ${diplomeLabel}`;
           }
 
           await fetch(webhookUrl, {

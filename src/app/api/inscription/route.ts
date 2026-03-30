@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
               prenom: data.prenom,
               nom: data.nom.toUpperCase(),
             },
-            email_subject: `MyStoryFormation - Confirmation de pré-inscription - ${formation?.nom || 'Formation'}`,
+            email_subject: `MYSTORYFormation - Confirmation de pré-inscription - ${formation?.nom || 'Formation'}`,
             email_html: emailHtml,
           }),
         });

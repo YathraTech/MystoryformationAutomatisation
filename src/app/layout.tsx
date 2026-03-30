@@ -9,9 +9,9 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: 'MyStoryFormation',
+  title: 'MYSTORYFormation',
   description:
-    'Inscrivez-vous à nos formations en langues éligibles CPF. Centre de formation MyStoryFormation.',
+    'Inscrivez-vous à nos formations en langues éligibles CPF. Centre de formation MYSTORYFormation.',
 };
 
 export default function RootLayout({

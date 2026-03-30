@@ -24,13 +24,13 @@ export default function LoginPage() {
           <div className="flex flex-col items-center mb-6">
             <Image
               src="/logo-mystory.png"
-              alt="MyStoryFormation"
+              alt="MYSTORYFormation"
               width={160}
               height={48}
               className="mb-4"
             />
             <h1 className="text-xl font-bold text-slate-800">
-              Espace MyStoryFormation
+              Espace MYSTORYFormation
             </h1>
             <p className="text-sm text-slate-500 mt-1">
               Connectez-vous pour accéder à l&apos;espace d&apos;inscription
@@ -46,7 +46,7 @@ export default function LoginPage() {
           )}
         </div>
         <p className="text-center text-xs text-slate-400 mt-4">
-          MyStoryFormation &copy; {new Date().getFullYear()}
+          MYSTORYFormation &copy; {new Date().getFullYear()}
         </p>
       </div>
 

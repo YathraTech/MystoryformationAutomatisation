@@ -50,7 +50,7 @@ export default function PartenaireSidebar({ open, onClose }: PartenaireSidebarPr
           <Link href="/partenaire" className="flex items-center gap-2">
             <Image
               src="/logo-mystory.png"
-              alt="MyStoryFormation"
+              alt="MYSTORYFormation"
               width={130}
               height={38}
             />

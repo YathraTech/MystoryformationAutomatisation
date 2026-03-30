@@ -3,7 +3,7 @@ import Image from 'next/image';
 import LoginForm from '@/components/admin/LoginForm';
 
 export const metadata: Metadata = {
-  title: 'Connexion Admin - MyStoryFormation',
+  title: 'Connexion Admin - MYSTORYFormation',
 };
 
 export default function LoginPage() {
@@ -13,7 +13,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center mb-6">
           <Image
             src="/logo-mystory.png"
-            alt="MyStoryFormation"
+            alt="MYSTORYFormation"
             width={160}
             height={48}
             className="mb-4"
@@ -28,7 +28,7 @@ export default function LoginPage() {
         <LoginForm />
       </div>
       <p className="text-center text-xs text-slate-400 mt-4">
-        MyStoryFormation &copy; {new Date().getFullYear()}
+        MYSTORYFormation &copy; {new Date().getFullYear()}
       </p>
     </div>
   );

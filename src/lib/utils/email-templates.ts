@@ -80,7 +80,7 @@ function emailLayout(title: string, body: string): string {
           <!-- Header -->
           <tr>
             <td class="email-header" style="background-color:#1e1e1e;padding:32px 40px;text-align:center;">
-              <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:0.5px;">MyStoryFormation</h1>
+              <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:0.5px;">MYSTORYFormation</h1>
               <p style="margin:6px 0 0;font-size:13px;color:#a1a1aa;">Centre de formation et d'examens</p>
             </td>
           </tr>
@@ -102,7 +102,7 @@ function emailLayout(title: string, body: string): string {
           <!-- Footer -->
           <tr>
             <td class="email-padding" style="padding:20px 40px 32px;text-align:center;">
-              <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#3f3f46;">MyStoryFormation</p>
+              <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#3f3f46;">MYSTORYFormation</p>
               <p style="margin:0 0 4px;font-size:12px;color:#71717a;">01 43 09 15 40</p>
               <p style="margin:0 0 4px;font-size:12px;color:#71717a;">
                 <a href="mailto:contact@mystoryformation.fr" style="color:#71717a;text-decoration:underline;">contact@mystoryformation.fr</a>
@@ -364,7 +364,7 @@ export function buildResultatReussiEmail(
     ${ctaButton(downloadUrl, "Télécharger l'attestation de réussite")}
 
     <p style="margin:24px 0 0;font-size:14px;color:#71717a;line-height:1.5;">
-      Toute l'équipe MyStoryFormation vous félicite et vous souhaite le meilleur pour la suite de vos démarches.
+      Toute l'équipe MYSTORYFormation vous félicite et vous souhaite le meilleur pour la suite de vos démarches.
     </p>`;
   return emailLayout('Résultat de votre examen - Réussite', body);
 }
@@ -441,7 +441,7 @@ export function buildResultatEchoueEmail(
     </p>
 
     <p style="margin:0 0 16px;font-size:15px;color:#3f3f46;line-height:1.6;">
-      <strong>MyStoryFormation</strong> vous recommande <strong>PrepCivique.fr</strong>, notre plateforme partenaire spécialisée dans la préparation aux examens :
+      <strong>MYSTORYFormation</strong> vous recommande <strong>PrepCivique.fr</strong>, notre plateforme partenaire spécialisée dans la préparation aux examens :
     </p>
 
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f0f9ff;border-radius:8px;border:1px solid #bae6fd;margin-bottom:24px;">
@@ -478,7 +478,7 @@ export function buildRelanceEmail(
     <p style="margin:0 0 20px;font-size:16px;color:#1e1e1e;">Bonjour <strong>${prenom} ${nom}</strong>,</p>
 
     <p style="margin:0 0 20px;font-size:15px;color:#3f3f46;line-height:1.6;">
-      Suite à votre examen, nous souhaitons vous informer que <strong>MyStoryFormation</strong> propose, via sa plateforme partenaire <strong>PrepCivique.fr</strong>, des outils pour vous accompagner dans votre réussite.
+      Suite à votre examen, nous souhaitons vous informer que <strong>MYSTORYFormation</strong> propose, via sa plateforme partenaire <strong>PrepCivique.fr</strong>, des outils pour vous accompagner dans votre réussite.
     </p>
 
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f0f9ff;border-radius:8px;border:1px solid #bae6fd;margin-bottom:24px;">
@@ -542,7 +542,7 @@ export function buildPartenaireCredentialsEmail(
   const body = `
     <p style="margin:0 0 20px;font-size:16px;color:#1e1e1e;">Bonjour <strong>${prenom} ${nom}</strong>,</p>
     <p style="margin:0 0 24px;font-size:15px;color:#3f3f46;line-height:1.6;">
-      Votre accès à l'espace partenaire MyStoryFormation a été créé${organisation ? ` pour <strong>${organisation}</strong>` : ''}. Voici vos identifiants de connexion :
+      Votre accès à l'espace partenaire MYSTORYFormation a été créé${organisation ? ` pour <strong>${organisation}</strong>` : ''}. Voici vos identifiants de connexion :
     </p>
     ${recapTable(
       recapRow('Email', email, true) +

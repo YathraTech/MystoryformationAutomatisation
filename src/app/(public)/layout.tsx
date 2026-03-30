@@ -2,7 +2,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 
 export const metadata = {
-  title: 'Inscription - MyStoryFormation',
+  title: 'Inscription - MYSTORYFormation',
   description: 'Formulaire d\'inscription client CPF',
 };
 

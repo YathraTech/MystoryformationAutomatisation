@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
           prenom,
           nom,
         },
-        email_subject: 'MyStoryFormation - Vos identifiants Espace Partenaire',
+        email_subject: 'MYSTORYFormation - Vos identifiants Espace Partenaire',
         email_html: emailHtml,
       }),
     });

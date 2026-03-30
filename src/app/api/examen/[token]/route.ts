@@ -343,7 +343,7 @@ export async function PATCH(
                 prenom: fullExamen.prenom || '',
                 nom: fullExamen.nom || '',
               },
-              email_subject: `MyStoryFormation - Confirmation d'inscription examen - ${diplomeLabel}`,
+              email_subject: `MYSTORYFormation - Confirmation d'inscription examen - ${diplomeLabel}`,
               email_html: emailHtml,
             }),
           });

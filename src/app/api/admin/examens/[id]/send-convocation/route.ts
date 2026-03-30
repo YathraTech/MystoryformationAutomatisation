@@ -62,7 +62,7 @@ export async function POST(
               nom: examen.nom,
             },
             document_url: data.signedUrl,
-            email_subject: `MyStoryFormation - Votre convocation - ${diplomeLabel}`,
+            email_subject: `MYSTORYFormation - Votre convocation - ${diplomeLabel}`,
             email_html: emailHtml,
           }),
         });

@@ -61,7 +61,7 @@ export async function POST(
               nom: examen.nom,
             },
             document_url: data.signedUrl,
-            email_subject: `MyStoryFormation - Votre attestation de paiement - ${diplomeLabel}`,
+            email_subject: `MYSTORYFormation - Votre attestation de paiement - ${diplomeLabel}`,
             email_html: emailHtml,
           }),
         });

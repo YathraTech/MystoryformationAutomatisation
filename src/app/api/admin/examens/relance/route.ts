@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
                 prenom: c.prenom,
                 nom: c.nom,
               },
-              email_subject: 'MyStoryFormation - PrepCivique.fr — Promotions et entraînements',
+              email_subject: 'MYSTORYFormation - PrepCivique.fr — Promotions et entraînements',
               email_html: emailHtml,
             }),
           });

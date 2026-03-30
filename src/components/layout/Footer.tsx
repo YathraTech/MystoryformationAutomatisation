@@ -5,7 +5,7 @@ export function Footer() {
     <footer className="border-t border-slate-200 bg-white py-6">
       <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-6 md:flex-row">
         <p className="text-xs text-slate-400">
-          &copy; {new Date().getFullYear()} MyStoryFormation.
+          &copy; {new Date().getFullYear()} MYSTORYFormation.
         </p>
         <div className="flex gap-4 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-300">
           <a

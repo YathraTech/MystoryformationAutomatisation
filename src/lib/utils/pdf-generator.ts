@@ -135,7 +135,7 @@ const CHECKBOX_EMPTY = '☐';
 const CHECKBOX_CHECKED = '☑';
 
 // Constantes entreprise
-const COMPANY_NAME = 'MyStoryFormation';
+const COMPANY_NAME = 'MYSTORYFormation';
 const COMPANY_ADDRESS = '123 Rue de la Formation, 75001 Paris';
 const COMPANY_PHONE = '01 23 45 67 89';
 const COMPANY_EMAIL = 'contact@mystoryformation.fr';
@@ -292,7 +292,7 @@ function addFooter(doc: jsPDF) {
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
   doc.text(
-    'Document généré automatiquement - MyStoryFormation',
+    'Document généré automatiquement - MYSTORYFormation',
     105,
     pageHeight - 15,
     { align: 'center' }
@@ -571,7 +571,7 @@ export async function generateAttestationPaiement(
   doc.rect(0, pageHeight - 5, pageWidth, 5, 'F');
   doc.setFontSize(6);
   doc.setTextColor(255, 255, 255);
-  doc.text('MyStoryFormation - Document officiel', pageWidth / 2, pageHeight - 1.5, { align: 'center' });
+  doc.text('MYSTORYFormation - Document officiel', pageWidth / 2, pageHeight - 1.5, { align: 'center' });
 
   const fileName = `attestation_paiement_${inscription.nom}_${inscription.prenom}.pdf`;
   const blob = doc.output('blob');
@@ -766,7 +766,7 @@ export async function generateAttestationReussite(
   doc.rect(0, pageHeight - 5, pageWidth, 5, 'F');
   doc.setFontSize(6);
   doc.setTextColor(255, 255, 255);
-  doc.text('MyStoryFormation - Document officiel', pageWidth / 2, pageHeight - 1.5, { align: 'center' });
+  doc.text('MYSTORYFormation - Document officiel', pageWidth / 2, pageHeight - 1.5, { align: 'center' });
 
   const fileName = `attestation_reussite_${examen.nom}_${examen.prenom}.pdf`;
   const blob = doc.output('blob');
@@ -1093,7 +1093,7 @@ export async function generateFicheInscription(
   doc.rect(0, pageHeight - 5, pageWidth, 5, 'F');
   doc.setFontSize(6);
   doc.setTextColor(255, 255, 255);
-  doc.text('MyStoryFormation - Document officiel', pageWidth / 2, pageHeight - 1.5, { align: 'center' });
+  doc.text('MYSTORYFormation - Document officiel', pageWidth / 2, pageHeight - 1.5, { align: 'center' });
 
   const fileName = `fiche_inscription_${inscription.nom}_${inscription.prenom}.pdf`;
   const blob = doc.output('blob');
@@ -1202,7 +1202,7 @@ export async function generateConvocationTefIrn(
     doc.rect(0, pageHeight - 5, pageWidth, 5, 'F');
     doc.setFontSize(6);
     doc.setTextColor(255, 255, 255);
-    doc.text(`MyStoryFormation - Convocation TEF IRN - Page ${pageNum}/${totalPages}`, pageWidth / 2, pageHeight - 1.5, { align: 'center' });
+    doc.text(`MYSTORYFormation - Convocation TEF IRN - Page ${pageNum}/${totalPages}`, pageWidth / 2, pageHeight - 1.5, { align: 'center' });
   };
 
   // ================================================================
@@ -1618,7 +1618,7 @@ export async function generateConvocationCivique(
     doc.rect(0, pageHeight - 5, pageWidth, 5, 'F');
     doc.setFontSize(6);
     doc.setTextColor(255, 255, 255);
-    doc.text(`MyStoryFormation - Convocation Examen Civique - Page ${pageNum}/${totalPages}`, pageWidth / 2, pageHeight - 1.5, { align: 'center' });
+    doc.text(`MYSTORYFormation - Convocation Examen Civique - Page ${pageNum}/${totalPages}`, pageWidth / 2, pageHeight - 1.5, { align: 'center' });
   };
 
   // ================================================================
@@ -2056,7 +2056,7 @@ export async function generateConvocation(
     doc.rect(0, pageHeight - 5, pageWidth, 5, 'F');
     doc.setFontSize(6);
     doc.setTextColor(255, 255, 255);
-    doc.text(`MyStoryFormation - Convocation - Page ${pageNum}/${totalPages}`, pageWidth / 2, pageHeight - 1.5, { align: 'center' });
+    doc.text(`MYSTORYFormation - Convocation - Page ${pageNum}/${totalPages}`, pageWidth / 2, pageHeight - 1.5, { align: 'center' });
   };
 
   // ================================================================

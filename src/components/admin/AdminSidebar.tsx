@@ -73,7 +73,7 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
           <Link href="/admin" className="flex items-center gap-2">
             <Image
               src="/logo-mystory.png"
-              alt="MyStoryFormation"
+              alt="MYSTORYFormation"
               width={130}
               height={38}
             />
