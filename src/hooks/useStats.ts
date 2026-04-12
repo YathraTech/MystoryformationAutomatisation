@@ -27,6 +27,8 @@ export function useStats() {
 
   useEffect(() => {
     fetchStats();
+    // Nettoyage auto: supprime les examens spam (>2j sans diplôme) + archive les vieux
+    fetch('/api/admin/cleanup', { method: 'POST' }).catch(() => {});
   }, [fetchStats]);
 
   const refresh = useCallback(() => fetchStats(true), [fetchStats]);

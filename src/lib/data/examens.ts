@@ -457,3 +457,79 @@ export async function getExamensForPlanning(startDate: string, endDate: string):
   if (error) throw new Error(error.message);
   return (data || []).map((row: DbExamen) => dbToExamen(row));
 }
+
+/**
+ * Supprime définitivement les examens sans diplôme choisi
+ * créés depuis plus de 2 jours (anti-spam).
+ * Supprime aussi le client associé s'il n'a aucune autre inscription/examen/formation.
+ */
+export async function autoDeleteStaleExamens(): Promise<number> {
+  const supabase = await createClient();
+
+  // Date limite : 2 jours dans le passé
+  const twoDaysAgo = new Date();
+  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+  const cutoffDate = twoDaysAgo.toISOString();
+
+  // Trouver les examens sans diplôme créés il y a plus de 2 jours
+  const { data: staleExamens, error: fetchError } = await supabase
+    .from('examens')
+    .select('id, client_id')
+    .is('diplome', null)
+    .lt('created_at', cutoffDate)
+    .neq('statut', 'Archivee');
+
+  if (fetchError) {
+    console.error('[autoDeleteStaleExamens] Erreur fetch:', fetchError.message);
+    return 0;
+  }
+
+  if (!staleExamens || staleExamens.length === 0) return 0;
+
+  const ids = staleExamens.map((e) => e.id);
+  const clientIds = [...new Set(
+    staleExamens.map((e) => e.client_id).filter(Boolean)
+  )] as number[];
+
+  // Supprimer les examens
+  const { error: deleteError } = await supabase
+    .from('examens')
+    .delete()
+    .in('id', ids);
+
+  if (deleteError) {
+    console.error('[autoDeleteStaleExamens] Erreur delete:', deleteError.message);
+    return 0;
+  }
+
+  console.log(`[autoDeleteStaleExamens] ${ids.length} examen(s) spam supprimé(s)`);
+
+  // Nettoyer les clients orphelins
+  for (const clientId of clientIds) {
+    try {
+      const { count: exCount } = await supabase
+        .from('examens')
+        .select('id', { count: 'exact', head: true })
+        .eq('client_id', clientId);
+
+      const { count: insCount } = await supabase
+        .from('inscriptions')
+        .select('id', { count: 'exact', head: true })
+        .eq('client_id', clientId);
+
+      const { count: stagCount } = await supabase
+        .from('stagiaires_formation')
+        .select('id', { count: 'exact', head: true })
+        .eq('client_id', clientId);
+
+      if ((exCount || 0) === 0 && (insCount || 0) === 0 && (stagCount || 0) === 0) {
+        await supabase.from('clients').delete().eq('id', clientId);
+        console.log(`[autoDeleteStaleExamens] Client orphelin #${clientId} supprimé`);
+      }
+    } catch {
+      // Continuer silencieusement
+    }
+  }
+
+  return ids.length;
+}
