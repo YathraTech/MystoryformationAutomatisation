@@ -8,8 +8,6 @@ import {
   X,
   Check,
   Clock,
-  Eye,
-  EyeOff,
   ChevronDown,
   ChevronRight,
   MapPin,
@@ -17,6 +15,9 @@ import {
   DoorOpen,
   BookOpen,
   Euro,
+  Eye,
+  EyeOff,
+  AlertCircle,
 } from 'lucide-react';
 
 interface Creneau {
@@ -81,6 +82,7 @@ export default function ParametresFormationPage() {
   const [types, setTypes] = useState<FormationType[]>([]);
   const [salles, setSalles] = useState<Salle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   // Sections collapsibles
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
@@ -91,6 +93,7 @@ export default function ParametresFormationPage() {
       return s;
     });
   };
+  const isSectionCollapsed = (id: string) => collapsedSections.has(id);
 
   // Créneau form
   const [showCreneauForm, setShowCreneauForm] = useState(false);
@@ -135,13 +138,14 @@ export default function ParametresFormationPage() {
 
   // === CRENEAUX CRUD ===
   const saveCreneau = async () => {
-    const method = editingCreneau ? 'PATCH' : 'POST';
-    const body = editingCreneau ? { id: editingCreneau.id, ...creneauForm } : creneauForm;
-    await fetch('/api/admin/formation-creneaux', {
-      method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-    });
-    resetCreneauForm();
-    fetchData();
+    try {
+      const method = editingCreneau ? 'PATCH' : 'POST';
+      const body = editingCreneau ? { id: editingCreneau.id, ...creneauForm } : creneauForm;
+      const res = await fetch('/api/admin/formation-creneaux', {
+        method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      });
+      if (res.ok) { resetCreneauForm(); fetchData(); }
+    } catch { setError('Erreur lors de la sauvegarde'); }
   };
   const deleteCreneau = async (id: number) => {
     if (!confirm('Supprimer ce créneau ?')) return;
@@ -160,23 +164,17 @@ export default function ParametresFormationPage() {
     setShowCreneauForm(false); setEditingCreneau(null);
     setCreneauForm({ label: '', jour: 'lundi', heureDebut: '09:30', heureFin: '12:30', dureeHeures: 3, agence: 'Gagny', placesMax: 15, actif: true, ordre: 0 });
   };
-  const toggleCreneauActif = async (c: Creneau) => {
-    await fetch('/api/admin/formation-creneaux', {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: c.id, actif: !c.actif }),
-    });
-    fetchData();
-  };
 
   // === TYPES CRUD ===
   const saveType = async () => {
-    const method = editingType ? 'PATCH' : 'POST';
-    const body = editingType ? { id: editingType.id, ...typeForm } : typeForm;
-    await fetch('/api/admin/formation-types', {
-      method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-    });
-    resetTypeForm();
-    fetchData();
+    try {
+      const method = editingType ? 'PATCH' : 'POST';
+      const body = editingType ? { id: editingType.id, ...typeForm } : typeForm;
+      const res = await fetch('/api/admin/formation-types', {
+        method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      });
+      if (res.ok) { resetTypeForm(); fetchData(); }
+    } catch { setError('Erreur lors de la sauvegarde'); }
   };
   const deleteType = async (id: number) => {
     if (!confirm('Supprimer ce type ?')) return;
@@ -200,13 +198,14 @@ export default function ParametresFormationPage() {
 
   // === SALLES CRUD ===
   const saveSalle = async () => {
-    const method = editingSalle ? 'PATCH' : 'POST';
-    const body = editingSalle ? { id: editingSalle.id, ...salleForm } : salleForm;
-    await fetch('/api/admin/formation-salles', {
-      method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-    });
-    resetSalleForm();
-    fetchData();
+    try {
+      const method = editingSalle ? 'PATCH' : 'POST';
+      const body = editingSalle ? { id: editingSalle.id, ...salleForm } : salleForm;
+      const res = await fetch('/api/admin/formation-salles', {
+        method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      });
+      if (res.ok) { resetSalleForm(); fetchData(); }
+    } catch { setError('Erreur lors de la sauvegarde'); }
   };
   const deleteSalle = async (id: number) => {
     if (!confirm('Supprimer cette salle ?')) return;
@@ -232,445 +231,430 @@ export default function ParametresFormationPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      <div className="flex items-center justify-center py-20">
+        <div className="h-8 w-8 border-3 border-blue-200 border-t-blue-700 rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-8">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Paramètres Formation</h1>
+        <h1 className="text-2xl font-bold text-slate-800">Paramètres de formation</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Configurez les créneaux, types de formation et salles
+          Configurez les créneaux, types de formation et salles disponibles
         </p>
       </div>
 
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {error}
+          <button onClick={() => setError('')} className="ml-auto">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* ==================== SECTION 1: CRÉNEAUX ==================== */}
       <section className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <button
+        <div
+          className="px-5 py-4 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
           onClick={() => toggleSection('creneaux')}
-          className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
         >
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <Clock className="h-5 w-5 text-blue-600" />
-            </div>
-            <div className="text-left">
-              <h2 className="text-sm font-semibold text-slate-900">Créneaux de formation</h2>
-              <p className="text-xs text-slate-500">{creneaux.length} créneau(x) configuré(s)</p>
-            </div>
+          <div className="flex items-center gap-2">
+            {isSectionCollapsed('creneaux') ? (
+              <ChevronRight className="h-5 w-5 text-slate-400" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-slate-400" />
+            )}
+            <Clock className="h-5 w-5 text-slate-500" />
+            <h2 className="font-semibold text-slate-800">Créneaux de formation</h2>
+            <span className="text-xs text-slate-400">({creneaux.length})</span>
           </div>
-          {collapsedSections.has('creneaux')
-            ? <ChevronRight className="h-5 w-5 text-slate-400" />
-            : <ChevronDown className="h-5 w-5 text-slate-400" />}
-        </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); resetCreneauForm(); setShowCreneauForm(true); }}
+            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Ajouter
+          </button>
+        </div>
 
-        {!collapsedSections.has('creneaux') && (
-          <div className="px-5 pb-5 border-t border-slate-100">
-            <div className="flex justify-end mt-3 mb-3">
-              <button
-                onClick={() => { resetCreneauForm(); setShowCreneauForm(true); }}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700"
-              >
-                <Plus className="h-3 w-3" /> Ajouter un créneau
-              </button>
-            </div>
-
+        {!isSectionCollapsed('creneaux') && (
+          <>
+            {/* Formulaire nouveau créneau */}
             {showCreneauForm && (
-              <div className="bg-blue-50 rounded-lg p-4 mb-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-900">
-                    {editingCreneau ? 'Modifier le créneau' : 'Nouveau créneau'}
-                  </span>
-                  <button onClick={resetCreneauForm}><X className="h-4 w-4 text-slate-400" /></button>
-                </div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="px-5 py-4 bg-slate-50 border-b border-slate-200">
+                <div className="grid grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Label *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Label</label>
                     <input type="text" placeholder="Ex: Lundi matin" value={creneauForm.label}
                       onChange={(e) => setCreneauForm({ ...creneauForm, label: e.target.value })}
-                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg" />
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Jour *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Jour</label>
                     <select value={creneauForm.jour} onChange={(e) => setCreneauForm({ ...creneauForm, jour: e.target.value })}
-                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg">
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
                       {JOURS.map((j) => <option key={j.value} value={j.value}>{j.label}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Heure début</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Heure début</label>
                     <input type="time" value={creneauForm.heureDebut}
                       onChange={(e) => setCreneauForm({ ...creneauForm, heureDebut: e.target.value })}
-                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg" />
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Heure fin</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Heure fin</label>
                     <input type="time" value={creneauForm.heureFin}
                       onChange={(e) => setCreneauForm({ ...creneauForm, heureFin: e.target.value })}
-                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg" />
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                   </div>
+                </div>
+                <div className="grid grid-cols-4 gap-4 mt-3">
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Agence *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Agence</label>
                     <select value={creneauForm.agence} onChange={(e) => setCreneauForm({ ...creneauForm, agence: e.target.value })}
-                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg">
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
                       {AGENCES.map((a) => <option key={a} value={a}>{a}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Places max</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Places max</label>
                     <input type="number" min={1} value={creneauForm.placesMax}
                       onChange={(e) => setCreneauForm({ ...creneauForm, placesMax: parseInt(e.target.value) || 15 })}
-                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg" />
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Durée (h)</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Durée (h)</label>
                     <input type="number" min={0.5} step={0.5} value={creneauForm.dureeHeures}
                       onChange={(e) => setCreneauForm({ ...creneauForm, dureeHeures: parseFloat(e.target.value) || 3 })}
-                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg" />
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                   </div>
-                  <div className="flex items-end">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <div className="flex items-end gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={creneauForm.actif}
                         onChange={(e) => setCreneauForm({ ...creneauForm, actif: e.target.checked })}
-                        className="rounded border-slate-300" /> Actif
+                        className="rounded border-slate-300" />
+                      <span className="text-sm text-slate-600">Actif</span>
                     </label>
+                    <div className="flex-1" />
+                    <button onClick={resetCreneauForm}
+                      className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 transition-colors">
+                      <X className="h-4 w-4" />
+                    </button>
+                    <button onClick={saveCreneau} disabled={!creneauForm.label}
+                      className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50">
+                      <Check className="h-4 w-4" />
+                    </button>
                   </div>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <button onClick={resetCreneauForm} className="px-3 py-1.5 text-xs text-slate-600">Annuler</button>
-                  <button onClick={saveCreneau} disabled={!creneauForm.label}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                    <Check className="h-3 w-3" /> {editingCreneau ? 'Mettre à jour' : 'Créer'}
-                  </button>
                 </div>
               </div>
             )}
 
-            {/* Liste des créneaux par agence */}
-            {AGENCES.map((agence) => {
-              const agenceCreneaux = creneaux.filter((c) => c.agence === agence);
-              if (agenceCreneaux.length === 0 && !showCreneauForm) return null;
-              return (
-                <div key={agence} className="mb-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MapPin className="h-3 w-3 text-slate-400" />
-                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{agence}</span>
-                    <span className="text-[10px] text-slate-400">({agenceCreneaux.length})</span>
-                  </div>
-                  <div className="space-y-1">
-                    {agenceCreneaux.map((c) => (
-                      <div key={c.id} className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm ${c.actif ? 'bg-slate-50' : 'bg-slate-50 opacity-50'}`}>
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs font-medium text-slate-400 capitalize w-16">{c.jour}</span>
-                          <span className="font-medium text-slate-800">{c.label}</span>
-                          <span className="text-xs text-slate-500">{c.heure_debut} - {c.heure_fin}</span>
-                          <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">{c.duree_heures}h</span>
-                          <span className="text-[10px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                            <Users className="h-2.5 w-2.5" />{c.places_max}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => toggleCreneauActif(c)} className="p-1 rounded hover:bg-slate-100">
-                            {c.actif ? <Eye className="h-3.5 w-3.5 text-green-500" /> : <EyeOff className="h-3.5 w-3.5 text-slate-300" />}
-                          </button>
-                          <button onClick={() => editCreneau(c)} className="p-1 rounded hover:bg-slate-100">
-                            <Pencil className="h-3.5 w-3.5 text-slate-400" />
-                          </button>
-                          <button onClick={() => deleteCreneau(c.id)} className="p-1 rounded hover:bg-red-50">
-                            <Trash2 className="h-3.5 w-3.5 text-red-400" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+            {/* Liste des créneaux */}
+            <div className="divide-y divide-slate-100">
+              {creneaux.length === 0 && !showCreneauForm && (
+                <div className="px-5 py-8 text-center text-sm text-slate-400">
+                  Aucun créneau configuré
                 </div>
-              );
-            })}
-            {creneaux.length === 0 && !showCreneauForm && (
-              <p className="text-sm text-slate-400 text-center py-4">Aucun créneau configuré</p>
-            )}
-          </div>
+              )}
+              {creneaux.map((c) => (
+                <div key={c.id} className={`px-5 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors ${!c.actif ? 'opacity-50' : ''}`}>
+                  {editingCreneau?.id === c.id && showCreneauForm ? null : (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium text-slate-800">{c.label}</span>
+                        <span className="text-xs text-slate-400 capitalize">{c.jour}</span>
+                        <span className="text-xs text-slate-500">{c.heure_debut} - {c.heure_fin}</span>
+                        <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-medium">{c.duree_heures}h</span>
+                        <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                          <MapPin className="h-2.5 w-2.5" />{c.agence}
+                        </span>
+                        <span className="text-[10px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                          <Users className="h-2.5 w-2.5" />{c.places_max} places
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => editCreneau(c)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                          <Pencil className="h-4 w-4 text-slate-400" />
+                        </button>
+                        <button onClick={() => deleteCreneau(c.id)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors">
+                          <Trash2 className="h-4 w-4 text-red-400" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </section>
 
       {/* ==================== SECTION 2: TYPES DE FORMATION ==================== */}
       <section className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <button
+        <div
+          className="px-5 py-4 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
           onClick={() => toggleSection('types')}
-          className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
         >
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-50 rounded-lg">
-              <BookOpen className="h-5 w-5 text-purple-600" />
-            </div>
-            <div className="text-left">
-              <h2 className="text-sm font-semibold text-slate-900">Types de formation</h2>
-              <p className="text-xs text-slate-500">{types.length} type(s) configuré(s)</p>
-            </div>
+          <div className="flex items-center gap-2">
+            {isSectionCollapsed('types') ? (
+              <ChevronRight className="h-5 w-5 text-slate-400" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-slate-400" />
+            )}
+            <BookOpen className="h-5 w-5 text-slate-500" />
+            <h2 className="font-semibold text-slate-800">Types de formation</h2>
+            <span className="text-xs text-slate-400">({types.length})</span>
           </div>
-          {collapsedSections.has('types')
-            ? <ChevronRight className="h-5 w-5 text-slate-400" />
-            : <ChevronDown className="h-5 w-5 text-slate-400" />}
-        </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); resetTypeForm(); setShowTypeForm(true); }}
+            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Ajouter
+          </button>
+        </div>
 
-        {!collapsedSections.has('types') && (
-          <div className="px-5 pb-5 border-t border-slate-100">
-            <div className="flex justify-end mt-3 mb-3">
-              <button onClick={() => { resetTypeForm(); setShowTypeForm(true); }}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700">
-                <Plus className="h-3 w-3" /> Ajouter un type
-              </button>
-            </div>
-
+        {!isSectionCollapsed('types') && (
+          <>
             {showTypeForm && (
-              <div className="bg-purple-50 rounded-lg p-4 mb-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-900">
-                    {editingType ? 'Modifier le type' : 'Nouveau type de formation'}
-                  </span>
-                  <button onClick={resetTypeForm}><X className="h-4 w-4 text-slate-400" /></button>
-                </div>
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="px-5 py-4 bg-slate-50 border-b border-slate-200">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Code *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Code *</label>
                     <input type="text" placeholder="TEF_IRN_A2" value={typeForm.code}
                       onChange={(e) => setTypeForm({ ...typeForm, code: e.target.value })}
-                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg" />
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Label *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Label *</label>
                     <input type="text" placeholder="Formation TEF IRN - A2" value={typeForm.label}
                       onChange={(e) => setTypeForm({ ...typeForm, label: e.target.value })}
-                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg" />
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Niveau cible</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Niveau cible</label>
                     <select value={typeForm.niveauCible} onChange={(e) => setTypeForm({ ...typeForm, niveauCible: e.target.value })}
-                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg">
-                      <option value="">Aucun</option>
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                      <option value="">-</option>
                       {['A1', 'A2', 'B1', 'B2'].map((n) => <option key={n} value={n}>{n}</option>)}
                     </select>
                   </div>
+                </div>
+                <div className="grid grid-cols-4 gap-4 mt-3">
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Durée min (h)</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Durée min (h)</label>
                     <input type="number" min={0} value={typeForm.dureeHeuresMin}
                       onChange={(e) => setTypeForm({ ...typeForm, dureeHeuresMin: parseInt(e.target.value) || 0 })}
-                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg" />
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Durée max (h)</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Durée max (h)</label>
                     <input type="number" min={0} value={typeForm.dureeHeuresMax}
                       onChange={(e) => setTypeForm({ ...typeForm, dureeHeuresMax: parseInt(e.target.value) || 0 })}
-                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg" />
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Prix/heure (EUR)</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Prix / heure</label>
                     <input type="number" min={0} step={0.5} value={typeForm.prixHoraire}
                       onChange={(e) => setTypeForm({ ...typeForm, prixHoraire: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg" />
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Prix forfait (EUR)</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Prix forfait</label>
                     <input type="number" min={0} step={1} value={typeForm.prixForfait}
                       onChange={(e) => setTypeForm({ ...typeForm, prixForfait: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg" />
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                   </div>
-                  <div className="flex items-end gap-4">
-                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                </div>
+                <div className="flex items-center justify-between mt-3">
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-600">
                       <input type="checkbox" checked={typeForm.eligibleCpf}
                         onChange={(e) => setTypeForm({ ...typeForm, eligibleCpf: e.target.checked })}
-                        className="rounded border-slate-300" /> CPF
+                        className="rounded border-slate-300" /> Éligible CPF
                     </label>
-                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-600">
                       <input type="checkbox" checked={typeForm.visible}
                         onChange={(e) => setTypeForm({ ...typeForm, visible: e.target.checked })}
                         className="rounded border-slate-300" /> Visible
                     </label>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-[10px] text-slate-500 mb-0.5">Description</label>
-                  <textarea value={typeForm.description}
-                    onChange={(e) => setTypeForm({ ...typeForm, description: e.target.value })}
-                    className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg" rows={2} />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <button onClick={resetTypeForm} className="px-3 py-1.5 text-xs text-slate-600">Annuler</button>
-                  <button onClick={saveType} disabled={!typeForm.code || !typeForm.label}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white text-xs rounded-lg hover:bg-purple-700 disabled:opacity-50">
-                    <Check className="h-3 w-3" /> {editingType ? 'Mettre à jour' : 'Créer'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={resetTypeForm}
+                      className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 transition-colors">
+                      <X className="h-4 w-4" />
+                    </button>
+                    <button onClick={saveType} disabled={!typeForm.code || !typeForm.label}
+                      className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50">
+                      <Check className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
 
-            <div className="space-y-1">
+            <div className="divide-y divide-slate-100">
+              {types.length === 0 && !showTypeForm && (
+                <div className="px-5 py-8 text-center text-sm text-slate-400">
+                  Aucun type de formation configuré
+                </div>
+              )}
               {types.map((t) => (
-                <div key={t.id} className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm ${t.visible ? 'bg-slate-50' : 'bg-slate-50 opacity-50'}`}>
-                  <div className="flex items-center gap-3 flex-1">
-                    <span className="text-xs font-mono text-slate-400">{t.code}</span>
+                <div key={t.id} className={`px-5 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors ${!t.visible ? 'opacity-50' : ''}`}>
+                  <div className="flex items-center gap-3">
                     <span className="font-medium text-slate-800">{t.label}</span>
+                    <span className="text-xs font-mono text-slate-400">{t.code}</span>
                     {t.niveau_cible && (
-                      <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded">{t.niveau_cible}</span>
+                      <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-medium">{t.niveau_cible}</span>
                     )}
-                    {t.duree_heures_min && t.duree_heures_max ? (
-                      <span className="text-[10px] text-slate-400">{t.duree_heures_min}-{t.duree_heures_max}h</span>
-                    ) : null}
+                    {(t.duree_heures_min || t.duree_heures_max) && (
+                      <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
+                        {t.duree_heures_min || '?'}-{t.duree_heures_max || '?'}h
+                      </span>
+                    )}
                     {t.prix_forfait ? (
                       <span className="text-[10px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded flex items-center gap-0.5">
                         <Euro className="h-2.5 w-2.5" />{t.prix_forfait}
                       </span>
                     ) : t.prix_horaire ? (
-                      <span className="text-[10px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded">{t.prix_horaire}EUR/h</span>
+                      <span className="text-[10px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded">{t.prix_horaire}€/h</span>
                     ) : null}
                     {t.eligible_cpf && (
-                      <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">CPF</span>
+                      <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-medium">CPF</span>
                     )}
                   </div>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => editType(t)} className="p-1 rounded hover:bg-slate-100">
-                      <Pencil className="h-3.5 w-3.5 text-slate-400" />
+                    <button onClick={() => editType(t)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                      <Pencil className="h-4 w-4 text-slate-400" />
                     </button>
-                    <button onClick={() => deleteType(t.id)} className="p-1 rounded hover:bg-red-50">
-                      <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                    <button onClick={() => deleteType(t.id)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors">
+                      <Trash2 className="h-4 w-4 text-red-400" />
                     </button>
                   </div>
                 </div>
               ))}
-              {types.length === 0 && !showTypeForm && (
-                <p className="text-sm text-slate-400 text-center py-4">Aucun type de formation configuré</p>
-              )}
             </div>
-          </div>
+          </>
         )}
       </section>
 
       {/* ==================== SECTION 3: SALLES ==================== */}
       <section className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <button
+        <div
+          className="px-5 py-4 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
           onClick={() => toggleSection('salles')}
-          className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
         >
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-50 rounded-lg">
-              <DoorOpen className="h-5 w-5 text-emerald-600" />
-            </div>
-            <div className="text-left">
-              <h2 className="text-sm font-semibold text-slate-900">Salles de formation</h2>
-              <p className="text-xs text-slate-500">{salles.length} salle(s) configurée(s)</p>
-            </div>
+          <div className="flex items-center gap-2">
+            {isSectionCollapsed('salles') ? (
+              <ChevronRight className="h-5 w-5 text-slate-400" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-slate-400" />
+            )}
+            <DoorOpen className="h-5 w-5 text-slate-500" />
+            <h2 className="font-semibold text-slate-800">Salles de formation</h2>
+            <span className="text-xs text-slate-400">({salles.length})</span>
           </div>
-          {collapsedSections.has('salles')
-            ? <ChevronRight className="h-5 w-5 text-slate-400" />
-            : <ChevronDown className="h-5 w-5 text-slate-400" />}
-        </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); resetSalleForm(); setShowSalleForm(true); }}
+            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Ajouter
+          </button>
+        </div>
 
-        {!collapsedSections.has('salles') && (
-          <div className="px-5 pb-5 border-t border-slate-100">
-            <div className="flex justify-end mt-3 mb-3">
-              <button onClick={() => { resetSalleForm(); setShowSalleForm(true); }}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700">
-                <Plus className="h-3 w-3" /> Ajouter une salle
-              </button>
-            </div>
-
+        {!isSectionCollapsed('salles') && (
+          <>
             {showSalleForm && (
-              <div className="bg-emerald-50 rounded-lg p-4 mb-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-900">
-                    {editingSalle ? 'Modifier la salle' : 'Nouvelle salle'}
-                  </span>
-                  <button onClick={resetSalleForm}><X className="h-4 w-4 text-slate-400" /></button>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
+              <div className="px-5 py-4 bg-slate-50 border-b border-slate-200">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Nom *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Nom *</label>
                     <input type="text" placeholder="Salle 1" value={salleForm.nom}
                       onChange={(e) => setSalleForm({ ...salleForm, nom: e.target.value })}
-                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg" />
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Agence *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Agence *</label>
                     <select value={salleForm.agence} onChange={(e) => setSalleForm({ ...salleForm, agence: e.target.value })}
-                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg">
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
                       {AGENCES.map((a) => <option key={a} value={a}>{a}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Capacité</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Capacité</label>
                     <input type="number" min={1} value={salleForm.capacite}
                       onChange={(e) => setSalleForm({ ...salleForm, capacite: parseInt(e.target.value) || 15 })}
-                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg" />
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-[10px] text-slate-500 mb-1">Équipements</label>
+                <div className="mt-3">
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Équipements</label>
                   <div className="flex gap-2 flex-wrap">
                     {EQUIPEMENTS.map((eq) => (
                       <button key={eq} type="button" onClick={() => toggleEquipement(eq)}
-                        className={`px-2 py-1 text-xs rounded-lg border transition-colors ${
+                        className={`px-2.5 py-1 text-xs rounded-lg border transition-colors ${
                           salleForm.equipements.includes(eq)
-                            ? 'bg-emerald-100 border-emerald-200 text-emerald-700'
-                            : 'border-slate-200 text-slate-500 hover:border-emerald-300'
+                            ? 'bg-blue-50 border-blue-200 text-blue-700'
+                            : 'border-slate-200 text-slate-500 hover:border-blue-300'
                         }`}>
                         {eq}
                       </button>
                     ))}
                   </div>
                 </div>
-                <div className="flex justify-end gap-2">
-                  <button onClick={resetSalleForm} className="px-3 py-1.5 text-xs text-slate-600">Annuler</button>
+                <div className="flex items-center justify-end gap-2 mt-3">
+                  <button onClick={resetSalleForm}
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 transition-colors">
+                    <X className="h-4 w-4" />
+                  </button>
                   <button onClick={saveSalle} disabled={!salleForm.nom}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700 disabled:opacity-50">
-                    <Check className="h-3 w-3" /> {editingSalle ? 'Mettre à jour' : 'Créer'}
+                    className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50">
+                    <Check className="h-4 w-4" />
                   </button>
                 </div>
               </div>
             )}
 
-            {AGENCES.map((agence) => {
-              const agenceSalles = salles.filter((s) => s.agence === agence);
-              if (agenceSalles.length === 0) return null;
-              return (
-                <div key={agence} className="mb-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MapPin className="h-3 w-3 text-slate-400" />
-                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{agence}</span>
-                  </div>
-                  <div className="space-y-1">
-                    {agenceSalles.map((s) => (
-                      <div key={s.id} className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm ${s.actif ? 'bg-slate-50' : 'bg-slate-50 opacity-50'}`}>
-                        <div className="flex items-center gap-3">
-                          <DoorOpen className="h-4 w-4 text-emerald-500" />
-                          <span className="font-medium text-slate-800">{s.nom}</span>
-                          <span className="text-[10px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                            <Users className="h-2.5 w-2.5" />{s.capacite}
-                          </span>
-                          {s.equipements?.map((eq) => (
-                            <span key={eq} className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{eq}</span>
-                          ))}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => editSalle(s)} className="p-1 rounded hover:bg-slate-100">
-                            <Pencil className="h-3.5 w-3.5 text-slate-400" />
-                          </button>
-                          <button onClick={() => deleteSalle(s.id)} className="p-1 rounded hover:bg-red-50">
-                            <Trash2 className="h-3.5 w-3.5 text-red-400" />
-                          </button>
-                        </div>
-                      </div>
+            <div className="divide-y divide-slate-100">
+              {salles.length === 0 && !showSalleForm && (
+                <div className="px-5 py-8 text-center text-sm text-slate-400">
+                  Aucune salle configurée
+                </div>
+              )}
+              {salles.map((s) => (
+                <div key={s.id} className={`px-5 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors ${!s.actif ? 'opacity-50' : ''}`}>
+                  <div className="flex items-center gap-3">
+                    <DoorOpen className="h-4 w-4 text-slate-400" />
+                    <span className="font-medium text-slate-800">{s.nom}</span>
+                    <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                      <MapPin className="h-2.5 w-2.5" />{s.agence}
+                    </span>
+                    <span className="text-[10px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                      <Users className="h-2.5 w-2.5" />{s.capacite} places
+                    </span>
+                    {s.equipements?.map((eq) => (
+                      <span key={eq} className="text-[10px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded">{eq}</span>
                     ))}
                   </div>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => editSalle(s)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                      <Pencil className="h-4 w-4 text-slate-400" />
+                    </button>
+                    <button onClick={() => deleteSalle(s.id)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors">
+                      <Trash2 className="h-4 w-4 text-red-400" />
+                    </button>
+                  </div>
                 </div>
-              );
-            })}
-            {salles.length === 0 && !showSalleForm && (
-              <p className="text-sm text-slate-400 text-center py-4">Aucune salle configurée</p>
-            )}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </section>
     </div>
