@@ -18,6 +18,9 @@ import {
   FileText,
   AlertCircle,
   FileQuestion,
+  Download,
+  FileSpreadsheet,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface QcmQuestion {
@@ -74,6 +77,13 @@ export default function QcmAdminPage() {
   const [saving, setSaving] = useState(false);
   const [uploadingAudio, setUploadingAudio] = useState(false);
   const audioInputRef = useRef<HTMLInputElement>(null);
+
+  // Import CSV
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{
+    inserted: number; skipped: number; total: number; errors: string[];
+  } | null>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   // Audio preview
   const [playingAudioId, setPlayingAudioId] = useState<number | null>(null);
@@ -241,6 +251,91 @@ export default function QcmAdminPage() {
           <button onClick={() => setError('')} className="ml-auto"><X className="h-4 w-4" /></button>
         </div>
       )}
+
+      {/* Import CSV */}
+      <div className="bg-white rounded-xl border border-slate-200 px-5 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <FileSpreadsheet className="h-5 w-5 text-slate-500" />
+            <div>
+              <h2 className="text-sm font-semibold text-slate-800">Importer des questions (CSV / Excel)</h2>
+              <p className="text-xs text-slate-400">Importez un fichier CSV avec vos questions pré-remplies</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <a href="/modele-qcm.csv" download
+              className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 transition-colors">
+              <Download className="h-4 w-4" />
+              Modèle CSV
+            </a>
+            <button
+              onClick={() => csvInputRef.current?.click()}
+              disabled={importing}
+              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              <Upload className="h-4 w-4" />
+              {importing ? 'Import...' : 'Importer CSV'}
+            </button>
+            <input ref={csvInputRef} type="file" accept=".csv,.txt,.xlsx" className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setImporting(true);
+                setImportResult(null);
+                try {
+                  const formData = new FormData();
+                  formData.append('file', file);
+                  const res = await fetch('/api/admin/qcm-questions/import', { method: 'POST', body: formData });
+                  const data = await res.json();
+                  if (data.success) {
+                    setImportResult(data);
+                    fetchQuestions();
+                  } else {
+                    setError(data.error || 'Erreur import');
+                  }
+                } catch { setError('Erreur réseau'); }
+                finally { setImporting(false); e.target.value = ''; }
+              }} />
+          </div>
+        </div>
+
+        {/* Résultat import */}
+        {importResult && (
+          <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-sm text-green-700">
+              <CheckCircle2 className="h-4 w-4" />
+              <strong>{importResult.inserted}</strong> question(s) importée(s) sur {importResult.total}
+              {importResult.skipped > 0 && (
+                <span className="text-amber-600">({importResult.skipped} ignorée(s))</span>
+              )}
+            </div>
+            {importResult.errors.length > 0 && (
+              <div className="mt-2 space-y-0.5">
+                {importResult.errors.map((err, i) => (
+                  <p key={i} className="text-xs text-red-600">{err}</p>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Format attendu */}
+        <details className="mt-3">
+          <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-600">
+            Format du fichier CSV
+          </summary>
+          <div className="mt-2 bg-slate-50 rounded-lg p-3 text-xs text-slate-600 space-y-1">
+            <p><strong>Séparateur :</strong> point-virgule (;) ou virgule (,)</p>
+            <p><strong>Colonnes obligatoires :</strong> competence, niveau, question, choix_a, choix_b, reponse</p>
+            <p><strong>Colonnes optionnelles :</strong> choix_c, choix_d, choix_multiple, points, audio_url</p>
+            <p><strong>competence :</strong> CE ou CO</p>
+            <p><strong>niveau :</strong> A0, A1, A2, B1, B2</p>
+            <p><strong>reponse :</strong> A, B, C, D (ou A,C pour choix multiple)</p>
+            <p><strong>choix_multiple :</strong> oui / non</p>
+            <p><strong>audio_url :</strong> URL du fichier audio (pour CO uniquement)</p>
+          </div>
+        </details>
+      </div>
 
       {/* Filtres rapides */}
       <div className="flex gap-3">

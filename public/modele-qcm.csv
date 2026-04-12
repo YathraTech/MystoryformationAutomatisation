@@ -1,0 +1,9 @@
+competence;niveau;question;choix_A;choix_B;choix_C;choix_D;reponse;choix_multiple;points;audio_url
+CE;A1;Quel est le mot pour "bonjour" en français ?;Hello;Bonjour;Gracias;Danke;B;non;1;
+CE;A1;Quelle phrase est correcte ?;Je suis content;Je suis contente;Les deux sont correctes;Aucune n'est correcte;C;non;1;
+CE;A2;Lisez le texte. Quels animaux sont mentionnés ?;Le chat;Le chien;Le chat et le chien;L'oiseau;A,C;oui;2;
+CE;A2;Quel est le synonyme de "rapide" ?;Lent;Vite;Grand;Petit;B;non;1;
+CE;B1;Dans ce texte, quelles informations sont vraies ?;L'auteur habite à Paris;Il travaille le weekend;Il a deux enfants;Il est professeur;A,C;oui;2;
+CO;A1;Écoutez. Quelle heure est-il ?;8h00;9h00;10h00;11h00;B;non;1;https://exemple.com/audio1.mp3
+CO;A2;Écoutez le dialogue. Que commande la personne ?;Un café;Un thé;Un jus d'orange;Un café et un croissant;D;non;1;https://exemple.com/audio2.mp3
+CO;B1;Écoutez. Quels sujets sont abordés ?;Le sport;La politique;La météo;La cuisine;A,C;oui;2;https://exemple.com/audio3.mp3
