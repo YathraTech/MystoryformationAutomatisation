@@ -14,6 +14,8 @@ import {
   Mail,
   Clock,
   Download,
+  Link2,
+  Copy,
 } from 'lucide-react';
 import type {
   StagiaireFormation,
@@ -125,6 +127,21 @@ export default function StagiaireDetailPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Lien test QCM pour le client */}
+          {(stagiaire.statut === 'inscription' || stagiaire.statut === 'test_initial') && (
+            <button
+              onClick={() => {
+                const testToken = Buffer.from(stagiaireId.toString()).toString('base64');
+                const testUrl = `${window.location.origin}/test/${testToken}`;
+                navigator.clipboard.writeText(testUrl);
+                alert(`Lien copié !\n\n${testUrl}\n\nEnvoyez ce lien au client pour qu'il passe le test QCM.`);
+              }}
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors"
+            >
+              <Link2 className="h-4 w-4" />
+              Lien test QCM
+            </button>
+          )}
           {stagiaire.statut === 'terminee' && stagiaire.pdfAttestationFin && (
             <a
               href={stagiaire.pdfAttestationFin}
