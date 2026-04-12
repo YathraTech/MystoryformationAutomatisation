@@ -16,6 +16,7 @@ import {
   X,
   Settings,
   Building2,
+  GraduationCap,
 } from 'lucide-react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { useFeuilleAppelBadge } from '@/hooks/useFeuilleAppelBadge';
@@ -24,6 +25,7 @@ const mainNavItems = [
   { href: '/admin', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/admin/feuilles-appel', label: "Suivi des examens", icon: ClipboardList },
   { href: '/admin/clients', label: 'Clients', icon: Users },
+  { href: '/admin/suivi-formation', label: 'Suivi Formation', icon: GraduationCap },
   { href: '/admin/formations', label: 'Formations', icon: BookOpen, disabled: true },
   { href: '/admin/examens', label: 'Candidats d\'examens', icon: ClipboardCheck },
   { href: '/admin/planning', label: 'Planning', icon: Calendar },

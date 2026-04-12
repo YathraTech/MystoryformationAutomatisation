@@ -1,0 +1,463 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import {
+  ArrowLeft,
+  User,
+  FileText,
+  ClipboardList,
+  BookOpen,
+  CheckCircle2,
+  Star,
+  Award,
+  Mail,
+  Clock,
+  Download,
+} from 'lucide-react';
+import type {
+  StagiaireFormation,
+  TestFormation,
+  AnalyseBesoin,
+  Evaluation,
+  SatisfactionChaud,
+  SatisfactionFroid,
+  Emargement,
+  StagiaireStatut,
+} from '@/types/admin';
+import TestInitialForm from '@/components/admin/formation/TestInitialForm';
+import AnalyseBesoinForm from '@/components/admin/formation/AnalyseBesoinForm';
+import EvaluationInitialeForm from '@/components/admin/formation/EvaluationInitialeForm';
+import InscriptionPaiementForm from '@/components/admin/formation/InscriptionPaiementForm';
+import DesignationForm from '@/components/admin/formation/DesignationForm';
+import EmargementSection from '@/components/admin/formation/EmargementSection';
+import SatisfactionChaudForm from '@/components/admin/formation/SatisfactionChaudForm';
+import TestFinalSection from '@/components/admin/formation/TestFinalSection';
+import SatisfactionFroidSection from '@/components/admin/formation/SatisfactionFroidSection';
+
+interface StagiaireData {
+  stagiaire: StagiaireFormation;
+  testInitial: TestFormation | null;
+  testFinal: TestFormation | null;
+  analyse: AnalyseBesoin | null;
+  evalInitiale: Evaluation | null;
+  evalFinale: Evaluation | null;
+  emargements: Emargement[];
+  satisfactionChaud: SatisfactionChaud[];
+  satisfactionFroid: SatisfactionFroid | null;
+}
+
+const WORKFLOW_STEPS: {
+  key: StagiaireStatut;
+  label: string;
+  icon: typeof User;
+  description: string;
+}[] = [
+  { key: 'inscription', label: 'Inscription', icon: User, description: 'Fiche client créée' },
+  { key: 'test_initial', label: 'Test initial', icon: FileText, description: 'CO + CE auto, EE + EO manuel' },
+  { key: 'analyse_besoin', label: 'Analyse besoin', icon: ClipboardList, description: 'Fiche d\'analyse remplie' },
+  { key: 'evaluation_initiale', label: 'Éval. initiale', icon: BookOpen, description: 'Générée automatiquement' },
+  { key: 'en_formation', label: 'Formation', icon: Clock, description: 'Émargement + suivi présences' },
+  { key: 'test_final', label: 'Test final', icon: FileText, description: 'Comparaison initial vs final' },
+  { key: 'evaluation_finale', label: 'Éval. finale', icon: CheckCircle2, description: 'Comparaison + axes' },
+  { key: 'terminee', label: 'Terminée', icon: Award, description: 'Attestation générée' },
+];
+
+const STATUT_ORDER: StagiaireStatut[] = [
+  'inscription', 'test_initial', 'analyse_besoin', 'evaluation_initiale',
+  'en_formation', 'test_final', 'evaluation_finale', 'terminee',
+];
+
+export default function StagiaireDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const stagiaireId = parseInt(params.id as string);
+
+  const [data, setData] = useState<StagiaireData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeStep, setActiveStep] = useState<StagiaireStatut>('inscription');
+
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/admin/stagiaires-formation/${stagiaireId}`);
+      if (!res.ok) throw new Error('Not found');
+      const result = await res.json();
+      setData(result);
+      setActiveStep(result.stagiaire.statut);
+    } catch {
+      router.push('/admin/suivi-formation');
+    } finally {
+      setLoading(false);
+    }
+  }, [stagiaireId, router]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  if (loading || !data) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
+
+  const { stagiaire } = data;
+  const currentStepIndex = STATUT_ORDER.indexOf(stagiaire.statut);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <button
+          onClick={() => router.push('/admin/suivi-formation')}
+          className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5 text-slate-600" />
+        </button>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-slate-900">
+            {stagiaire.civilite} {stagiaire.nom} {stagiaire.prenom}
+          </h1>
+          <p className="text-sm text-slate-500">
+            {stagiaire.typePrestation} - {stagiaire.agence} - {stagiaire.email}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {stagiaire.statut === 'terminee' && stagiaire.pdfAttestationFin && (
+            <a
+              href={stagiaire.pdfAttestationFin}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors"
+            >
+              <Download className="h-4 w-4" />
+              Attestation
+            </a>
+          )}
+          {!stagiaire.mailInscriptionEnvoye && stagiaire.statut !== 'inscription' && (
+            <button
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+              onClick={async () => {
+                // TODO: Envoyer les docs par mail
+                alert('Envoi des documents par mail...');
+              }}
+            >
+              <Mail className="h-4 w-4" />
+              Envoyer docs
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Workflow Progress */}
+      <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="flex items-center overflow-x-auto gap-1">
+          {WORKFLOW_STEPS.map((step, idx) => {
+            const isCompleted = STATUT_ORDER.indexOf(step.key) < currentStepIndex;
+            const isCurrent = step.key === stagiaire.statut;
+            const isClickable = STATUT_ORDER.indexOf(step.key) <= currentStepIndex;
+            const Icon = step.icon;
+
+            return (
+              <div key={step.key} className="flex items-center">
+                <button
+                  onClick={() => isClickable && setActiveStep(step.key)}
+                  disabled={!isClickable}
+                  className={`flex flex-col items-center min-w-[80px] p-2 rounded-lg transition-colors ${
+                    activeStep === step.key
+                      ? 'bg-blue-50'
+                      : isClickable
+                        ? 'hover:bg-slate-50 cursor-pointer'
+                        : 'opacity-40 cursor-not-allowed'
+                  }`}
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
+                      isCompleted
+                        ? 'bg-green-100 text-green-600'
+                        : isCurrent
+                          ? 'bg-blue-100 text-blue-600'
+                          : 'bg-slate-100 text-slate-400'
+                    }`}
+                  >
+                    {isCompleted ? (
+                      <CheckCircle2 className="h-4 w-4" />
+                    ) : (
+                      <Icon className="h-4 w-4" />
+                    )}
+                  </div>
+                  <span
+                    className={`text-[10px] font-medium text-center leading-tight ${
+                      isCurrent ? 'text-blue-700' : isCompleted ? 'text-green-700' : 'text-slate-400'
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                </button>
+                {idx < WORKFLOW_STEPS.length - 1 && (
+                  <div
+                    className={`w-4 h-0.5 ${
+                      isCompleted ? 'bg-green-300' : 'bg-slate-200'
+                    }`}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Info résumé */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="bg-white rounded-lg border border-slate-200 p-3">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Heures</p>
+          <p className="text-lg font-bold text-slate-900 mt-1">
+            {stagiaire.heuresEffectuees}/{stagiaire.heuresPrevues}h
+          </p>
+        </div>
+        <div className="bg-white rounded-lg border border-slate-200 p-3">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Paiement</p>
+          <p className="text-lg font-bold text-slate-900 mt-1">
+            {stagiaire.montantTotal ? `${stagiaire.montantTotal}€` : '-'}
+          </p>
+          <span className="text-[10px] text-slate-500">{stagiaire.statutPaiement}</span>
+        </div>
+        <div className="bg-white rounded-lg border border-slate-200 p-3">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Formatrice</p>
+          <p className="text-sm font-medium text-slate-900 mt-1">
+            {stagiaire.formatriceNom || 'Non assignée'}
+          </p>
+        </div>
+        <div className="bg-white rounded-lg border border-slate-200 p-3">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Commerciale</p>
+          <p className="text-sm font-medium text-slate-900 mt-1">
+            {stagiaire.commercialeNom || '-'}
+          </p>
+        </div>
+        <div className="bg-white rounded-lg border border-slate-200 p-3">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Satisfaction</p>
+          <div className="flex items-center gap-1 mt-1">
+            <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+            <span className="text-lg font-bold text-slate-900">
+              {data.satisfactionChaud.length > 0
+                ? (
+                    data.satisfactionChaud.reduce(
+                      (sum, s) =>
+                        sum +
+                        (s.q1ContenuClair + s.q2FormateurExplique + s.q3Progression + s.q4Accueil + s.q5Recommandation) / 5,
+                      0
+                    ) / data.satisfactionChaud.length
+                  ).toFixed(1)
+                : '-'}
+            </span>
+            <span className="text-[10px] text-slate-500">/5</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Step Content */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
+        {activeStep === 'inscription' && (
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">
+              Fiche stagiaire
+            </h2>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <InfoRow label="Civilité" value={stagiaire.civilite} />
+              <InfoRow label="Nom" value={stagiaire.nom} />
+              <InfoRow label="Prénom" value={stagiaire.prenom} />
+              <InfoRow label="Nom de jeune fille" value={stagiaire.nomJeuneFille || '-'} />
+              <InfoRow label="Date de naissance" value={formatDate(stagiaire.dateNaissance)} />
+              <InfoRow label="Nationalité" value={stagiaire.nationalite} />
+              <InfoRow label="Téléphone" value={stagiaire.telephone} />
+              <InfoRow label="Email" value={stagiaire.email} />
+              <InfoRow label="Adresse" value={stagiaire.adressePostale} />
+              <InfoRow label="Pièce d'identité" value={`${stagiaire.typePiece} - ${stagiaire.numeroPieceIdentite}`} />
+              <InfoRow label="Agence" value={stagiaire.agence} />
+              <InfoRow label="Source" value={stagiaire.sourceProvenance || '-'} />
+            </div>
+          </div>
+        )}
+
+        {activeStep === 'test_initial' && (
+          <TestInitialForm
+            stagiaireId={stagiaireId}
+            existingTest={data.testInitial}
+            onSaved={fetchData}
+          />
+        )}
+
+        {activeStep === 'analyse_besoin' && (
+          <AnalyseBesoinForm
+            stagiaireId={stagiaireId}
+            existingAnalyse={data.analyse}
+            testInitial={data.testInitial}
+            stagiaire={stagiaire}
+            onSaved={fetchData}
+          />
+        )}
+
+        {activeStep === 'evaluation_initiale' && (
+          <EvaluationInitialeForm
+            stagiaireId={stagiaireId}
+            existingEval={data.evalInitiale}
+            testInitial={data.testInitial}
+            analyse={data.analyse}
+            stagiaire={stagiaire}
+            onSaved={fetchData}
+          />
+        )}
+
+        {activeStep === 'en_formation' && (
+          <div className="space-y-6">
+            <InscriptionPaiementForm
+              stagiaireId={stagiaireId}
+              stagiaire={stagiaire}
+              onSaved={fetchData}
+            />
+            <hr className="border-slate-200" />
+            <DesignationForm
+              stagiaireId={stagiaireId}
+              stagiaire={stagiaire}
+              onSaved={fetchData}
+            />
+            <hr className="border-slate-200" />
+            <EmargementSection
+              stagiaireId={stagiaireId}
+              stagiaire={stagiaire}
+              emargements={data.emargements}
+              onRefresh={fetchData}
+            />
+            <hr className="border-slate-200" />
+            <SatisfactionChaudForm
+              stagiaireId={stagiaireId}
+              existing={data.satisfactionChaud}
+              onSaved={fetchData}
+            />
+          </div>
+        )}
+
+        {activeStep === 'test_final' && (
+          <TestFinalSection
+            stagiaireId={stagiaireId}
+            testFinal={data.testFinal}
+            testInitial={data.testInitial}
+            onSaved={fetchData}
+          />
+        )}
+
+        {activeStep === 'evaluation_finale' && (
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold text-slate-900">Évaluation finale</h2>
+            {data.evalFinale ? (
+              <div className="space-y-4">
+                <p className="text-sm text-green-600 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Évaluation finale générée
+                </p>
+                {data.evalFinale.comparaisonInitialeFinale && (
+                  <div>
+                    <h3 className="text-sm font-medium text-slate-700 mb-2">
+                      Comparaison initiale vs finale
+                    </h3>
+                    <div className="grid grid-cols-4 gap-3">
+                      {Object.entries(data.evalFinale.comparaisonInitialeFinale).map(
+                        ([comp, scores]) => (
+                          <div
+                            key={comp}
+                            className="bg-slate-50 rounded-lg p-3 text-center"
+                          >
+                            <p className="text-xs text-slate-500 mb-1">{comp}</p>
+                            <p className="text-sm">
+                              <span className="text-slate-400">
+                                {(scores as { initial: number; final: number }).initial}/20
+                              </span>
+                              {' → '}
+                              <span className="font-bold text-slate-900">
+                                {(scores as { initial: number; final: number }).final}/20
+                              </span>
+                            </p>
+                            <p
+                              className={`text-xs mt-1 ${
+                                (scores as { initial: number; final: number }).final >
+                                (scores as { initial: number; final: number }).initial
+                                  ? 'text-green-600'
+                                  : 'text-red-600'
+                              }`}
+                            >
+                              {(scores as { initial: number; final: number }).final -
+                                (scores as { initial: number; final: number }).initial >
+                              0
+                                ? '+'
+                                : ''}
+                              {(scores as { initial: number; final: number }).final -
+                                (scores as { initial: number; final: number }).initial}
+                            </p>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={async () => {
+                  await fetch(
+                    `/api/admin/stagiaires-formation/${stagiaireId}/evaluation`,
+                    {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ typeEvaluation: 'finale' }),
+                    }
+                  );
+                  fetchData();
+                }}
+                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+              >
+                Générer l'évaluation finale
+              </button>
+            )}
+          </div>
+        )}
+
+        {activeStep === 'terminee' && (
+          <div className="space-y-6">
+            <div className="text-center py-8">
+              <Award className="h-16 w-16 text-green-500 mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-slate-900">Formation terminée</h2>
+              <p className="text-sm text-slate-500 mt-2">
+                Attestation de fin de formation disponible
+              </p>
+            </div>
+            <SatisfactionFroidSection
+              stagiaireId={stagiaireId}
+              existing={data.satisfactionFroid}
+              onSaved={fetchData}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="font-medium text-slate-900">{value}</p>
+    </div>
+  );
+}
+
+function formatDate(date: string | null): string {
+  if (!date) return '-';
+  return new Date(date).toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
