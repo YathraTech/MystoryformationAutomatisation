@@ -39,6 +39,8 @@ export async function POST(request: NextRequest) {
         question: body.question,
         choix: body.choix,
         reponse_correcte: body.reponseCorrecte,
+        choix_multiple: body.choixMultiple || false,
+        reponses_correctes: body.reponsesCorrectes || [],
         media_url: body.mediaUrl || null,
         points: body.points || 1,
         actif: body.actif !== false,
@@ -72,6 +74,8 @@ export async function PATCH(request: NextRequest) {
     if (fields.question !== undefined) dbFields.question = fields.question;
     if (fields.choix !== undefined) dbFields.choix = fields.choix;
     if (fields.reponseCorrecte !== undefined) dbFields.reponse_correcte = fields.reponseCorrecte;
+    if (fields.choixMultiple !== undefined) dbFields.choix_multiple = fields.choixMultiple;
+    if (fields.reponsesCorrectes !== undefined) dbFields.reponses_correctes = fields.reponsesCorrectes;
     if (fields.mediaUrl !== undefined) dbFields.media_url = fields.mediaUrl;
     if (fields.points !== undefined) dbFields.points = fields.points;
     if (fields.actif !== undefined) dbFields.actif = fields.actif;

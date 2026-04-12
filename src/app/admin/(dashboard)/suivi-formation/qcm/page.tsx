@@ -27,6 +27,8 @@ interface QcmQuestion {
   question: string;
   choix: string[];
   reponse_correcte: string;
+  choix_multiple: boolean;
+  reponses_correctes: string[];
   media_url: string | null;
   points: number;
   actif: boolean;
@@ -62,6 +64,8 @@ export default function QcmAdminPage() {
     question: '',
     choix: ['', '', '', ''],
     reponseCorrecte: 'A',
+    choixMultiple: false,
+    reponsesCorrectes: [] as string[],
     mediaUrl: '',
     points: 1,
     actif: true,
@@ -94,7 +98,8 @@ export default function QcmAdminPage() {
     setEditingId(null);
     setForm({
       typeCompetence: 'CE', niveau: 'A1', question: '', choix: ['', '', '', ''],
-      reponseCorrecte: 'A', mediaUrl: '', points: 1, actif: true, ordre: 0,
+      reponseCorrecte: 'A', choixMultiple: false, reponsesCorrectes: [],
+      mediaUrl: '', points: 1, actif: true, ordre: 0,
     });
   };
 
@@ -112,6 +117,8 @@ export default function QcmAdminPage() {
       question: q.question,
       choix: [...q.choix, ...Array(4 - q.choix.length).fill('')].slice(0, 4),
       reponseCorrecte: q.reponse_correcte,
+      choixMultiple: q.choix_multiple || false,
+      reponsesCorrectes: q.reponses_correctes || [],
       mediaUrl: q.media_url || '',
       points: q.points,
       actif: q.actif,
@@ -343,36 +350,79 @@ export default function QcmAdminPage() {
                   : 'Ex: Lisez le texte suivant. Quelle est l\'information principale ?'} />
             </div>
 
-            {/* Choix avec bonne réponse */}
+            {/* Type de question: choix unique vs multiple */}
+            <div className="flex items-center gap-4 bg-slate-50 rounded-lg px-4 py-3">
+              <span className="text-xs font-medium text-slate-600">Type de réponse :</span>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="choixType" checked={!form.choixMultiple}
+                  onChange={() => setForm({ ...form, choixMultiple: false, reponsesCorrectes: [] })}
+                  className="text-blue-600" />
+                <span className="text-sm text-slate-700">Choix unique</span>
+                <span className="text-[10px] text-slate-400">(1 seule bonne réponse)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="choixType" checked={form.choixMultiple}
+                  onChange={() => setForm({ ...form, choixMultiple: true, reponsesCorrectes: form.reponseCorrecte ? [form.reponseCorrecte] : [] })}
+                  className="text-blue-600" />
+                <span className="text-sm text-slate-700">Choix multiple</span>
+                <span className="text-[10px] text-slate-400">(plusieurs bonnes réponses)</span>
+              </label>
+            </div>
+
+            {/* Choix avec bonne(s) réponse(s) */}
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-2">
-                Choix de réponses * <span className="text-slate-400 font-normal">(cliquez sur la lettre pour marquer la bonne réponse)</span>
+                Choix de réponses *
+                <span className="text-slate-400 font-normal ml-1">
+                  {form.choixMultiple
+                    ? '(cochez toutes les bonnes réponses)'
+                    : '(cliquez sur la lettre pour marquer la bonne réponse)'}
+                </span>
               </label>
               <div className="space-y-2">
-                {LETTRES.map((lettre, idx) => (
-                  <div key={lettre} className="flex items-center gap-2">
-                    <button type="button" onClick={() => setForm({ ...form, reponseCorrecte: lettre })}
-                      className={`w-9 h-9 rounded-full text-sm font-bold border-2 flex items-center justify-center transition-all ${
-                        form.reponseCorrecte === lettre
-                          ? 'bg-green-500 border-green-500 text-white scale-110'
-                          : 'border-slate-200 text-slate-400 hover:border-green-300'
-                      }`}
-                      title={form.reponseCorrecte === lettre ? 'Bonne réponse' : 'Définir comme bonne réponse'}>
-                      {lettre}
-                    </button>
-                    <input type="text" value={form.choix[idx]}
-                      onChange={(e) => updateChoix(idx, e.target.value)}
-                      placeholder={`Choix ${lettre}${idx < 2 ? ' *' : ' (optionnel)'}`}
-                      className={`flex-1 rounded-lg border px-3 py-2 text-sm transition-colors ${
-                        form.reponseCorrecte === lettre
-                          ? 'border-green-300 bg-green-50 focus:ring-green-500'
-                          : 'border-slate-300 focus:ring-blue-500'
-                      } focus:ring-1 focus:outline-none`} />
-                    {form.reponseCorrecte === lettre && (
-                      <span className="text-xs text-green-600 font-medium whitespace-nowrap">Bonne réponse</span>
-                    )}
-                  </div>
-                ))}
+                {LETTRES.map((lettre, idx) => {
+                  const isCorrect = form.choixMultiple
+                    ? form.reponsesCorrectes.includes(lettre)
+                    : form.reponseCorrecte === lettre;
+
+                  const toggleCorrect = () => {
+                    if (form.choixMultiple) {
+                      const updated = isCorrect
+                        ? form.reponsesCorrectes.filter((l) => l !== lettre)
+                        : [...form.reponsesCorrectes, lettre];
+                      setForm({ ...form, reponsesCorrectes: updated });
+                    } else {
+                      setForm({ ...form, reponseCorrecte: lettre });
+                    }
+                  };
+
+                  return (
+                    <div key={lettre} className="flex items-center gap-2">
+                      <button type="button" onClick={toggleCorrect}
+                        className={`w-9 h-9 ${form.choixMultiple ? 'rounded-lg' : 'rounded-full'} text-sm font-bold border-2 flex items-center justify-center transition-all ${
+                          isCorrect
+                            ? 'bg-green-500 border-green-500 text-white scale-110'
+                            : 'border-slate-200 text-slate-400 hover:border-green-300'
+                        }`}
+                        title={isCorrect ? 'Bonne réponse' : 'Marquer comme bonne réponse'}>
+                        {lettre}
+                      </button>
+                      <input type="text" value={form.choix[idx]}
+                        onChange={(e) => updateChoix(idx, e.target.value)}
+                        placeholder={`Choix ${lettre}${idx < 2 ? ' *' : ' (optionnel)'}`}
+                        className={`flex-1 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                          isCorrect
+                            ? 'border-green-300 bg-green-50 focus:ring-green-500'
+                            : 'border-slate-300 focus:ring-blue-500'
+                        } focus:ring-1 focus:outline-none`} />
+                      {isCorrect && (
+                        <span className="text-xs text-green-600 font-medium whitespace-nowrap">
+                          {form.choixMultiple ? '✓ Correct' : 'Bonne réponse'}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -476,6 +526,9 @@ function QuestionRow({ q, onEdit, onDelete, onToggle, onPlayAudio, playingId }: 
             }`}>{q.type_competence}</span>
             <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium">{q.niveau}</span>
             <span className="text-[10px] text-slate-400">{q.points} pt{q.points > 1 ? 's' : ''}</span>
+            {q.choix_multiple && (
+              <span className="text-[10px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded font-medium">Choix multiple</span>
+            )}
             {q.type_competence === 'CO' && q.media_url && (
               <button onClick={() => onPlayAudio(q.media_url!, q.id)}
                 className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
@@ -491,15 +544,21 @@ function QuestionRow({ q, onEdit, onDelete, onToggle, onPlayAudio, playingId }: 
           </div>
           <p className="text-sm text-slate-800">{q.question}</p>
           <div className="flex gap-2 mt-1.5 flex-wrap">
-            {q.choix.filter(Boolean).map((choix, i) => (
-              <span key={i} className={`text-xs px-2 py-0.5 rounded ${
-                LETTRES[i] === q.reponse_correcte
-                  ? 'bg-green-100 text-green-700 font-semibold'
-                  : 'bg-slate-50 text-slate-500'
-              }`}>
-                {LETTRES[i]}. {choix}
-              </span>
-            ))}
+            {q.choix.filter(Boolean).map((choix, i) => {
+              const lettre = LETTRES[i];
+              const isCorrect = q.choix_multiple
+                ? (q.reponses_correctes || []).includes(lettre)
+                : lettre === q.reponse_correcte;
+              return (
+                <span key={i} className={`text-xs px-2 py-0.5 rounded ${
+                  isCorrect
+                    ? 'bg-green-100 text-green-700 font-semibold'
+                    : 'bg-slate-50 text-slate-500'
+                }`}>
+                  {lettre}. {choix}
+                </span>
+              );
+            })}
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">

@@ -46,14 +46,14 @@ export async function GET(
     // Récupérer les questions actives
     const { data: questionsCe } = await supabase
       .from('qcm_questions')
-      .select('id, type_competence, niveau, question, choix, media_url, points')
+      .select('id, type_competence, niveau, question, choix, choix_multiple, reponses_correctes, media_url, points')
       .eq('type_competence', 'CE')
       .eq('actif', true)
       .order('ordre', { ascending: true });
 
     const { data: questionsCo } = await supabase
       .from('qcm_questions')
-      .select('id, type_competence, niveau, question, choix, media_url, points')
+      .select('id, type_competence, niveau, question, choix, choix_multiple, reponses_correctes, media_url, points')
       .eq('type_competence', 'CO')
       .eq('actif', true)
       .order('ordre', { ascending: true });
@@ -94,10 +94,23 @@ export async function POST(
     // Récupérer toutes les questions pour la correction
     const { data: allQuestions } = await supabase
       .from('qcm_questions')
-      .select('id, type_competence, reponse_correcte, points')
+      .select('id, type_competence, reponse_correcte, choix_multiple, reponses_correctes, points')
       .eq('actif', true);
 
     const questions = allQuestions || [];
+
+    // Fonction de vérification (supporte choix unique et multiple)
+    function isCorrect(q: typeof questions[number], userReponse: string): boolean {
+      if (q.choix_multiple && q.reponses_correctes?.length > 0) {
+        // Choix multiple: comparer les sets de réponses
+        const userLetters = userReponse.split(',').filter(Boolean).sort();
+        const correctLetters = [...q.reponses_correctes].sort();
+        return userLetters.length === correctLetters.length &&
+          userLetters.every((l, i) => l === correctLetters[i]);
+      }
+      // Choix unique
+      return userReponse === q.reponse_correcte;
+    }
 
     // Correction automatique CE
     let scoreCe = 0;
@@ -110,7 +123,7 @@ export async function POST(
 
       for (const r of reponsesCe) {
         const q = ceQuestions.find((q) => q.id === r.questionId);
-        const correct = q ? r.reponse === q.reponse_correcte : false;
+        const correct = q ? isCorrect(q, r.reponse) : false;
         if (correct && q) scoreCe += q.points || 1;
         detailsCe.push({ question: r.questionId, reponse: r.reponse, correct });
       }
@@ -128,7 +141,7 @@ export async function POST(
 
       for (const r of reponsesCo) {
         const q = coQuestions.find((q) => q.id === r.questionId);
-        const correct = q ? r.reponse === q.reponse_correcte : false;
+        const correct = q ? isCorrect(q, r.reponse) : false;
         if (correct && q) scoreCo += q.points || 1;
         detailsCo.push({ question: r.questionId, reponse: r.reponse, correct });
       }

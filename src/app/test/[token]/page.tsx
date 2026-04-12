@@ -22,13 +22,15 @@ interface Question {
   niveau: string;
   question: string;
   choix: string[];
+  choix_multiple: boolean;
+  reponses_correctes: string[];
   media_url: string | null;
   points: number;
 }
 
 interface Reponse {
   questionId: number;
-  reponse: string;
+  reponse: string; // Pour choix unique: 'A'. Pour choix multiple: 'A,C' (lettres jointes par virgule)
 }
 
 type Phase = 'loading' | 'intro' | 'test_ce' | 'test_co' | 'submitting' | 'results' | 'error' | 'already_done';
@@ -122,12 +124,35 @@ export default function TestClientPage() {
   const currentQuestion = currentQuestions[currentIndex] || null;
 
   const getReponse = (qId: number) => currentReponses.find((r) => r.questionId === qId)?.reponse || null;
+  const getReponsesArray = (qId: number): string[] => {
+    const r = getReponse(qId);
+    return r ? r.split(',') : [];
+  };
+  const isLetterSelected = (qId: number, lettre: string): boolean => {
+    const q = currentQuestions.find((q) => q.id === qId);
+    if (q?.choix_multiple) return getReponsesArray(qId).includes(lettre);
+    return getReponse(qId) === lettre;
+  };
 
   const setReponse = (qId: number, lettre: string) => {
+    const q = currentQuestions.find((q) => q.id === qId);
     setCurrentReponses((prev) => {
-      const existing = prev.find((r) => r.questionId === qId);
-      if (existing) return prev.map((r) => r.questionId === qId ? { ...r, reponse: lettre } : r);
-      return [...prev, { questionId: qId, reponse: lettre }];
+      if (q?.choix_multiple) {
+        // Toggle la lettre dans la liste
+        const current = prev.find((r) => r.questionId === qId);
+        const currentLetters = current ? current.reponse.split(',').filter(Boolean) : [];
+        const updated = currentLetters.includes(lettre)
+          ? currentLetters.filter((l) => l !== lettre)
+          : [...currentLetters, lettre].sort();
+        const newReponse = updated.join(',');
+        if (current) return prev.map((r) => r.questionId === qId ? { ...r, reponse: newReponse } : r);
+        return [...prev, { questionId: qId, reponse: newReponse }];
+      } else {
+        // Choix unique
+        const existing = prev.find((r) => r.questionId === qId);
+        if (existing) return prev.map((r) => r.questionId === qId ? { ...r, reponse: lettre } : r);
+        return [...prev, { questionId: qId, reponse: lettre }];
+      }
     });
   };
 
@@ -403,20 +428,30 @@ export default function TestClientPage() {
 
             <h3 className="text-lg font-medium text-slate-900 mt-5 mb-6">{currentQuestion.question}</h3>
 
+            {/* Indication choix multiple */}
+            {currentQuestion.choix_multiple && (
+              <p className="text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg mb-3">
+                Plusieurs réponses possibles — cochez toutes les bonnes réponses
+              </p>
+            )}
+
             {/* Choix */}
             <div className="space-y-3">
               {currentQuestion.choix.filter(Boolean).map((choix, idx) => {
                 const lettre = LETTRES[idx];
-                const selected = getReponse(currentQuestion.id) === lettre;
+                const selected = isLetterSelected(currentQuestion.id, lettre);
+                const isMultiple = currentQuestion.choix_multiple;
                 return (
                   <button key={idx} onClick={() => setReponse(currentQuestion.id, lettre)}
                     className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border-2 text-left transition-all ${
-                      selected ? `border-${phaseColor}-500 bg-${phaseColor}-50 shadow-sm` : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      selected ? 'border-blue-500 bg-blue-50 shadow-sm' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                     }`}>
-                    <span className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors ${
-                      selected ? `bg-${phaseColor}-600 border-${phaseColor}-600 text-white` : 'border-slate-300 text-slate-400'
-                    }`}>{lettre}</span>
-                    <span className={`text-sm ${selected ? `text-${phaseColor}-900 font-medium` : 'text-slate-700'}`}>{choix}</span>
+                    <span className={`w-10 h-10 ${isMultiple ? 'rounded-lg' : 'rounded-full'} flex items-center justify-center text-sm font-bold border-2 transition-colors ${
+                      selected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 text-slate-400'
+                    }`}>
+                      {selected && isMultiple ? '✓' : lettre}
+                    </span>
+                    <span className={`text-sm ${selected ? 'text-blue-900 font-medium' : 'text-slate-700'}`}>{choix}</span>
                   </button>
                 );
               })}
