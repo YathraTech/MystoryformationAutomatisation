@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Users,
   UsersRound,
-  BookOpen,
   ClipboardCheck,
   ClipboardList,
   Calendar,
@@ -26,7 +25,6 @@ const mainNavItems = [
   { href: '/admin/feuilles-appel', label: "Suivi des examens", icon: ClipboardList },
   { href: '/admin/clients', label: 'Clients', icon: Users },
   { href: '/admin/suivi-formation', label: 'Suivi Formation', icon: GraduationCap },
-  { href: '/admin/formations', label: 'Formations', icon: BookOpen, disabled: true },
   { href: '/admin/examens', label: 'Candidats d\'examens', icon: ClipboardCheck },
   { href: '/admin/planning', label: 'Planning', icon: Calendar },
   { href: '/admin/partenaires', label: 'Partenaires', icon: Building2 },
@@ -89,20 +87,7 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {mainNavItems.map(({ href, label, icon: Icon, disabled }) => {
-            if (disabled) {
-              return (
-                <div
-                  key={href}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 cursor-not-allowed"
-                  title="Bientôt disponible"
-                >
-                  <Icon className="h-5 w-5" />
-                  {label}
-                </div>
-              );
-            }
-
+          {mainNavItems.map(({ href, label, icon: Icon }) => {
             return (
               <Link
                 key={href}

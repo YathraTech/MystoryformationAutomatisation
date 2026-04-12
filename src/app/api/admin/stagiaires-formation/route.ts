@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
       type_piece: d.typePiece,
       agence: d.agence,
       commerciale_id: d.commercialeId || null,
+      commerciale_nom: body.commercialeNom || null,
       source_provenance: d.sourceProvenance || null,
       type_prestation: d.typePrestation,
       statut: 'inscription',
