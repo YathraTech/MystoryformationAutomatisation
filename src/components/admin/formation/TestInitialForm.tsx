@@ -5,6 +5,7 @@ import { CheckCircle2, FileText, Play, Pencil, Settings } from 'lucide-react';
 import Link from 'next/link';
 import type { TestFormation } from '@/types/admin';
 import QcmTestRunner from './QcmTestRunner';
+import TestResultsDetail from './TestResultsDetail';
 
 interface Props {
   stagiaireId: number;
@@ -337,6 +338,11 @@ export default function TestInitialForm({ stagiaireId, existingTest, onSaved }: 
           </p>
         </div>
       </div>
+
+      {/* Détail des réponses (consultable) */}
+      {existingTest && (
+        <TestResultsDetail test={existingTest} type="initial" />
+      )}
 
       <div className="mt-6 flex justify-end gap-3">
         <button

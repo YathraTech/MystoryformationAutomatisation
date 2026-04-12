@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { CheckCircle2, FileText, TrendingUp, TrendingDown, Play, Pencil } from 'lucide-react';
 import type { TestFormation } from '@/types/admin';
 import QcmTestRunner from './QcmTestRunner';
+import TestResultsDetail from './TestResultsDetail';
 
 interface Props {
   stagiaireId: number;
@@ -204,6 +205,11 @@ export default function TestFinalSection({ stagiaireId, testFinal, testInitial, 
             </div>
           </div>
         </div>
+      )}
+
+      {/* Détail des réponses (consultable) */}
+      {testFinal && (
+        <TestResultsDetail test={testFinal} type="final" />
       )}
 
       <div className="mt-4 flex justify-end">
