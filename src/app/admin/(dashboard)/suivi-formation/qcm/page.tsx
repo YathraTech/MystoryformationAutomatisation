@@ -304,6 +304,48 @@ export default function QcmAdminPage() {
               Modèle CSV
             </a>
             <button
+              onClick={() => {
+                // Exporter toutes les questions en CSV
+                const allQ = questions;
+                if (allQ.length === 0) { setError('Aucune question à exporter'); return; }
+                const header = 'type_test;competence;niveau;question;choix_A;choix_B;choix_C;choix_D;reponse;choix_multiple;points;audio_url';
+                const rows = allQ.map((q) => {
+                  const choix = [...(q.choix || []), '', '', '', ''].slice(0, 4);
+                  const reponse = q.choix_multiple && q.reponses_correctes?.length > 0
+                    ? q.reponses_correctes.join(',')
+                    : q.reponse_correcte;
+                  const escapeCsv = (s: string) => s.includes(';') || s.includes('"') || s.includes('\n')
+                    ? `"${s.replace(/"/g, '""')}"` : s;
+                  return [
+                    q.type_test || 'initial',
+                    q.type_competence,
+                    q.niveau,
+                    escapeCsv(q.question),
+                    escapeCsv(choix[0]),
+                    escapeCsv(choix[1]),
+                    escapeCsv(choix[2]),
+                    escapeCsv(choix[3]),
+                    reponse,
+                    q.choix_multiple ? 'oui' : 'non',
+                    q.points,
+                    q.media_url || '',
+                  ].join(';');
+                });
+                const csv = '\uFEFF' + [header, ...rows].join('\n'); // BOM UTF-8 pour Excel
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `qcm-export-${activeTab}-${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="flex items-center gap-1.5 rounded-lg border border-green-300 bg-green-50 px-3 py-1.5 text-sm text-green-700 hover:bg-green-100 transition-colors"
+            >
+              <Download className="h-4 w-4" />
+              Exporter CSV ({questions.length})
+            </button>
+            <button
               onClick={() => csvInputRef.current?.click()}
               disabled={importing}
               className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
