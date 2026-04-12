@@ -249,36 +249,6 @@ export default function QcmAdminPage() {
         </p>
       </div>
 
-      {/* Onglets Test Initial / Test Final */}
-      <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
-        <button
-          onClick={() => { setActiveTab('initial'); setShowForm(false); }}
-          className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-            activeTab === 'initial'
-              ? 'bg-white text-blue-700 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          Test Initial
-          <span className="ml-1.5 text-xs text-slate-400">
-            ({questions.filter((q) => (q.type_test || 'initial') === 'initial').length || '...'})
-          </span>
-        </button>
-        <button
-          onClick={() => { setActiveTab('final'); setShowForm(false); }}
-          className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-            activeTab === 'final'
-              ? 'bg-white text-purple-700 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          Test Final
-          <span className="ml-1.5 text-xs text-slate-400">
-            ({questions.filter((q) => q.type_test === 'final').length || '...'})
-          </span>
-        </button>
-      </div>
-
       {error && (
         <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
           <AlertCircle className="h-4 w-4 shrink-0" />
@@ -287,14 +257,17 @@ export default function QcmAdminPage() {
         </div>
       )}
 
-      {/* Import CSV */}
+      {/* Import / Export CSV — Global (initial + final dans le même fichier) */}
       <div className="bg-white rounded-xl border border-slate-200 px-5 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <FileSpreadsheet className="h-5 w-5 text-slate-500" />
             <div>
-              <h2 className="text-sm font-semibold text-slate-800">Importer des questions (CSV / Excel)</h2>
-              <p className="text-xs text-slate-400">Importez un fichier CSV avec vos questions pré-remplies</p>
+              <h2 className="text-sm font-semibold text-slate-800">Import / Export CSV</h2>
+              <p className="text-xs text-slate-400">
+                Un seul fichier contient les questions des <strong>deux tests</strong> (initial + final).
+                La colonne <code className="bg-slate-100 px-1 rounded">type_test</code> détermine à quel test appartient chaque question.
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -305,45 +278,42 @@ export default function QcmAdminPage() {
             </a>
             <button
               onClick={() => {
-                // Exporter toutes les questions en CSV
-                const allQ = questions;
-                if (allQ.length === 0) { setError('Aucune question à exporter'); return; }
-                const header = 'type_test;competence;niveau;question;choix_A;choix_B;choix_C;choix_D;reponse;choix_multiple;points;audio_url';
-                const rows = allQ.map((q) => {
-                  const choix = [...(q.choix || []), '', '', '', ''].slice(0, 4);
-                  const reponse = q.choix_multiple && q.reponses_correctes?.length > 0
-                    ? q.reponses_correctes.join(',')
-                    : q.reponse_correcte;
-                  const escapeCsv = (s: string) => s.includes(';') || s.includes('"') || s.includes('\n')
-                    ? `"${s.replace(/"/g, '""')}"` : s;
-                  return [
-                    q.type_test || 'initial',
-                    q.type_competence,
-                    q.niveau,
-                    escapeCsv(q.question),
-                    escapeCsv(choix[0]),
-                    escapeCsv(choix[1]),
-                    escapeCsv(choix[2]),
-                    escapeCsv(choix[3]),
-                    reponse,
-                    q.choix_multiple ? 'oui' : 'non',
-                    q.points,
-                    q.media_url || '',
-                  ].join(';');
-                });
-                const csv = '\uFEFF' + [header, ...rows].join('\n'); // BOM UTF-8 pour Excel
-                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `qcm-export-${activeTab}-${new Date().toISOString().split('T')[0]}.csv`;
-                a.click();
-                URL.revokeObjectURL(url);
+                // Exporter TOUTES les questions (initial + final) en CSV
+                const exportAll = async () => {
+                  try {
+                    const res = await fetch('/api/admin/qcm-questions');
+                    const allQ: QcmQuestion[] = await res.json();
+                    if (!Array.isArray(allQ) || allQ.length === 0) { setError('Aucune question à exporter'); return; }
+                    const header = 'type_test;competence;niveau;question;choix_A;choix_B;choix_C;choix_D;reponse;choix_multiple;points;audio_url';
+                    const rows = allQ.map((q) => {
+                      const choix = [...(q.choix || []), '', '', '', ''].slice(0, 4);
+                      const reponse = q.choix_multiple && q.reponses_correctes?.length > 0
+                        ? q.reponses_correctes.join(',')
+                        : q.reponse_correcte;
+                      const esc = (s: string) => s.includes(';') || s.includes('"') || s.includes('\n')
+                        ? `"${s.replace(/"/g, '""')}"` : s;
+                      return [
+                        q.type_test || 'initial', q.type_competence, q.niveau,
+                        esc(q.question), esc(choix[0]), esc(choix[1]), esc(choix[2]), esc(choix[3]),
+                        reponse, q.choix_multiple ? 'oui' : 'non', q.points, q.media_url || '',
+                      ].join(';');
+                    });
+                    const csv = '\uFEFF' + [header, ...rows].join('\n');
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `qcm-export-complet-${new Date().toISOString().split('T')[0]}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  } catch { setError('Erreur export'); }
+                };
+                exportAll();
               }}
               className="flex items-center gap-1.5 rounded-lg border border-green-300 bg-green-50 px-3 py-1.5 text-sm text-green-700 hover:bg-green-100 transition-colors"
             >
               <Download className="h-4 w-4" />
-              Exporter CSV ({questions.length})
+              Tout exporter
             </button>
             <button
               onClick={() => csvInputRef.current?.click()}
@@ -351,7 +321,7 @@ export default function QcmAdminPage() {
               className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
               <Upload className="h-4 w-4" />
-              {importing ? 'Import...' : 'Importer CSV'}
+              {importing ? 'Import...' : 'Importer'}
             </button>
             <input ref={csvInputRef} type="file" accept=".csv,.txt,.xlsx" className="hidden"
               onChange={async (e) => {
@@ -401,18 +371,44 @@ export default function QcmAdminPage() {
           <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-600">
             Format du fichier CSV
           </summary>
-          <div className="mt-2 bg-slate-50 rounded-lg p-3 text-xs text-slate-600 space-y-1">
+          <div className="mt-2 bg-slate-50 rounded-lg p-3 text-xs text-slate-600 space-y-1.5">
             <p><strong>Séparateur :</strong> point-virgule (;) ou virgule (,)</p>
             <p><strong>Colonnes obligatoires :</strong> type_test, competence, niveau, question, choix_a, choix_b, reponse</p>
             <p><strong>Colonnes optionnelles :</strong> choix_c, choix_d, choix_multiple, points, audio_url</p>
-            <p><strong>type_test :</strong> initial ou final</p>
-            <p><strong>competence :</strong> CE ou CO</p>
-            <p><strong>niveau :</strong> A0, A1, A2, B1, B2</p>
-            <p><strong>reponse :</strong> A, B, C, D (ou A,C pour choix multiple)</p>
-            <p><strong>choix_multiple :</strong> oui / non</p>
-            <p><strong>audio_url :</strong> URL du fichier audio (pour CO uniquement)</p>
+            <div className="mt-2 border-t border-slate-200 pt-2 space-y-1">
+              <p><strong>type_test :</strong> <code className="bg-white px-1 rounded">initial</code> ou <code className="bg-white px-1 rounded">final</code> — c'est cette colonne qui détermine si la question est pour le test initial ou final</p>
+              <p><strong>competence :</strong> CE ou CO</p>
+              <p><strong>niveau :</strong> A0, A1, A2, B1, B2</p>
+              <p><strong>reponse :</strong> A, B, C, D (ou A,C pour choix multiple)</p>
+              <p><strong>choix_multiple :</strong> oui / non</p>
+              <p><strong>audio_url :</strong> URL du fichier audio (pour CO uniquement)</p>
+            </div>
           </div>
         </details>
+      </div>
+
+      {/* Onglets Test Initial / Test Final */}
+      <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+        <button
+          onClick={() => { setActiveTab('initial'); setShowForm(false); }}
+          className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+            activeTab === 'initial'
+              ? 'bg-white text-blue-700 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Test Initial
+        </button>
+        <button
+          onClick={() => { setActiveTab('final'); setShowForm(false); }}
+          className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+            activeTab === 'final'
+              ? 'bg-white text-purple-700 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Test Final
+        </button>
       </div>
 
       {/* Filtres rapides */}
