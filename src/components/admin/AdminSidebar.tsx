@@ -33,6 +33,7 @@ const mainNavItems = [
 const secondaryNavItems = [
   { href: '/admin/staff', label: 'Équipe', icon: UsersRound, adminOnly: true },
   { href: '/admin/archives', label: 'Archives', icon: Archive, adminOnly: true },
+  { href: '/admin/suivi-formation/parametres', label: 'Paramètres formation', icon: Settings, adminOnly: true },
   { href: '/admin/examens/parametres', label: 'Paramètres examens', icon: Settings, adminOnly: true },
 ];
 
