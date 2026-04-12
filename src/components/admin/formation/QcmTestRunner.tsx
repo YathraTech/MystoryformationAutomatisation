@@ -32,13 +32,14 @@ interface QcmReponse {
 
 interface Props {
   competence: 'CE' | 'CO';
+  typeTest?: 'initial' | 'final';
   onComplete: (score: number, reponses: { question: number; reponse: string; correct: boolean }[]) => void;
   onCancel: () => void;
 }
 
 const LETTRES = ['A', 'B', 'C', 'D'];
 
-export default function QcmTestRunner({ competence, onComplete, onCancel }: Props) {
+export default function QcmTestRunner({ competence, typeTest = 'initial', onComplete, onCancel }: Props) {
   const [questions, setQuestions] = useState<QcmQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -63,7 +64,7 @@ export default function QcmTestRunner({ competence, onComplete, onCancel }: Prop
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`/api/admin/qcm-questions?type=${competence}`);
+        const res = await fetch(`/api/admin/qcm-questions?type=${competence}&typeTest=${typeTest}`);
         const data = await res.json();
         // Ne garder que les questions actives
         const actives = (Array.isArray(data) ? data : []).filter(

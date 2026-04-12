@@ -71,6 +71,7 @@ export default function TestFinalSection({ stagiaireId, testFinal, testInitial, 
         <h2 className="text-lg font-semibold text-slate-900 mb-4">Test final - Compréhension Écrite (CE)</h2>
         <QcmTestRunner
           competence="CE"
+          typeTest="final"
           onComplete={(score, details) => { setScoreCe(score); setReponsesCe(details); setMode('idle'); }}
           onCancel={() => setMode('idle')}
         />
@@ -83,6 +84,7 @@ export default function TestFinalSection({ stagiaireId, testFinal, testInitial, 
         <h2 className="text-lg font-semibold text-slate-900 mb-4">Test final - Compréhension Orale (CO)</h2>
         <QcmTestRunner
           competence="CO"
+          typeTest="final"
           onComplete={(score, details) => { setScoreCo(score); setReponsesCo(details); setMode('idle'); }}
           onCancel={() => setMode('idle')}
         />

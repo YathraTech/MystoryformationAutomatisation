@@ -98,6 +98,7 @@ export default function TestInitialForm({ stagiaireId, existingTest, onSaved }: 
         </div>
         <QcmTestRunner
           competence="CE"
+          typeTest="initial"
           onComplete={handleCeComplete}
           onCancel={() => setMode('idle')}
         />
@@ -115,6 +116,7 @@ export default function TestInitialForm({ stagiaireId, existingTest, onSaved }: 
         </div>
         <QcmTestRunner
           competence="CO"
+          typeTest="initial"
           onComplete={handleCoComplete}
           onCancel={() => setMode('idle')}
         />

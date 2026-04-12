@@ -46,15 +46,17 @@ export async function GET(
     // Récupérer les questions actives
     const { data: questionsCe } = await supabase
       .from('qcm_questions')
-      .select('id, type_competence, niveau, question, choix, choix_multiple, reponses_correctes, media_url, points')
+      .select('id, type_competence, type_test, niveau, question, choix, choix_multiple, reponses_correctes, media_url, points')
       .eq('type_competence', 'CE')
+      .eq('type_test', 'initial')
       .eq('actif', true)
       .order('ordre', { ascending: true });
 
     const { data: questionsCo } = await supabase
       .from('qcm_questions')
-      .select('id, type_competence, niveau, question, choix, choix_multiple, reponses_correctes, media_url, points')
+      .select('id, type_competence, type_test, niveau, question, choix, choix_multiple, reponses_correctes, media_url, points')
       .eq('type_competence', 'CO')
+      .eq('type_test', 'initial')
       .eq('actif', true)
       .order('ordre', { ascending: true });
 

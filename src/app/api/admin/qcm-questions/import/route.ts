@@ -46,6 +46,8 @@ export async function POST(request: NextRequest) {
       // Parser la ligne en respectant les guillemets
       const row = parseCsvLine(lines[i], separator);
 
+      const typeTestRaw = getCol(row, 'type_test').toLowerCase();
+      const typeTest = typeTestRaw === 'final' ? 'final' : 'initial';
       const competence = getCol(row, 'competence').toUpperCase();
       const niveau = getCol(row, 'niveau').toUpperCase();
       const question = getCol(row, 'question');
@@ -96,6 +98,7 @@ export async function POST(request: NextRequest) {
       }
 
       questionsToInsert.push({
+        type_test: typeTest,
         type_competence: competence,
         niveau,
         question,

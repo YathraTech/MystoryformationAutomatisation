@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const typeCompetence = searchParams.get('type'); // CE ou CO
     const niveau = searchParams.get('niveau');
+    const typeTest = searchParams.get('typeTest'); // initial ou final
 
     const supabase = await createClient();
     let query = supabase
@@ -15,6 +16,7 @@ export async function GET(request: NextRequest) {
 
     if (typeCompetence) query = query.eq('type_competence', typeCompetence);
     if (niveau) query = query.eq('niveau', niveau);
+    if (typeTest) query = query.eq('type_test', typeTest);
 
     const { data, error } = await query;
     if (error) throw new Error(error.message);
@@ -35,6 +37,7 @@ export async function POST(request: NextRequest) {
       .from('qcm_questions')
       .insert({
         type_competence: body.typeCompetence,
+        type_test: body.typeTest || 'initial',
         niveau: body.niveau,
         question: body.question,
         choix: body.choix,
@@ -70,6 +73,7 @@ export async function PATCH(request: NextRequest) {
     const dbFields: Record<string, unknown> = {};
 
     if (fields.typeCompetence !== undefined) dbFields.type_competence = fields.typeCompetence;
+    if (fields.typeTest !== undefined) dbFields.type_test = fields.typeTest;
     if (fields.niveau !== undefined) dbFields.niveau = fields.niveau;
     if (fields.question !== undefined) dbFields.question = fields.question;
     if (fields.choix !== undefined) dbFields.choix = fields.choix;

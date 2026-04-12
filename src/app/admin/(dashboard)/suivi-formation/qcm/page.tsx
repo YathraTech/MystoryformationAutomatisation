@@ -25,6 +25,7 @@ import {
 
 interface QcmQuestion {
   id: number;
+  type_test: 'initial' | 'final';
   type_competence: 'CE' | 'CO';
   niveau: string;
   question: string;
@@ -45,6 +46,7 @@ export default function QcmAdminPage() {
   const [questions, setQuestions] = useState<QcmQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState<'initial' | 'final'>('initial');
   const [filterType, setFilterType] = useState<'CE' | 'CO' | 'all'>('all');
   const [filterNiveau, setFilterNiveau] = useState<string>('all');
 
@@ -62,6 +64,7 @@ export default function QcmAdminPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState({
+    typeTest: 'initial' as 'initial' | 'final',
     typeCompetence: 'CE' as 'CE' | 'CO',
     niveau: 'A1',
     question: '',
@@ -92,6 +95,7 @@ export default function QcmAdminPage() {
   const fetchQuestions = useCallback(async () => {
     try {
       const params = new URLSearchParams();
+      params.set('typeTest', activeTab);
       if (filterType !== 'all') params.set('type', filterType);
       if (filterNiveau !== 'all') params.set('niveau', filterNiveau);
       const res = await fetch(`/api/admin/qcm-questions?${params}`);
@@ -99,7 +103,7 @@ export default function QcmAdminPage() {
       setQuestions(Array.isArray(data) ? data : []);
     } catch { setQuestions([]); }
     finally { setLoading(false); }
-  }, [filterType, filterNiveau]);
+  }, [activeTab, filterType, filterNiveau]);
 
   useEffect(() => { fetchQuestions(); }, [fetchQuestions]);
 
@@ -107,7 +111,7 @@ export default function QcmAdminPage() {
     setShowForm(false);
     setEditingId(null);
     setForm({
-      typeCompetence: 'CE', niveau: 'A1', question: '', choix: ['', '', '', ''],
+      typeTest: activeTab, typeCompetence: 'CE', niveau: 'A1', question: '', choix: ['', '', '', ''],
       reponseCorrecte: 'A', choixMultiple: false, reponsesCorrectes: [],
       mediaUrl: '', points: 1, actif: true, ordre: 0,
     });
@@ -115,13 +119,14 @@ export default function QcmAdminPage() {
 
   const openNew = (type: 'CE' | 'CO') => {
     resetForm();
-    setForm((f) => ({ ...f, typeCompetence: type, ordre: questions.length + 1 }));
+    setForm((f) => ({ ...f, typeTest: activeTab, typeCompetence: type, ordre: questions.length + 1 }));
     setShowForm(true);
   };
 
   const openEdit = (q: QcmQuestion) => {
     setEditingId(q.id);
     setForm({
+      typeTest: q.type_test || 'initial',
       typeCompetence: q.type_competence,
       niveau: q.niveau,
       question: q.question,
@@ -244,6 +249,36 @@ export default function QcmAdminPage() {
         </p>
       </div>
 
+      {/* Onglets Test Initial / Test Final */}
+      <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+        <button
+          onClick={() => { setActiveTab('initial'); setShowForm(false); }}
+          className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+            activeTab === 'initial'
+              ? 'bg-white text-blue-700 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Test Initial
+          <span className="ml-1.5 text-xs text-slate-400">
+            ({questions.filter((q) => (q.type_test || 'initial') === 'initial').length || '...'})
+          </span>
+        </button>
+        <button
+          onClick={() => { setActiveTab('final'); setShowForm(false); }}
+          className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+            activeTab === 'final'
+              ? 'bg-white text-purple-700 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Test Final
+          <span className="ml-1.5 text-xs text-slate-400">
+            ({questions.filter((q) => q.type_test === 'final').length || '...'})
+          </span>
+        </button>
+      </div>
+
       {error && (
         <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
           <AlertCircle className="h-4 w-4 shrink-0" />
@@ -326,8 +361,9 @@ export default function QcmAdminPage() {
           </summary>
           <div className="mt-2 bg-slate-50 rounded-lg p-3 text-xs text-slate-600 space-y-1">
             <p><strong>Séparateur :</strong> point-virgule (;) ou virgule (,)</p>
-            <p><strong>Colonnes obligatoires :</strong> competence, niveau, question, choix_a, choix_b, reponse</p>
+            <p><strong>Colonnes obligatoires :</strong> type_test, competence, niveau, question, choix_a, choix_b, reponse</p>
             <p><strong>Colonnes optionnelles :</strong> choix_c, choix_d, choix_multiple, points, audio_url</p>
+            <p><strong>type_test :</strong> initial ou final</p>
             <p><strong>competence :</strong> CE ou CO</p>
             <p><strong>niveau :</strong> A0, A1, A2, B1, B2</p>
             <p><strong>reponse :</strong> A, B, C, D (ou A,C pour choix multiple)</p>
