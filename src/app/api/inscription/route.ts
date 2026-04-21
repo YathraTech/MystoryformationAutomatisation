@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { inscriptionCompleteSchema } from '@/lib/validations/inscription.schema';
 import { getFormationById } from '@/lib/data/formations';
 import { addInscription } from '@/lib/data/inscriptions';
+import { createStagiaireFormation } from '@/lib/data/stagiaires-formation';
 import { createClient } from '@/lib/supabase/server';
 import { getSessionUser } from '@/lib/auth/session';
 import { buildPreinscriptionFormationEmail } from '@/lib/utils/email-templates';
@@ -27,10 +28,11 @@ export async function POST(request: NextRequest) {
 
     const formation = await getFormationById(data.formationId);
 
-    // Récupérer le lieu de l'utilisateur connecté (si connecté)
+    // Récupérer l'utilisateur connecté (si connecté) et son lieu
     let userLieu: string | null = null;
+    let sessionUser: Awaited<ReturnType<typeof getSessionUser>> = null;
     try {
-      const sessionUser = await getSessionUser();
+      sessionUser = await getSessionUser();
       if (sessionUser?.role === 'admin' && body.lieu) {
         // Admin peut choisir le centre manuellement
         userLieu = body.lieu;
@@ -93,6 +95,42 @@ export async function POST(request: NextRequest) {
       commentaires: data.commentaires || '',
       lieu: userLieu,
     });
+
+    // Créer la fiche Suivi Formation (non bloquant en cas d'erreur)
+    try {
+      const adresseComplete = [data.adresse, data.codePostal, data.ville]
+        .filter((v) => v && v.trim().length > 0)
+        .join(', ');
+
+      await createStagiaireFormation({
+        client_id: (clientId as number | undefined) ?? null,
+        civilite: data.civilite,
+        nom: data.nom.toUpperCase(),
+        prenom: data.prenom,
+        date_naissance: data.dateNaissance,
+        email: data.email.toLowerCase(),
+        telephone: data.telephone,
+        adresse_postale: adresseComplete,
+        agence: userLieu, // 'Gagny' | 'Sarcelles' | null (CHECK accepte NULL)
+        commerciale_id: sessionUser?.id ?? null,
+        commerciale_nom: sessionUser ? `${sessionUser.prenom} ${sessionUser.nom}`.trim() : null,
+        source_provenance: 'Site',
+        type_prestation: 'Formation TEF IRN',
+        statut: 'inscription',
+        heures_prevues: formation?.dureeHeures ?? 0,
+        montant_total: formation?.prix ?? null,
+        mode_paiement:
+          data.modeFinancement === 'CPF'
+            ? 'CPF'
+            : data.modeFinancement === 'Personnel'
+              ? null
+              : null,
+        numero_dossier_cpf: data.numeroCPF || null,
+      });
+    } catch (stagiaireError) {
+      // Ne pas bloquer l'inscription si la création du stagiaire échoue
+      console.error('[Inscription] Création stagiaire_formation échouée:', stagiaireError);
+    }
 
     // Envoi webhook Make.com — Confirmation de pré-inscription
     const webhookUrl = process.env.MAKE_ATTESTATION_WEBHOOK_URL;
