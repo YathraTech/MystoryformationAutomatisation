@@ -18,7 +18,10 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
+  Globe,
 } from 'lucide-react';
+import { LANGUES, NIVEAUX } from '@/lib/utils/constants';
+import type { Formation } from '@/types/admin';
 
 interface Creneau {
   id: number;
@@ -77,10 +80,24 @@ const EQUIPEMENTS = [
   'Climatisation',
 ];
 
+function slugify(input: string): string {
+  return input
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+}
+
+const LANGUE_VALUES = LANGUES.map((l) => l.value);
+const NIVEAU_VALUES = NIVEAUX.map((n) => n.value);
+
 export default function ParametresFormationPage() {
   const [creneaux, setCreneaux] = useState<Creneau[]>([]);
   const [types, setTypes] = useState<FormationType[]>([]);
   const [salles, setSalles] = useState<Salle[]>([]);
+  const [formations, setFormations] = useState<Formation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -119,17 +136,43 @@ export default function ParametresFormationPage() {
     nom: '', agence: 'Gagny', capacite: 15, equipements: [] as string[], actif: true,
   });
 
+  // Formation (inscription publique) form
+  const [showFormationForm, setShowFormationForm] = useState(false);
+  const [editingFormation, setEditingFormation] = useState<Formation | null>(null);
+  const [idTouched, setIdTouched] = useState(false);
+  const [formationForm, setFormationForm] = useState<{
+    id: string;
+    nom: string;
+    langue: string;
+    niveau: string;
+    dureeHeures: number;
+    prix: number;
+    description: string;
+    eligibleCpf: boolean;
+  }>({
+    id: '',
+    nom: '',
+    langue: LANGUE_VALUES[0] || 'Francais',
+    niveau: NIVEAU_VALUES[0] || 'Debutant',
+    dureeHeures: 30,
+    prix: 1500,
+    description: '',
+    eligibleCpf: true,
+  });
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [cRes, tRes, sRes] = await Promise.all([
+      const [cRes, tRes, sRes, fRes] = await Promise.all([
         fetch('/api/admin/formation-creneaux'),
         fetch('/api/admin/formation-types'),
         fetch('/api/admin/formation-salles'),
+        fetch('/api/admin/formations'),
       ]);
       if (cRes.ok) { const d = await cRes.json(); setCreneaux(d.creneaux || []); }
       if (tRes.ok) { const d = await tRes.json(); setTypes(d.types || []); }
       if (sRes.ok) { const d = await sRes.json(); setSalles(d.salles || []); }
+      if (fRes.ok) { const d = await fRes.json(); setFormations(d.formations || []); }
     } catch { /* ignore */ }
     finally { setLoading(false); }
   }, []);
@@ -228,6 +271,103 @@ export default function ParametresFormationPage() {
       equipements: f.equipements.includes(eq) ? f.equipements.filter((e) => e !== eq) : [...f.equipements, eq],
     }));
   };
+
+  // === FORMATIONS (inscription publique) CRUD ===
+  const saveFormation = async () => {
+    setError('');
+    try {
+      if (editingFormation) {
+        const { id: _unusedId, ...updateBody } = formationForm;
+        void _unusedId;
+        const res = await fetch(`/api/admin/formations/${editingFormation.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updateBody),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: 'Erreur' }));
+          setError(err.error || 'Erreur lors de la sauvegarde');
+          return;
+        }
+      } else {
+        const res = await fetch('/api/admin/formations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formationForm),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: 'Erreur' }));
+          setError(err.error || 'Erreur lors de la sauvegarde');
+          return;
+        }
+      }
+      resetFormationForm();
+      fetchData();
+    } catch {
+      setError('Erreur lors de la sauvegarde');
+    }
+  };
+
+  const deleteFormation = async (id: string) => {
+    if (!confirm('Supprimer cette formation ? Les anciennes inscriptions garderont cet id.')) return;
+    const res = await fetch(`/api/admin/formations/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Erreur' }));
+      setError(err.error || 'Erreur lors de la suppression');
+      return;
+    }
+    fetchData();
+  };
+
+  const editFormation = (f: Formation) => {
+    setEditingFormation(f);
+    setIdTouched(true);
+    setFormationForm({
+      id: f.id,
+      nom: f.nom,
+      langue: f.langue,
+      niveau: f.niveau,
+      dureeHeures: f.dureeHeures,
+      prix: f.prix,
+      description: f.description || '',
+      eligibleCpf: f.eligibleCpf,
+    });
+    setShowFormationForm(true);
+  };
+
+  const resetFormationForm = () => {
+    setShowFormationForm(false);
+    setEditingFormation(null);
+    setIdTouched(false);
+    setFormationForm({
+      id: '',
+      nom: '',
+      langue: LANGUE_VALUES[0] || 'Francais',
+      niveau: NIVEAU_VALUES[0] || 'Debutant',
+      dureeHeures: 30,
+      prix: 1500,
+      description: '',
+      eligibleCpf: true,
+    });
+  };
+
+  // Auto-slug l'id depuis nom/niveau/durée tant que l'utilisateur n'a pas modifié l'id manuellement
+  const onFormationNomChange = (nom: string) => {
+    setFormationForm((prev) => ({
+      ...prev,
+      nom,
+      id: !editingFormation && !idTouched
+        ? slugify(`${nom}-${prev.dureeHeures}h`)
+        : prev.id,
+    }));
+  };
+
+  const formationFormValid =
+    formationForm.id.trim().length > 0 &&
+    /^[a-z0-9-]+$/.test(formationForm.id) &&
+    formationForm.nom.trim().length > 0 &&
+    formationForm.dureeHeures >= 1 &&
+    formationForm.prix >= 0;
 
   if (loading) {
     return (
@@ -534,6 +674,206 @@ export default function ParametresFormationPage() {
                       <Pencil className="h-4 w-4 text-slate-400" />
                     </button>
                     <button onClick={() => deleteType(t.id)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors">
+                      <Trash2 className="h-4 w-4 text-red-400" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* ==================== SECTION: FORMATIONS (inscription publique) ==================== */}
+      <section className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div
+          className="px-5 py-4 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+          onClick={() => toggleSection('formations')}
+        >
+          <div className="flex items-center gap-2">
+            {isSectionCollapsed('formations') ? (
+              <ChevronRight className="h-5 w-5 text-slate-400" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-slate-400" />
+            )}
+            <Globe className="h-5 w-5 text-slate-500" />
+            <h2 className="font-semibold text-slate-800">Formations (inscription publique)</h2>
+            <span className="text-xs text-slate-400">({formations.length})</span>
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); resetFormationForm(); setShowFormationForm(true); }}
+            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Ajouter
+          </button>
+        </div>
+
+        {!isSectionCollapsed('formations') && (
+          <>
+            <div className="px-5 py-2 text-xs text-slate-500 bg-slate-50 border-b border-slate-100">
+              Ces formations sont affichées sur le formulaire d&apos;inscription public, filtrées par la langue choisie.
+            </div>
+
+            {showFormationForm && (
+              <div className="px-5 py-4 bg-slate-50 border-b border-slate-200 space-y-3">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Nom *</label>
+                    <input
+                      type="text"
+                      placeholder="Français Débutant - 30h"
+                      value={formationForm.nom}
+                      onChange={(e) => onFormationNomChange(e.target.value)}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">
+                      Identifiant * <span className="text-slate-400 font-normal">(minuscules, chiffres, tirets)</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="fr-debutant-30h"
+                      value={formationForm.id}
+                      onChange={(e) => {
+                        setIdTouched(true);
+                        setFormationForm({ ...formationForm, id: e.target.value.toLowerCase() });
+                      }}
+                      disabled={!!editingFormation}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Langue *</label>
+                    <select
+                      value={formationForm.langue}
+                      onChange={(e) => setFormationForm({ ...formationForm, langue: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    >
+                      {LANGUES.map((l) => (
+                        <option key={l.value} value={l.value}>{l.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Niveau *</label>
+                    <select
+                      value={formationForm.niveau}
+                      onChange={(e) => setFormationForm({ ...formationForm, niveau: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    >
+                      {NIVEAUX.map((n) => (
+                        <option key={n.value} value={n.value}>{n.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Durée (heures) *</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={500}
+                      value={formationForm.dureeHeures}
+                      onChange={(e) => setFormationForm({ ...formationForm, dureeHeures: parseInt(e.target.value) || 1 })}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Prix (€) *</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={99999}
+                      step={0.01}
+                      value={formationForm.prix}
+                      onChange={(e) => setFormationForm({ ...formationForm, prix: parseFloat(e.target.value) || 0 })}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={formationForm.eligibleCpf}
+                        onChange={(e) => setFormationForm({ ...formationForm, eligibleCpf: e.target.checked })}
+                        className="rounded border-slate-300"
+                      />
+                      Éligible CPF
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Description</label>
+                  <textarea
+                    rows={2}
+                    maxLength={1000}
+                    placeholder="Description affichée sous le nom de la formation..."
+                    value={formationForm.description}
+                    onChange={(e) => setFormationForm({ ...formationForm, description: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    onClick={resetFormationForm}
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={saveFormation}
+                    disabled={!formationFormValid}
+                    className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="divide-y divide-slate-100">
+              {formations.length === 0 && !showFormationForm && (
+                <div className="px-5 py-8 text-center text-sm text-slate-400">
+                  Aucune formation configurée — le formulaire public n&apos;affichera aucun choix.
+                </div>
+              )}
+              {formations.map((f) => (
+                <div key={f.id} className="px-5 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-slate-800 truncate">{f.nom}</span>
+                        <span className="text-xs font-mono text-slate-400">{f.id}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-medium">{f.langue}</span>
+                        <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{f.niveau}</span>
+                        <span className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                          <Clock className="h-2.5 w-2.5" />{f.dureeHeures}h
+                        </span>
+                        <span className="text-[10px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                          <Euro className="h-2.5 w-2.5" />{f.prix.toFixed(2).replace(/\.00$/, '')}
+                        </span>
+                        {f.eligibleCpf && (
+                          <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-medium">CPF</span>
+                        )}
+                      </div>
+                      {f.description && (
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-1">{f.description}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => editFormation(f)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                      <Pencil className="h-4 w-4 text-slate-400" />
+                    </button>
+                    <button onClick={() => deleteFormation(f.id)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors">
                       <Trash2 className="h-4 w-4 text-red-400" />
                     </button>
                   </div>
