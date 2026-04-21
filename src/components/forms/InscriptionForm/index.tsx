@@ -189,7 +189,6 @@ export function InscriptionForm() {
               isFirstStep={isFirstStep}
               isLastStep={isLastStep}
               isSubmitting={isSubmitting}
-              isDisabled={currentStep === 3}
             />
           </div>
         </form>
