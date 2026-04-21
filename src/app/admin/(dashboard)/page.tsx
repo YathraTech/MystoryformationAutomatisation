@@ -7,7 +7,7 @@ import StatusBadge from '@/components/admin/StatusBadge';
 import RevenueChart from '@/components/admin/RevenueChart';
 import Link from 'next/link';
 import type { CommercialRevenue, FeuilleAppelData, FeuilleAppelExamen } from '@/types/admin';
-import { GraduationCap, BookOpen, Eye, EyeOff, Trophy, Sparkles, PartyPopper, Users, MapPin, Target, Crown, ShieldCheck, TrendingUp, TrendingDown, ClipboardCheck, RefreshCw, Check, Send, Mail, Loader2, StickyNote, Pencil, Save, X } from 'lucide-react';
+import { GraduationCap, BookOpen, Eye, EyeOff, Trophy, Sparkles, PartyPopper, Users, MapPin, Target, Crown, ShieldCheck, TrendingUp, TrendingDown, ClipboardCheck, RefreshCw, Check, Send, Mail, Loader2, StickyNote, Plus, Trash2, Loader } from 'lucide-react';
 
 // États des examens pour le tableau de bord (2 états uniquement + absent)
 function getExamenEtat(examen: { resultat: string; diplome: string | null; configured?: boolean }): { label: string; color: string } {
@@ -37,49 +37,128 @@ function CentreBadge({ lieu }: { lieu: string | null | undefined }) {
   );
 }
 
-// ===================== Note de centre =====================
+// ===================== Note de centre (todo list) =====================
+interface TodoItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+function newTodoId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+// Parse le content stocké : JSON d'items si possible, sinon un texte brut legacy = 1 item
+function parseTodoItems(content: string): TodoItem[] {
+  if (!content) return [];
+  try {
+    const parsed = JSON.parse(content);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .filter((it): it is { id?: unknown; text?: unknown; done?: unknown } => it && typeof it === 'object')
+        .map((it) => ({
+          id: typeof it.id === 'string' ? it.id : newTodoId(),
+          text: typeof it.text === 'string' ? it.text : '',
+          done: Boolean(it.done),
+        }))
+        .filter((it) => it.text.length > 0);
+    }
+  } catch {
+    // Pas du JSON : contenu texte legacy
+  }
+  return [{ id: newTodoId(), text: content, done: false }];
+}
+
 function CentreNoteCard({ centre }: { centre: string }) {
-  const [content, setContent] = useState('');
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState('');
+  const [items, setItems] = useState<TodoItem[]>([]);
+  const [draftText, setDraftText] = useState('');
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     fetch('/api/admin/centre-notes')
-      .then((res) => res.ok ? res.json() : { notes: [] })
+      .then((res) => (res.ok ? res.json() : { notes: [] }))
       .then((data) => {
+        if (cancelled) return;
         const note = data.notes?.find((n: { centre: string }) => n.centre === centre);
-        if (note) setContent(note.content || '');
+        setItems(parseTodoItems(note?.content || ''));
         setLoaded(true);
       })
-      .catch(() => setLoaded(true));
+      .catch(() => {
+        if (cancelled) return;
+        setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [centre]);
 
-  const handleSave = async () => {
+  // Persiste les items côté serveur (une requête par changement)
+  const persist = useCallback(async (nextItems: TodoItem[]) => {
     setSaving(true);
     try {
-      const res = await fetch('/api/admin/centre-notes', {
+      await fetch('/api/admin/centre-notes', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ centre, content: draft }),
+        body: JSON.stringify({ centre, content: JSON.stringify(nextItems) }),
       });
-      if (res.ok) {
-        setContent(draft);
-        setEditing(false);
-      }
     } catch {
-      // silently fail
+      // silently fail — l'UI reste optimiste
     } finally {
       setSaving(false);
     }
+  }, [centre]);
+
+  const updateItems = useCallback((updater: (prev: TodoItem[]) => TodoItem[]) => {
+    setItems((prev) => {
+      const next = updater(prev);
+      persist(next);
+      return next;
+    });
+  }, [persist]);
+
+  const handleToggle = (id: string) => {
+    updateItems((prev) => prev.map((it) => (it.id === id ? { ...it, done: !it.done } : it)));
+  };
+
+  const handleDelete = (id: string) => {
+    updateItems((prev) => prev.filter((it) => it.id !== id));
+  };
+
+  const handleEditText = (id: string, text: string) => {
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, text } : it)));
+  };
+
+  const handleEditBlur = (id: string) => {
+    setItems((prev) => {
+      const target = prev.find((it) => it.id === id);
+      // Si le texte est vide après édition, on supprime l'item
+      if (target && target.text.trim().length === 0) {
+        const next = prev.filter((it) => it.id !== id);
+        persist(next);
+        return next;
+      }
+      persist(prev);
+      return prev;
+    });
+  };
+
+  const handleAdd = () => {
+    const text = draftText.trim();
+    if (!text) return;
+    setDraftText('');
+    updateItems((prev) => [...prev, { id: newTodoId(), text, done: false }]);
   };
 
   if (!loaded) return null;
 
   const colors = centre === 'Gagny'
-    ? { border: 'border-blue-200', bg: 'bg-blue-50/50', header: 'text-blue-700', icon: 'text-blue-500' }
-    : { border: 'border-purple-200', bg: 'bg-purple-50/50', header: 'text-purple-700', icon: 'text-purple-500' };
+    ? { border: 'border-blue-200', bg: 'bg-blue-50/50', header: 'text-blue-700', icon: 'text-blue-500', accent: 'text-blue-600', ring: 'focus:ring-blue-500/20 focus:border-blue-300' }
+    : { border: 'border-purple-200', bg: 'bg-purple-50/50', header: 'text-purple-700', icon: 'text-purple-500', accent: 'text-purple-600', ring: 'focus:ring-purple-500/20 focus:border-purple-300' };
+
+  const doneCount = items.filter((it) => it.done).length;
+  const total = items.length;
 
   return (
     <div className={`rounded-xl border ${colors.border} ${colors.bg} overflow-hidden`}>
@@ -87,54 +166,83 @@ function CentreNoteCard({ centre }: { centre: string }) {
         <div className="flex items-center gap-2">
           <StickyNote className={`h-3.5 w-3.5 ${colors.icon}`} />
           <span className={`text-xs font-semibold ${colors.header}`}>Note — {centre}</span>
+          {total > 0 && (
+            <span className={`text-[10px] font-medium ${colors.accent}`}>
+              {doneCount}/{total}
+            </span>
+          )}
         </div>
-        {!editing ? (
-          <button
-            onClick={() => { setDraft(content); setEditing(true); }}
-            className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors"
-            title="Modifier"
+        {saving && <Loader className="h-3 w-3 animate-spin text-slate-400" />}
+      </div>
+
+      <div className="px-4 py-3 space-y-1.5">
+        {items.length === 0 && (
+          <p className="text-xs text-slate-400 italic">Aucune tâche — ajoutez-en une ci-dessous</p>
+        )}
+
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="group flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-white/60"
           >
-            <Pencil className="h-3 w-3" />
-          </button>
-        ) : (
-          <div className="flex items-center gap-1">
             <button
-              onClick={handleSave}
-              disabled={saving}
-              className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
-              title="Sauvegarder"
+              onClick={() => handleToggle(item.id)}
+              className={`shrink-0 h-4 w-4 rounded border flex items-center justify-center transition-colors ${
+                item.done
+                  ? 'bg-emerald-500 border-emerald-500 text-white'
+                  : 'bg-white border-slate-300 hover:border-slate-400'
+              }`}
+              aria-label={item.done ? 'Marquer comme à faire' : 'Marquer comme fait'}
             >
-              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+              {item.done && <Check className="h-3 w-3" />}
             </button>
+            <input
+              type="text"
+              value={item.text}
+              onChange={(e) => handleEditText(item.id, e.target.value)}
+              onBlur={() => handleEditBlur(item.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+              }}
+              className={`flex-1 bg-transparent text-sm outline-none ${
+                item.done ? 'line-through text-slate-400' : 'text-slate-700'
+              }`}
+            />
             <button
-              onClick={() => setEditing(false)}
-              className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
-              title="Annuler"
+              onClick={() => handleDelete(item.id)}
+              className="shrink-0 p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+              title="Supprimer"
+              aria-label="Supprimer la tâche"
             >
-              <X className="h-3 w-3" />
+              <Trash2 className="h-3 w-3" />
             </button>
           </div>
-        )}
-      </div>
-      <div className="px-4 py-3">
-        {editing ? (
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            rows={3}
-            autoFocus
-            className="w-full text-sm text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 resize-none"
-            placeholder="Écrivez une note pour l'équipe..."
+        ))}
+
+        <div className="flex items-center gap-2 pt-1">
+          <Plus className={`h-4 w-4 shrink-0 ${colors.icon}`} />
+          <input
+            type="text"
+            value={draftText}
+            onChange={(e) => setDraftText(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSave();
-              if (e.key === 'Escape') setEditing(false);
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAdd();
+              }
             }}
+            placeholder="Ajouter une tâche..."
+            className={`flex-1 bg-white/70 text-sm text-slate-700 border border-transparent rounded-lg px-2 py-1 placeholder:text-slate-400 outline-none focus:bg-white ${colors.ring} focus:ring-2`}
           />
-        ) : content ? (
-          <p className="text-sm text-slate-700 whitespace-pre-wrap">{content}</p>
-        ) : (
-          <p className="text-xs text-slate-400 italic">Aucune note</p>
-        )}
+          {draftText.trim().length > 0 && (
+            <button
+              onClick={handleAdd}
+              className={`shrink-0 text-[11px] font-semibold ${colors.accent} hover:underline`}
+            >
+              Ajouter
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
