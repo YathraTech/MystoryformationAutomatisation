@@ -9,6 +9,7 @@ import {
   getSatisfactionChaudByStagiaire,
   getSatisfactionFroid,
 } from '@/lib/data/stagiaires-formation';
+import { getInscriptionById } from '@/lib/data/inscriptions';
 
 export async function GET(
   _request: NextRequest,
@@ -27,7 +28,7 @@ export async function GET(
     }
 
     // Charger toutes les données associées en parallèle
-    const [tests, analyse, evalInitiale, evalFinale, emargements, satisfactionChaud, satisfactionFroid] =
+    const [tests, analyse, evalInitiale, evalFinale, emargements, satisfactionChaud, satisfactionFroid, inscription] =
       await Promise.all([
         getTestsByStagiaire(stagiaireId),
         getAnalyseBesoin(stagiaireId),
@@ -36,6 +37,7 @@ export async function GET(
         getEmargementsByStagiaire(stagiaireId),
         getSatisfactionChaudByStagiaire(stagiaireId),
         getSatisfactionFroid(stagiaireId),
+        stagiaire.inscriptionId ? getInscriptionById(stagiaire.inscriptionId) : Promise.resolve(null),
       ]);
 
     const testInitial = tests.find((t) => t.typeTest === 'initial') || null;
@@ -51,6 +53,7 @@ export async function GET(
       emargements,
       satisfactionChaud,
       satisfactionFroid,
+      inscription,
     });
   } catch (error) {
     console.error('[GET stagiaire-formation/:id]', error);

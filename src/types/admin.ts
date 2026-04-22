@@ -249,6 +249,7 @@ export type ReclamationStatut = 'ouverte' | 'en_cours' | 'resolue' | 'fermee';
 export interface StagiaireFormation {
   id: number;
   clientId: number | null;
+  inscriptionId: number | null;
 
   // Infos personnelles
   civilite: string;

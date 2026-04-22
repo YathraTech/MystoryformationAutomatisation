@@ -24,6 +24,7 @@ function dbToStagiaire(row: any): StagiaireFormation {
   return {
     id: row.id,
     clientId: row.client_id,
+    inscriptionId: row.inscription_id ?? null,
     civilite: row.civilite || '',
     nom: row.nom || '',
     nomJeuneFille: row.nom_jeune_fille,

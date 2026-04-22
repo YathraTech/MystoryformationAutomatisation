@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { CheckCircle2, Save, Sparkles, UserCheck } from 'lucide-react';
-import type { AnalyseBesoin, TestFormation, StagiaireFormation } from '@/types/admin';
+import type { AnalyseBesoin, TestFormation, StagiaireFormation, Inscription } from '@/types/admin';
 
 const NIVEAUX_ORDRE = ['A0', 'A1', 'A2', 'B1', 'B2'] as const;
 
@@ -29,7 +29,17 @@ interface Props {
   existingAnalyse: AnalyseBesoin | null;
   testInitial: TestFormation | null;
   stagiaire: StagiaireFormation;
+  inscription?: Inscription | null;
   onSaved: () => void;
+}
+
+// Mapping des valeurs du formulaire public (étape 1) vers celles de l'analyse besoin
+function mapModeFinancementFromInscription(m: string | undefined | null): string {
+  if (!m) return '';
+  if (m === 'CPF') return 'CPF';
+  if (m === 'Entreprise' || m === 'PoleEmploi') return 'Mixte';
+  // Personnel, Autre, autres valeurs → fonds propres
+  return 'Fonds propres';
 }
 
 const OBJECTIFS = [
@@ -53,9 +63,10 @@ const DISPONIBILITES = [
 const CERTIFICATIONS = ['TEF IRN', 'LEVEL TEL', 'LE ROBERT'];
 
 export default function AnalyseBesoinForm({
-  stagiaireId, existingAnalyse, testInitial, stagiaire, onSaved,
+  stagiaireId, existingAnalyse, testInitial, stagiaire, inscription, onSaved,
 }: Props) {
   const [saving, setSaving] = useState(false);
+  const inscriptionModeFinancement = mapModeFinancementFromInscription(inscription?.modeFinancement);
   const [form, setForm] = useState({
     objectifFormation: existingAnalyse?.objectifFormation ?? [],
     niveauEstime: existingAnalyse?.niveauEstime ?? testInitial?.niveauEstime ?? '',
@@ -67,7 +78,8 @@ export default function AnalyseBesoinForm({
     dureeEstimeeFormation: existingAnalyse?.dureeEstimeeFormation ?? '',
     niveauVise: existingAnalyse?.niveauVise ?? '',
     typeCertificationVisee: existingAnalyse?.typeCertificationVisee ?? [],
-    modeFinancement: existingAnalyse?.modeFinancement ?? '',
+    modeFinancement:
+      existingAnalyse?.modeFinancement ?? inscriptionModeFinancement ?? '',
     commentaires: existingAnalyse?.commentaires ?? '',
   });
 
@@ -340,6 +352,14 @@ export default function AnalyseBesoinForm({
               <option value="Fonds propres">Fonds propres</option>
               <option value="Mixte">Mixte</option>
             </select>
+            {inscription?.modeFinancement && (
+              <p className="mt-1.5 text-[11px] text-slate-500">
+                Choix à l&apos;inscription : <strong>{inscription.modeFinancement}</strong>
+                {inscriptionModeFinancement && (
+                  <> → mappé en <strong>{inscriptionModeFinancement}</strong></>
+                )}
+              </p>
+            )}
           </div>
         </div>
 

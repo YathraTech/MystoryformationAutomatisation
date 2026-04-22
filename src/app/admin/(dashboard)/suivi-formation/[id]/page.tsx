@@ -26,6 +26,7 @@ import type {
   SatisfactionFroid,
   Emargement,
   StagiaireStatut,
+  Inscription,
 } from '@/types/admin';
 import TestInitialForm from '@/components/admin/formation/TestInitialForm';
 import AnalyseBesoinForm from '@/components/admin/formation/AnalyseBesoinForm';
@@ -48,6 +49,7 @@ interface StagiaireData {
   emargements: Emargement[];
   satisfactionChaud: SatisfactionChaud[];
   satisfactionFroid: SatisfactionFroid | null;
+  inscription: Inscription | null;
 }
 
 const WORKFLOW_STEPS: {
@@ -322,6 +324,7 @@ export default function StagiaireDetailPage() {
             existingAnalyse={data.analyse}
             testInitial={data.testInitial}
             stagiaire={stagiaire}
+            inscription={data.inscription}
             onSaved={fetchData}
           />
         )}
