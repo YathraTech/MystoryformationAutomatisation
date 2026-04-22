@@ -191,6 +191,34 @@ function ctaButton(url: string, label: string): string {
   </p>`;
 }
 
+export function buildTestInitialEmail(
+  prenom: string,
+  nom: string,
+  testUrl: string,
+): string {
+  const body = `
+    <p style="margin:0 0 20px;font-size:16px;color:#1e1e1e;">Bonjour <strong>${prenom} ${nom}</strong>,</p>
+    <p style="margin:0 0 20px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      Avant de démarrer votre parcours de formation, nous vous invitons à passer vos
+      <strong>tests initiaux de positionnement</strong>.
+    </p>
+    <p style="margin:0 0 24px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      Ces deux tests évaluent votre compréhension écrite (CE) et votre compréhension orale (CO).
+      Ils sont corrigés automatiquement et permettent à votre conseiller d&apos;adapter votre programme.
+    </p>
+    ${recapTable(
+      recapRow('Test 1', 'Compréhension écrite (CE)', true) +
+      recapRow('Test 2', 'Compréhension orale (CO)', false) +
+      recapRow('Durée estimée', 'Environ 30 minutes', false)
+    )}
+    ${ctaButton(testUrl, 'Commencer les tests')}
+    <p style="margin:24px 0 0;font-size:14px;color:#71717a;line-height:1.5;">
+      Installez-vous au calme avant de commencer : les tests doivent être réalisés en une seule session.
+      Vos résultats seront transmis automatiquement à votre conseiller.
+    </p>`;
+  return emailLayout('Tests initiaux de positionnement', body);
+}
+
 export function buildPreinscriptionFormationEmail(
   prenom: string,
   nom: string,

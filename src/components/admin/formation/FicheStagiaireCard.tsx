@@ -57,9 +57,12 @@ export default function FicheStagiaireCard({ stagiaireId, stagiaire, onSaved }: 
       .catch(() => setAgents([]));
   }, []);
 
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'sent' | 'failed'>('idle');
+
   const advanceToTestInitial = async () => {
     setAdvancing(true);
     setError('');
+    setEmailStatus('idle');
     try {
       const res = await fetch(`/api/admin/stagiaires-formation/${stagiaireId}`, {
         method: 'PATCH',
@@ -71,6 +74,25 @@ export default function FicheStagiaireCard({ stagiaireId, stagiaire, onSaved }: 
         setError(err.error || 'Impossible de passer à l\'étape suivante');
         return;
       }
+
+      // Envoi du mail avec le lien des tests initiaux (non bloquant)
+      try {
+        const mailRes = await fetch(
+          `/api/admin/stagiaires-formation/${stagiaireId}/send-test-initial-email`,
+          { method: 'POST' },
+        );
+        if (mailRes.ok) {
+          setEmailStatus('sent');
+        } else {
+          setEmailStatus('failed');
+          const err = await mailRes.json().catch(() => ({ error: '' }));
+          console.warn('[advance] envoi mail test initial échoué:', err.error);
+        }
+      } catch (mailErr) {
+        setEmailStatus('failed');
+        console.warn('[advance] envoi mail test initial erreur réseau:', mailErr);
+      }
+
       onSaved();
     } catch {
       setError('Erreur réseau');
@@ -239,7 +261,7 @@ export default function FicheStagiaireCard({ stagiaireId, stagiaire, onSaved }: 
           </div>
 
           {stagiaire.statut === 'inscription' && (
-            <div className="mt-2 pt-4 border-t border-slate-100">
+            <div className="mt-2 pt-4 border-t border-slate-100 space-y-2">
               <div className="flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
                 <div className="flex items-start gap-2">
                   <CheckCircle2 className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
@@ -248,8 +270,12 @@ export default function FicheStagiaireCard({ stagiaireId, stagiaire, onSaved }: 
                       Fiche client créée
                     </p>
                     <p className="text-xs text-blue-700 mt-0.5">
+                      En passant à l&apos;étape suivante, un mail avec le lien des tests
+                      initiaux (CE + CO, correction automatique) sera envoyé au stagiaire.
+                    </p>
+                    <p className="text-xs text-blue-700 mt-0.5">
                       L&apos;inscription + paiement et la définition définitive de la
-                      formation (heures, type) se font après les tests initiaux.
+                      formation se font après les tests.
                     </p>
                   </div>
                 </div>
@@ -266,6 +292,12 @@ export default function FicheStagiaireCard({ stagiaireId, stagiaire, onSaved }: 
                   Passer au test initial
                 </button>
               </div>
+              {emailStatus === 'failed' && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                  Le statut a été mis à jour, mais l&apos;envoi du mail a échoué.
+                  Vous pouvez copier le lien manuellement depuis le bouton « Lien test QCM » en haut de la page.
+                </div>
+              )}
             </div>
           )}
         </div>

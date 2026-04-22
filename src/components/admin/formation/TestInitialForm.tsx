@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, FileText, Play, Pencil, Settings } from 'lucide-react';
+import { CheckCircle2, FileText, Play, Pencil, Settings, ArrowRight, Mail, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import type { TestFormation } from '@/types/admin';
 import QcmTestRunner from './QcmTestRunner';
@@ -19,6 +19,9 @@ const PROFIL_OPTIONS = ['Alphabétisation', 'FLE'] as const;
 
 export default function TestInitialForm({ stagiaireId, existingTest, onSaved }: Props) {
   const [saving, setSaving] = useState(false);
+  const [advancing, setAdvancing] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [mode, setMode] = useState<Mode>('idle');
 
   // Scores
@@ -63,8 +66,9 @@ export default function TestInitialForm({ stagiaireId, existingTest, onSaved }: 
 
   const handleSubmit = async () => {
     setSaving(true);
+    setFeedback(null);
     try {
-      await fetch(`/api/admin/stagiaires-formation/${stagiaireId}/test`, {
+      const res = await fetch(`/api/admin/stagiaires-formation/${stagiaireId}/test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -79,11 +83,70 @@ export default function TestInitialForm({ stagiaireId, existingTest, onSaved }: 
           reponsesCo: reponsesCo || undefined,
         }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Erreur' }));
+        setFeedback({ type: 'error', message: err.error || 'Erreur lors de la sauvegarde' });
+        return;
+      }
+      setFeedback({ type: 'success', message: 'Test enregistré avec les scores à jour.' });
       onSaved();
     } catch (err) {
       console.error(err);
+      setFeedback({ type: 'error', message: 'Erreur réseau' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAdvance = async () => {
+    setAdvancing(true);
+    setFeedback(null);
+    try {
+      const res = await fetch(`/api/admin/stagiaires-formation/${stagiaireId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statut: 'analyse_besoin' }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Erreur' }));
+        setFeedback({
+          type: 'error',
+          message: err.error || 'Impossible de passer à l\'étape suivante',
+        });
+        return;
+      }
+      onSaved();
+    } catch {
+      setFeedback({ type: 'error', message: 'Erreur réseau' });
+    } finally {
+      setAdvancing(false);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    setResending(true);
+    setFeedback(null);
+    try {
+      const res = await fetch(
+        `/api/admin/stagiaires-formation/${stagiaireId}/send-test-initial-email`,
+        { method: 'POST' },
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Erreur' }));
+        setFeedback({
+          type: 'error',
+          message: err.error || 'Échec de l\'envoi du mail',
+        });
+        return;
+      }
+      setFeedback({
+        type: 'success',
+        message: 'Lien du test renvoyé par mail au stagiaire.',
+      });
+    } catch {
+      setFeedback({ type: 'error', message: 'Erreur réseau' });
+    } finally {
+      setResending(false);
     }
   };
 
@@ -346,15 +409,50 @@ export default function TestInitialForm({ stagiaireId, existingTest, onSaved }: 
         <TestResultsDetail test={existingTest} type="initial" />
       )}
 
-      <div className="mt-6 flex justify-end gap-3">
-        <button
-          disabled={saving}
-          onClick={handleSubmit}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
+      {feedback && (
+        <div
+          className={`mt-4 rounded-lg border p-3 text-sm ${
+            feedback.type === 'success'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+              : 'border-red-200 bg-red-50 text-red-800'
+          }`}
         >
-          <FileText className="h-4 w-4" />
-          {saving ? 'Enregistrement...' : existingTest ? 'Mettre à jour' : 'Enregistrer le test'}
+          {feedback.message}
+        </div>
+      )}
+
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 pt-6 border-t border-slate-100">
+        <button
+          onClick={handleResendEmail}
+          disabled={resending}
+          className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
+          title="Renvoyer au stagiaire le mail avec le lien des tests (utile en cas de bug ou de perte du mail)"
+        >
+          {resending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+          Renvoyer le mail du test
         </button>
+
+        <div className="flex items-center gap-2">
+          <button
+            disabled={saving}
+            onClick={handleSubmit}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+            {saving ? 'Enregistrement...' : existingTest ? 'Mettre à jour' : 'Enregistrer le test'}
+          </button>
+
+          {existingTest && (
+            <button
+              onClick={handleAdvance}
+              disabled={advancing}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
+            >
+              {advancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+              Passer à l&apos;analyse de besoin
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
