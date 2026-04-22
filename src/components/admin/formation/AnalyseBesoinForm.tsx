@@ -86,6 +86,22 @@ export default function AnalyseBesoinForm({
   const toggleArray = (arr: string[], value: string) =>
     arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
 
+  // Champs requis → liste des champs manquants (affichés si vides)
+  const missingFields: string[] = [];
+  if (form.objectifFormation.length === 0) missingFields.push('Objectif de la formation');
+  if (!form.methodePositionnement) missingFields.push('Méthode de positionnement');
+  if (!form.situationProfessionnelle) missingFields.push('Situation professionnelle');
+  if (form.disponibilites.length === 0) missingFields.push('Disponibilités');
+  if (!form.dureeEstimeeFormation || !form.dureeEstimeeFormation.trim())
+    missingFields.push('Durée estimée');
+  if (!form.niveauVise) missingFields.push('Niveau visé');
+  if (form.typeCertificationVisee.length === 0) missingFields.push('Certification visée');
+  if (!form.modeFinancement) missingFields.push('Mode de financement');
+  if (form.situationHandicap && !form.situationHandicapDetail.trim())
+    missingFields.push('Précision situation de handicap');
+
+  const canSave = missingFields.length === 0;
+
   const handleSubmit = async () => {
     setSaving(true);
     try {
@@ -374,11 +390,25 @@ export default function AnalyseBesoinForm({
         </div>
       </div>
 
+      {!canSave && (
+        <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+          <p className="font-semibold mb-1">
+            Champs obligatoires à compléter avant d&apos;enregistrer :
+          </p>
+          <ul className="list-disc list-inside space-y-0.5">
+            {missingFields.map((f) => (
+              <li key={f}>{f}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="flex justify-end">
         <button
-          disabled={saving}
+          disabled={saving || !canSave}
           onClick={handleSubmit}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          title={!canSave ? 'Complétez tous les champs obligatoires' : undefined}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Save className="h-4 w-4" />
           {saving ? 'Enregistrement...' : existingAnalyse ? 'Mettre à jour' : 'Enregistrer'}
