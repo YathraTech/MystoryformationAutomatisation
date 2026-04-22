@@ -1,8 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Pencil, Save, X, Loader2, ArrowRight, CheckCircle2 } from 'lucide-react';
 import type { StagiaireFormation } from '@/types/admin';
+
+interface Agent {
+  id: string;
+  prenom: string;
+  nom: string;
+}
 
 interface Props {
   stagiaireId: number;
@@ -40,11 +46,16 @@ export default function FicheStagiaireCard({ stagiaireId, stagiaire, onSaved }: 
   const [saving, setSaving] = useState(false);
   const [advancing, setAdvancing] = useState(false);
   const [error, setError] = useState('');
+  const [agents, setAgents] = useState<Agent[]>([]);
 
   const [form, setForm] = useState<FicheForm>(() => makeForm(stagiaire));
 
-  const canAdvanceToTestInitial =
-    stagiaire.statut === 'inscription' && stagiaire.statutPaiement === 'Payé';
+  useEffect(() => {
+    fetch('/api/agents')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: Agent[]) => setAgents(Array.isArray(data) ? data : []))
+      .catch(() => setAgents([]));
+  }, []);
 
   const advanceToTestInitial = async () => {
     setAdvancing(true);
@@ -83,6 +94,7 @@ export default function FicheStagiaireCard({ stagiaireId, stagiaire, onSaved }: 
     setSaving(true);
     setError('');
     try {
+      const selectedAgent = agents.find((a) => a.id === form.commercialeId);
       const payload = {
         // Identité & contact
         civilite: form.civilite,
@@ -99,6 +111,9 @@ export default function FicheStagiaireCard({ stagiaireId, stagiaire, onSaved }: 
         agence: form.agence || null,
         sourceProvenance: form.sourceProvenance || null,
         typePrestation: form.typePrestation,
+        // Commercial(e) en charge
+        commercialeId: form.commercialeId || null,
+        commercialeNom: selectedAgent ? `${selectedAgent.prenom} ${selectedAgent.nom}`.trim() : null,
         // Formation
         heuresPrevues: Number.isFinite(form.heuresPrevues) ? form.heuresPrevues : 0,
         dateDebutFormation: form.dateDebutFormation || null,
@@ -225,38 +240,32 @@ export default function FicheStagiaireCard({ stagiaireId, stagiaire, onSaved }: 
 
           {stagiaire.statut === 'inscription' && (
             <div className="mt-2 pt-4 border-t border-slate-100">
-              {canAdvanceToTestInitial ? (
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                    <div>
-                      <p className="text-sm font-semibold text-emerald-800">
-                        Paiement encaissé
-                      </p>
-                      <p className="text-xs text-emerald-700">
-                        Le stagiaire peut démarrer son parcours formation.
-                      </p>
-                    </div>
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-blue-800">
+                      Fiche client créée
+                    </p>
+                    <p className="text-xs text-blue-700 mt-0.5">
+                      L&apos;inscription + paiement et la définition définitive de la
+                      formation (heures, type) se font après les tests initiaux.
+                    </p>
                   </div>
-                  <button
-                    onClick={advanceToTestInitial}
-                    disabled={advancing}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 shrink-0"
-                  >
-                    {advancing ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <ArrowRight className="h-4 w-4" />
-                    )}
-                    Passer au test initial
-                  </button>
                 </div>
-              ) : (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                  Le passage à l&apos;étape suivante sera débloqué une fois le statut
-                  de paiement passé à <strong>Payé</strong>.
-                </div>
-              )}
+                <button
+                  onClick={advanceToTestInitial}
+                  disabled={advancing}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 shrink-0"
+                >
+                  {advancing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowRight className="h-4 w-4" />
+                  )}
+                  Passer au test initial
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -409,6 +418,21 @@ export default function FicheStagiaireCard({ stagiaireId, stagiaire, onSaved }: 
               ))}
             </select>
           </Field>
+
+          <Field label="Commerciale en charge" wide>
+            <select
+              value={form.commercialeId}
+              onChange={(e) => setForm({ ...form, commercialeId: e.target.value })}
+              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+            >
+              <option value="">— Non attribué —</option>
+              {agents.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.prenom} {a.nom}
+                </option>
+              ))}
+            </select>
+          </Field>
           </div>
         </div>
 
@@ -516,6 +540,7 @@ interface FicheForm {
   agence: string;
   sourceProvenance: string;
   typePrestation: string;
+  commercialeId: string;
   heuresPrevues: number;
   dateDebutFormation: string;
   dateFinFormation: string;
@@ -541,6 +566,7 @@ function makeForm(s: StagiaireFormation): FicheForm {
     agence: s.agence || '',
     sourceProvenance: s.sourceProvenance || '',
     typePrestation: s.typePrestation || 'Formation TEF IRN',
+    commercialeId: s.commercialeId || '',
     heuresPrevues: s.heuresPrevues || 0,
     dateDebutFormation: toDateInputValue(s.dateDebutFormation),
     dateFinFormation: toDateInputValue(s.dateFinFormation),
