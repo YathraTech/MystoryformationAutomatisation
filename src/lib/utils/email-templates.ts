@@ -191,6 +191,65 @@ function ctaButton(url: string, label: string): string {
   </p>`;
 }
 
+export function buildProgramFormationEmail(
+  prenom: string,
+  nom: string,
+  formateur: string | null,
+  dateDebut: string | null,
+  heuresPrevues: number | null,
+  joursFormation: string[] | null,
+  horaires: string | null,
+  agence: string | null,
+): string {
+  const body = `
+    <p style="margin:0 0 20px;font-size:16px;color:#1e1e1e;">Bonjour <strong>${prenom} ${nom}</strong>,</p>
+    <p style="margin:0 0 20px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      Votre inscription à la formation est <strong>validée</strong>. Vous trouverez ci-joint les documents de votre formation :
+    </p>
+    <ul style="margin:0 0 24px 20px;padding:0;font-size:14px;color:#3f3f46;line-height:1.8;">
+      <li>Convention de formation</li>
+      <li>Livret d'accueil</li>
+      <li>Règlement intérieur</li>
+      <li>Conditions générales de vente</li>
+      <li>Convocation</li>
+      <li>Programme pédagogique</li>
+    </ul>
+    ${recapTable(
+      recapRow('Date de début', formatDate(dateDebut), true) +
+      recapRow('Heures prévues', heuresPrevues ? `${heuresPrevues}h` : '-', false) +
+      recapRow('Jours', (joursFormation || []).join(', ') || '-', false) +
+      recapRow('Horaires', horaires || '-', false) +
+      recapRow('Centre', agence || '-', false) +
+      recapRow('Formateur', formateur || '-', false)
+    )}
+    <p style="margin:0;font-size:14px;color:#71717a;line-height:1.5;">
+      Merci de confirmer votre présence et de bien conserver ces documents.
+      Une convocation vous sera rappelée avant le démarrage.
+    </p>`;
+  return emailLayout('Documents de votre formation', body);
+}
+
+export function buildSatisfactionChaudEmail(
+  prenom: string,
+  nom: string,
+  formUrl: string,
+): string {
+  const body = `
+    <p style="margin:0 0 20px;font-size:16px;color:#1e1e1e;">Bonjour <strong>${prenom} ${nom}</strong>,</p>
+    <p style="margin:0 0 20px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      Votre formation touche à sa fin. Nous serions ravis de recueillir votre avis à chaud
+      pour nous aider à progresser et améliorer nos prochaines sessions.
+    </p>
+    <p style="margin:0 0 24px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      Le questionnaire prend moins de <strong>2 minutes</strong> à remplir.
+    </p>
+    ${ctaButton(formUrl, 'Donner mon avis')}
+    <p style="margin:24px 0 0;font-size:13px;color:#71717a;line-height:1.5;">
+      Merci pour votre participation !
+    </p>`;
+  return emailLayout('Votre avis nous intéresse', body);
+}
+
 export function buildTestInitialEmail(
   prenom: string,
   nom: string,

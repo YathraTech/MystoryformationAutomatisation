@@ -250,6 +250,18 @@ export async function generateAnalyseBesoinPdf(
 // ============================================================
 // PDF: Évaluation Initiale
 // ============================================================
+// Mapping scores -> niveaux CECRL (A0-C2)
+function niveauFromScoreInitiale(score: number | null | undefined): string {
+  if (score === null || score === undefined) return 'A0';
+  if (score >= 19) return 'C2';
+  if (score >= 17) return 'C1';
+  if (score >= 15) return 'B2';
+  if (score >= 12) return 'B1';
+  if (score >= 8) return 'A2';
+  if (score >= 4) return 'A1';
+  return 'A0';
+}
+
 export async function generateEvaluationInitialePdf(
   stagiaire: StagiaireFormation,
   evaluation: Evaluation,
@@ -313,24 +325,16 @@ export async function generateEvaluationInitialePdf(
     return yPos + 4 + wrapped.length * 4;
   };
 
-  // Helper : ligne en deux colonnes
-  const drawTwoCols = (
-    l1: string, v1: string, l2: string, v2: string, yPos: number
-  ): number => {
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text(l1, marginX + 2, yPos + 4);
-    doc.text(l2, marginX + 95, yPos + 4);
-    doc.setFont('helvetica', 'bold');
-    doc.text(v1 || '—', marginX + 25, yPos + 4);
-    doc.text(v2 || '—', marginX + 118, yPos + 4);
-    doc.setFont('helvetica', 'normal');
-    return yPos + 7;
-  };
-
-  // ===== Identification =====
-  y = drawTwoCols('Nom :', stagiaire.nom || '', 'Nom de jeune fille :', stagiaire.nomJeuneFille || '', y);
-  y = drawTwoCols('Prénom :', stagiaire.prenom || '', "Formateur :", stagiaire.formatriceNom || stagiaire.commercialeNom || '', y);
+  // ===== Identification (1 champ par ligne, label + valeur) =====
+  y = drawLabelValue('Nom :', stagiaire.nom || '', y, 20);
+  y = drawLabelValue('Nom de jeune fille :', stagiaire.nomJeuneFille || '—', y, 40);
+  y = drawLabelValue('Prénom :', stagiaire.prenom || '', y, 25);
+  y = drawLabelValue(
+    'Formateur :',
+    stagiaire.formatriceNom || stagiaire.commercialeNom || '—',
+    y,
+    25,
+  );
   y += 2;
 
   // ===== FORMATION =====
@@ -435,7 +439,16 @@ export async function generateEvaluationInitialePdf(
     { label: 'Expression écrite', key: 'EE' as const },
     { label: 'Expression orale', key: 'EO' as const },
   ];
-  const grille = (evaluation.grilleNiveaux as Record<string, string> | null) || {};
+  // Toujours recalculer le niveau depuis les scores du test initial (source de vérité)
+  // plutôt que de se reposer sur grille_niveaux qui peut être obsolète ou au mauvais format.
+  const grille: Record<string, string> = testInitial
+    ? {
+        CE: niveauFromScoreInitiale(testInitial.scoreCe),
+        CO: niveauFromScoreInitiale(testInitial.scoreCo),
+        EE: niveauFromScoreInitiale(testInitial.scoreEe),
+        EO: niveauFromScoreInitiale(testInitial.scoreEo),
+      }
+    : (evaluation.grilleNiveaux as Record<string, string> | null) || {};
   const colLabelW = 60;
   const colNivW = (contentW - colLabelW) / niveaux.length;
 
@@ -444,34 +457,44 @@ export async function generateEvaluationInitialePdf(
 
   // En-tête : "Résultats évaluation" + niveaux
   doc.setFillColor(240, 240, 240);
-  doc.rect(marginX, y, contentW, 7, 'F');
+  doc.rect(marginX, y, contentW, 8, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.text('Résultats évaluation', marginX + 2, y + 4.8);
+  doc.text('Résultats évaluation', marginX + 2, y + 5.5);
   niveaux.forEach((n, i) => {
     const x = marginX + colLabelW + i * colNivW + colNivW / 2;
-    doc.text(n, x, y + 4.8, { align: 'center' });
+    doc.text(n, x, y + 5.5, { align: 'center' });
   });
   // Bordures
   doc.setDrawColor(150);
-  doc.rect(marginX, y, contentW, 7);
-  y += 7;
+  doc.rect(marginX, y, contentW, 8);
+  y += 8;
 
   competences.forEach(({ label, key }) => {
     const niveauAttendu = grille[key];
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text(label, marginX + 2, y + 4.8);
+    doc.text(label, marginX + 2, y + 5);
     niveaux.forEach((n, i) => {
       const cellX = marginX + colLabelW + i * colNivW;
+      doc.setDrawColor(150);
+      doc.rect(cellX, y, colNivW, 8);
       if (niveauAttendu === n) {
+        // Remplir la cellule entière pour que ce soit bien visible
         doc.setFillColor(30, 30, 30);
-        doc.rect(cellX + colNivW / 2 - 2.5, y + 2, 5, 3.5, 'F');
+        doc.rect(cellX + 0.3, y + 0.3, colNivW - 0.6, 7.4, 'F');
+        doc.setTextColor(255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text('X', cellX + colNivW / 2, y + 5.5, { align: 'center' });
+        doc.setTextColor(0);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
       }
-      doc.rect(cellX, y, colNivW, 7);
     });
-    doc.rect(marginX, y, colLabelW, 7);
-    y += 7;
+    doc.setDrawColor(150);
+    doc.rect(marginX, y, colLabelW, 8);
+    y += 8;
   });
   y += 3;
 
@@ -489,26 +512,6 @@ export async function generateEvaluationInitialePdf(
     doc.line(marginX + 2, y + 4, marginX + contentW - 2, y + 4); y += 5;
     doc.line(marginX + 2, y + 4, marginX + contentW - 2, y + 4); y += 5;
   }
-
-  // Test initial récap (si dispo)
-  if (testInitial && y < 250) {
-    y += 4;
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(8);
-    doc.setTextColor(100);
-    doc.text(
-      `Test initial — CE: ${testInitial.scoreCe}/20 · CO: ${testInitial.scoreCo}/20 · EE: ${testInitial.scoreEe}/20 · EO: ${testInitial.scoreEo}/20 · Global: ${testInitial.scoreGlobal}/80 · Niveau: ${testInitial.niveauEstime}`,
-      marginX + 2, y + 4,
-    );
-    doc.setTextColor(0);
-  }
-
-  // Signature / date en bas
-  const ySign = Math.min(y + 10, 275);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.text(`Signature intervenant : ${evaluation.signatureIntervenant || '—'}`, marginX, ySign);
-  doc.text(`Date : ${formatDateFr(evaluation.createdAt)}`, marginX + 130, ySign);
 
   addFooter(doc, 1, 1);
   return doc;

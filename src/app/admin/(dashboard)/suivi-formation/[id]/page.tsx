@@ -15,7 +15,8 @@ import {
   Clock,
   Download,
   Link2,
-  Copy,
+  Send,
+  Loader2,
 } from 'lucide-react';
 import type {
   StagiaireFormation,
@@ -34,7 +35,6 @@ import EvaluationInitialeForm from '@/components/admin/formation/EvaluationIniti
 import InscriptionPaiementForm from '@/components/admin/formation/InscriptionPaiementForm';
 import DesignationForm from '@/components/admin/formation/DesignationForm';
 import EmargementSection from '@/components/admin/formation/EmargementSection';
-import SatisfactionChaudForm from '@/components/admin/formation/SatisfactionChaudForm';
 import TestFinalSection from '@/components/admin/formation/TestFinalSection';
 import SatisfactionFroidSection from '@/components/admin/formation/SatisfactionFroidSection';
 import FicheStagiaireCard from '@/components/admin/formation/FicheStagiaireCard';
@@ -355,32 +355,12 @@ export default function StagiaireDetailPage() {
         )}
 
         {activeStep === 'en_formation' && (
-          <div className="space-y-6">
-            <InscriptionPaiementForm
-              stagiaireId={stagiaireId}
-              stagiaire={stagiaire}
-              onSaved={fetchData}
-            />
-            <hr className="border-slate-200" />
-            <DesignationForm
-              stagiaireId={stagiaireId}
-              stagiaire={stagiaire}
-              onSaved={fetchData}
-            />
-            <hr className="border-slate-200" />
-            <EmargementSection
-              stagiaireId={stagiaireId}
-              stagiaire={stagiaire}
-              emargements={data.emargements}
-              onRefresh={fetchData}
-            />
-            <hr className="border-slate-200" />
-            <SatisfactionChaudForm
-              stagiaireId={stagiaireId}
-              existing={data.satisfactionChaud}
-              onSaved={fetchData}
-            />
-          </div>
+          <EnFormationStep
+            stagiaireId={stagiaireId}
+            stagiaire={stagiaire}
+            emargements={data.emargements}
+            onSaved={fetchData}
+          />
         )}
 
         {activeStep === 'test_final' && (
@@ -483,6 +463,138 @@ export default function StagiaireDetailPage() {
             />
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Étape en_formation : sous-étape 1 (paiement + désignation)
+// puis sous-étape 2 (émargements) après envoi des docs.
+// ============================================================
+function EnFormationStep({
+  stagiaireId,
+  stagiaire,
+  emargements,
+  onSaved,
+}: {
+  stagiaireId: number;
+  stagiaire: StagiaireFormation;
+  emargements: Emargement[];
+  onSaved: () => void;
+}) {
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<'idle' | 'ok' | 'err'>('idle');
+  const [errMsg, setErrMsg] = useState('');
+
+  const designationComplete =
+    !!stagiaire.formatriceNom
+    && !!stagiaire.dateDebutFormation
+    && !!stagiaire.horairesFormation
+    && Array.isArray(stagiaire.joursFormation)
+    && stagiaire.joursFormation.length > 0
+    && stagiaire.heuresPrevues > 0;
+  const paiementComplete =
+    stagiaire.statutPaiement === 'Payé' || stagiaire.statutPaiement === 'Partiel';
+  const canSendDocs = designationComplete && paiementComplete;
+
+  const handleSendDocs = async () => {
+    setSending(true);
+    setSendResult('idle');
+    setErrMsg('');
+    try {
+      const res = await fetch(
+        `/api/admin/stagiaires-formation/${stagiaireId}/send-program-docs`,
+        { method: 'POST' },
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Erreur' }));
+        setSendResult('err');
+        setErrMsg(err.error || 'Envoi échoué');
+        return;
+      }
+      setSendResult('ok');
+      onSaved();
+    } catch {
+      setSendResult('err');
+      setErrMsg('Erreur réseau');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Sous-étape 2 : émargements (une fois le mail envoyé)
+  if (stagiaire.mailInscriptionEnvoye) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4" />
+          Documents du programme envoyés au stagiaire. Vous pouvez désormais suivre les émargements.
+        </div>
+        <EmargementSection
+          stagiaireId={stagiaireId}
+          stagiaire={stagiaire}
+          emargements={emargements}
+          onRefresh={onSaved}
+        />
+      </div>
+    );
+  }
+
+  // Sous-étape 1 : paiement + désignation + bouton Valider
+  return (
+    <div className="space-y-6">
+      <InscriptionPaiementForm
+        stagiaireId={stagiaireId}
+        stagiaire={stagiaire}
+        onSaved={onSaved}
+      />
+      <hr className="border-slate-200" />
+      <DesignationForm
+        stagiaireId={stagiaireId}
+        stagiaire={stagiaire}
+        onSaved={onSaved}
+      />
+
+      <div className="rounded-xl border-2 border-blue-200 bg-blue-50 p-5">
+        <h3 className="text-sm font-semibold text-blue-900 mb-2">
+          Prêt à valider et envoyer les documents ?
+        </h3>
+        <p className="text-xs text-blue-700 mb-4">
+          En validant, un mail est envoyé au stagiaire avec : convention de formation · livret
+          d&apos;accueil · règlement intérieur · CGV · convocation · programme pédagogique.
+          Vous passerez ensuite à la phase d&apos;émargement.
+        </p>
+
+        {!canSendDocs && (
+          <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+            <p className="font-semibold mb-1">
+              Avant d&apos;envoyer, complétez :
+            </p>
+            <ul className="list-disc list-inside space-y-0.5">
+              {!paiementComplete && <li>Statut paiement à « Payé » (ou « Partiel »)</li>}
+              {!designationComplete && (
+                <li>Désignation formatrice &amp; planning (tous les champs obligatoires)</li>
+              )}
+            </ul>
+          </div>
+        )}
+
+        {sendResult === 'err' && (
+          <div className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+            {errMsg}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={handleSendDocs}
+          disabled={sending || !canSendDocs}
+          className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          Valider et envoyer le mail du programme
+        </button>
       </div>
     </div>
   );
