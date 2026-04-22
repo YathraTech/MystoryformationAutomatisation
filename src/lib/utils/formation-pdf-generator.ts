@@ -259,75 +259,256 @@ export async function generateEvaluationInitialePdf(
   const logo = await loadLogo();
   let y = addHeader(doc, logo, 'ÉVALUATION INITIALE');
 
-  doc.setFontSize(10);
+  const marginX = 15;
+  const pageW = 210;
+  const contentW = pageW - marginX * 2;
 
-  // Page 1: Recueil
-  doc.setFont('helvetica', 'bold');
-  y += 3;
-  doc.text('RECUEIL D\'INFORMATIONS', 15, y); y += 6;
-
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Nom : ${stagiaire.nom} ${stagiaire.prenom}`, 20, y); y += 5;
-  doc.text(`Date de naissance : ${formatDateFr(stagiaire.dateNaissance)}`, 20, y); y += 5;
-
-  const boolFields = [
-    { key: 'scolarisationFrance', label: 'Scolarisation en France' },
-    { key: 'scolarisationEtranger', label: 'Scolarisation à l\'étranger' },
-    { key: 'alphabetisation', label: 'Alphabétisation' },
-    { key: 'coursFrancais', label: 'Cours de français' },
-    { key: 'usageOrdinateur', label: 'Usage ordinateur' },
-    { key: 'maitriseClavier', label: 'Maîtrise clavier' },
-  ];
-
-  boolFields.forEach(({ key, label }) => {
-    const val = evaluation[key as keyof Evaluation];
-    doc.text(`${val ? CHECKBOX_CHECKED : CHECKBOX_EMPTY} ${label}`, 20, y); y += 5;
-  });
-
-  if (evaluation.motivation) {
-    y += 3;
-    doc.text(`Motivation : ${evaluation.motivation}`, 20, y); y += 5;
-  }
-
-  // Page 2: Résultats
-  y += 8;
-  doc.setFont('helvetica', 'bold');
-  doc.text('RÉSULTATS DE L\'ÉVALUATION', 15, y); y += 6;
-
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Profil pédagogique : ${evaluation.profilPedagogique || '-'}`, 20, y); y += 8;
-
-  // Grille des scores
-  if (testInitial) {
-    const competences = [
-      { label: 'CE', score: testInitial.scoreCe },
-      { label: 'CO', score: testInitial.scoreCo },
-      { label: 'EE', score: testInitial.scoreEe },
-      { label: 'EO', score: testInitial.scoreEo },
-    ];
-
-    competences.forEach(({ label, score }) => {
-      doc.text(`${label} : ${score} / 20`, 20, y); y += 5;
-    });
-
-    y += 3;
+  // Helper : bandeau titre de section (fond noir, texte blanc)
+  const drawSection = (title: string, yPos: number): number => {
+    doc.setFillColor(30, 30, 30);
+    doc.rect(marginX, yPos, contentW, 6, 'F');
+    doc.setTextColor(255);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Niveau global : ${testInitial.niveauEstime}`, 20, y); y += 8;
-  }
+    doc.setFontSize(9);
+    doc.text(title, marginX + 2, yPos + 4);
+    doc.setTextColor(0);
+    return yPos + 8;
+  };
 
-  // Grille par compétence
-  if (evaluation.grilleNiveaux) {
-    doc.setFont('helvetica', 'bold');
-    doc.text('Grille de niveaux par compétence :', 15, y); y += 6;
+  // Helper : case à cocher (OUI/NON)
+  const drawCheckLine = (label: string, value: boolean | null, yPos: number): number => {
     doc.setFont('helvetica', 'normal');
-    Object.entries(evaluation.grilleNiveaux).forEach(([comp, niveau]) => {
-      doc.text(`${comp} : ${niveau}`, 25, y); y += 5;
-    });
+    doc.setFontSize(9);
+    doc.text(label, marginX + 2, yPos + 4);
+    // OUI
+    doc.setDrawColor(0);
+    doc.rect(marginX + 95, yPos + 1, 4, 4);
+    if (value === true) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('X', marginX + 96.2, yPos + 4.2);
+      doc.setFont('helvetica', 'normal');
+    }
+    doc.text('OUI', marginX + 101, yPos + 4);
+    // NON
+    doc.rect(marginX + 140, yPos + 1, 4, 4);
+    if (value === false) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('X', marginX + 141.2, yPos + 4.2);
+      doc.setFont('helvetica', 'normal');
+    }
+    doc.text('NON', marginX + 146, yPos + 4);
+    return yPos + 7;
+  };
+
+  // Helper : ligne label + valeur texte
+  const drawLabelValue = (label: string, value: string, yPos: number, labelW = 50): number => {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text(label, marginX + 2, yPos + 4);
+    doc.setFont('helvetica', 'bold');
+    const text = value || '—';
+    const wrapped = doc.splitTextToSize(text, contentW - labelW - 4);
+    doc.text(wrapped, marginX + labelW, yPos + 4);
+    doc.setFont('helvetica', 'normal');
+    return yPos + 4 + wrapped.length * 4;
+  };
+
+  // Helper : ligne en deux colonnes
+  const drawTwoCols = (
+    l1: string, v1: string, l2: string, v2: string, yPos: number
+  ): number => {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(l1, marginX + 2, yPos + 4);
+    doc.text(l2, marginX + 95, yPos + 4);
+    doc.setFont('helvetica', 'bold');
+    doc.text(v1 || '—', marginX + 25, yPos + 4);
+    doc.text(v2 || '—', marginX + 118, yPos + 4);
+    doc.setFont('helvetica', 'normal');
+    return yPos + 7;
+  };
+
+  // ===== Identification =====
+  y = drawTwoCols('Nom :', stagiaire.nom || '', 'Nom de jeune fille :', stagiaire.nomJeuneFille || '', y);
+  y = drawTwoCols('Prénom :', stagiaire.prenom || '', "Formateur :", stagiaire.formatriceNom || stagiaire.commercialeNom || '', y);
+  y += 2;
+
+  // ===== FORMATION =====
+  y = drawSection('FORMATION', y);
+  y = drawCheckLine('Scolarisation en France', evaluation.scolarisationFrance, y);
+  y = drawCheckLine("Scolarisation à l'étranger", evaluation.scolarisationEtranger, y);
+  y = drawLabelValue('Où :', evaluation.scolarisationOu || '', y, 18);
+  y = drawLabelValue('Quand :', evaluation.scolarisationQuand || '', y, 22);
+  y += 2;
+
+  // ===== FORMATION LINGUISTIQUE =====
+  y = drawSection('FORMATION LINGUISTIQUE', y);
+  y = drawCheckLine('Cours dans la langue étudiée', evaluation.coursFrancais, y);
+  if (evaluation.coursFrancaisDetail) {
+    y = drawLabelValue('Précisez (où/quand) :', evaluation.coursFrancaisDetail, y, 40);
+  }
+  y = drawLabelValue('Langues parlée(s) / écrite(s) :', evaluation.languesParlees || '', y, 55);
+  y += 2;
+
+  // ===== OUTILS INFORMATIQUES ET NUMÉRIQUES =====
+  y = drawSection('OUTILS INFORMATIQUES ET NUMÉRIQUES', y);
+  y = drawCheckLine('Smartphone / tablette', evaluation.smartphoneTablette, y);
+  y = drawCheckLine('Ordinateur à la maison', evaluation.ordinateurMaison, y);
+  y = drawCheckLine('Accès à internet', evaluation.accesInternet, y);
+  y = drawCheckLine('Utilisation boîte mail', evaluation.utilisationBoiteMail, y);
+  y += 2;
+
+  // ===== MOTIVATION ET OBJECTIF DE L'APPRENTISSAGE =====
+  y = drawSection("MOTIVATION ET OBJECTIF DE L'APPRENTISSAGE", y);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text('Pourquoi voulez-vous apprendre ?', marginX + 2, y + 4);
+  y += 7;
+  if (evaluation.motivation) {
+    const wrapped = doc.splitTextToSize(evaluation.motivation, contentW - 4);
+    doc.setFont('helvetica', 'bold');
+    doc.text(wrapped, marginX + 2, y + 4);
+    doc.setFont('helvetica', 'normal');
+    y += wrapped.length * 4 + 3;
+  } else {
+    doc.line(marginX + 2, y + 4, marginX + contentW - 2, y + 4);
+    y += 7;
   }
 
-  y += 10;
-  doc.text(`Signature : ${evaluation.signatureIntervenant || '-'}`, 15, y);
-  doc.text(`Date : ${formatDateFr(evaluation.createdAt)}`, 120, y);
+  // Échelles 0-5
+  const drawScale = (label: string, value: number | null, yPos: number): number => {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text(label, marginX + 2, yPos + 4);
+    const startX = marginX + 85;
+    const cellW = 7;
+    for (let i = 0; i <= 5; i++) {
+      const cellX = startX + i * cellW;
+      if (value === i) {
+        doc.setFillColor(30, 30, 30);
+        doc.rect(cellX, yPos + 0.5, cellW - 1, 5, 'F');
+        doc.setTextColor(255);
+        doc.setFont('helvetica', 'bold');
+      } else {
+        doc.setDrawColor(0);
+        doc.rect(cellX, yPos + 0.5, cellW - 1, 5);
+        doc.setTextColor(0);
+        doc.setFont('helvetica', 'normal');
+      }
+      doc.text(String(i), cellX + cellW / 2 - 0.5, yPos + 4, { align: 'center' });
+    }
+    doc.setTextColor(0);
+    doc.setFont('helvetica', 'normal');
+    return yPos + 7;
+  };
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(8);
+  doc.text('Besoins :', marginX + 2, y + 3);
+  doc.setFont('helvetica', 'normal');
+  y += 5;
+  y = drawScale('Vie quotidienne', evaluation.besoinsVieQuotidienne, y);
+  y = drawScale('Vie professionnelle', evaluation.besoinsVieProfessionnelle, y);
+  y = drawLabelValue('Certificat visé :', evaluation.certificationViseeDetail || '', y, 32);
+  y += 2;
+
+  // ===== Besoins spécifiques =====
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('Besoins spécifiques :', marginX + 2, y + 4);
+  y += 6;
+  doc.setFont('helvetica', 'normal');
+  if (evaluation.besoinsSpecifiques) {
+    const wrapped = doc.splitTextToSize(evaluation.besoinsSpecifiques, contentW - 4);
+    doc.text(wrapped, marginX + 2, y + 4);
+    y += wrapped.length * 4 + 3;
+  } else {
+    doc.line(marginX + 2, y + 4, marginX + contentW - 2, y + 4); y += 5;
+    doc.line(marginX + 2, y + 4, marginX + contentW - 2, y + 4); y += 5;
+  }
+  y += 3;
+
+  // ===== Grille des résultats (tableau A0-C2 × CE/CO/EE/EO) =====
+  const niveaux = ['A0', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
+  const competences = [
+    { label: 'Compréhension écrite', key: 'CE' as const },
+    { label: 'Compréhension orale', key: 'CO' as const },
+    { label: 'Expression écrite', key: 'EE' as const },
+    { label: 'Expression orale', key: 'EO' as const },
+  ];
+  const grille = (evaluation.grilleNiveaux as Record<string, string> | null) || {};
+  const colLabelW = 60;
+  const colNivW = (contentW - colLabelW) / niveaux.length;
+
+  // Si on déborde, saut de page
+  if (y > 230) { doc.addPage(); y = 20; }
+
+  // En-tête : "Résultats évaluation" + niveaux
+  doc.setFillColor(240, 240, 240);
+  doc.rect(marginX, y, contentW, 7, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('Résultats évaluation', marginX + 2, y + 4.8);
+  niveaux.forEach((n, i) => {
+    const x = marginX + colLabelW + i * colNivW + colNivW / 2;
+    doc.text(n, x, y + 4.8, { align: 'center' });
+  });
+  // Bordures
+  doc.setDrawColor(150);
+  doc.rect(marginX, y, contentW, 7);
+  y += 7;
+
+  competences.forEach(({ label, key }) => {
+    const niveauAttendu = grille[key];
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text(label, marginX + 2, y + 4.8);
+    niveaux.forEach((n, i) => {
+      const cellX = marginX + colLabelW + i * colNivW;
+      if (niveauAttendu === n) {
+        doc.setFillColor(30, 30, 30);
+        doc.rect(cellX + colNivW / 2 - 2.5, y + 2, 5, 3.5, 'F');
+      }
+      doc.rect(cellX, y, colNivW, 7);
+    });
+    doc.rect(marginX, y, colLabelW, 7);
+    y += 7;
+  });
+  y += 3;
+
+  // ===== Remarques =====
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('Remarques :', marginX + 2, y + 4);
+  y += 6;
+  doc.setFont('helvetica', 'normal');
+  if (evaluation.remarques) {
+    const wrapped = doc.splitTextToSize(evaluation.remarques, contentW - 4);
+    doc.text(wrapped, marginX + 2, y + 4);
+    y += wrapped.length * 4 + 3;
+  } else {
+    doc.line(marginX + 2, y + 4, marginX + contentW - 2, y + 4); y += 5;
+    doc.line(marginX + 2, y + 4, marginX + contentW - 2, y + 4); y += 5;
+  }
+
+  // Test initial récap (si dispo)
+  if (testInitial && y < 250) {
+    y += 4;
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(100);
+    doc.text(
+      `Test initial — CE: ${testInitial.scoreCe}/20 · CO: ${testInitial.scoreCo}/20 · EE: ${testInitial.scoreEe}/20 · EO: ${testInitial.scoreEo}/20 · Global: ${testInitial.scoreGlobal}/80 · Niveau: ${testInitial.niveauEstime}`,
+      marginX + 2, y + 4,
+    );
+    doc.setTextColor(0);
+  }
+
+  // Signature / date en bas
+  const ySign = Math.min(y + 10, 275);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(`Signature intervenant : ${evaluation.signatureIntervenant || '—'}`, marginX, ySign);
+  doc.text(`Date : ${formatDateFr(evaluation.createdAt)}`, marginX + 130, ySign);
 
   addFooter(doc, 1, 1);
   return doc;

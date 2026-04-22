@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, FileText, ArrowRight, Loader2 } from 'lucide-react';
+import { CheckCircle2, FileText, ArrowRight, Loader2, Download } from 'lucide-react';
 import type { Evaluation, TestFormation, AnalyseBesoin, StagiaireFormation } from '@/types/admin';
+import { generateEvaluationInitialePdf } from '@/lib/utils/formation-pdf-generator';
 
 interface Props {
   stagiaireId: number;
@@ -32,6 +33,7 @@ export default function EvaluationInitialeForm({
 }: Props) {
   const [saving, setSaving] = useState(false);
   const [advancing, setAdvancing] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const [recueil, setRecueil] = useState({
     // FORMATION
@@ -110,6 +112,21 @@ export default function EvaluationInitialeForm({
       console.error(err);
     } finally {
       setAdvancing(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!existingEval) return;
+    setDownloading(true);
+    try {
+      const doc = await generateEvaluationInitialePdf(stagiaire, existingEval, testInitial);
+      const nomFichier = `Evaluation-initiale-${stagiaire.nom}-${stagiaire.prenom}.pdf`
+        .replace(/\s+/g, '_');
+      doc.save(nomFichier);
+    } catch (err) {
+      console.error('[PDF evaluation initiale]', err);
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -396,6 +413,18 @@ export default function EvaluationInitialeForm({
       </div>
 
       <div className="mt-6 flex items-center justify-end gap-2">
+        {existingEval && (
+          <button
+            onClick={handleDownloadPdf}
+            disabled={downloading}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
+            title="Télécharger l'évaluation au format PDF"
+          >
+            {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            Télécharger PDF
+          </button>
+        )}
+
         <button
           disabled={saving}
           onClick={handleSubmit}

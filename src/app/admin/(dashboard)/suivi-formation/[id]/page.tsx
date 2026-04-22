@@ -232,10 +232,24 @@ export default function StagiaireDetailPage() {
       {/* Info résumé */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <div className="bg-white rounded-lg border border-slate-200 p-3">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Heures</p>
-          <p className="text-lg font-bold text-slate-900 mt-1">
-            {stagiaire.heuresEffectuees}/{stagiaire.heuresPrevues}h
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide">
+            Heures besoin
           </p>
+          <p className="text-lg font-bold text-slate-900 mt-1">
+            {stagiaire.heuresEffectuees}/{
+              (() => {
+                const raw = data.analyse?.dureeEstimeeFormation || '';
+                const match = raw.match(/(\d+(?:[.,]\d+)?)/);
+                const hoursFromAnalyse = match ? parseFloat(match[1].replace(',', '.')) : 0;
+                return hoursFromAnalyse > 0 ? hoursFromAnalyse : stagiaire.heuresPrevues;
+              })()
+            }h
+          </p>
+          {data.analyse?.dureeEstimeeFormation && (
+            <span className="text-[10px] text-slate-400">
+              Issu de l&apos;analyse de besoin
+            </span>
+          )}
         </div>
         <div className="bg-white rounded-lg border border-slate-200 p-3">
           <p className="text-[10px] text-slate-500 uppercase tracking-wide">Paiement</p>
