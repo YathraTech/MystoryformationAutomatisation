@@ -1,8 +1,28 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, Save } from 'lucide-react';
+import { CheckCircle2, Save, Sparkles, UserCheck } from 'lucide-react';
 import type { AnalyseBesoin, TestFormation, StagiaireFormation } from '@/types/admin';
+
+const NIVEAUX_ORDRE = ['A0', 'A1', 'A2', 'B1', 'B2'] as const;
+
+// Barème CECRL indicatif (heures cumulées par niveau)
+const HOURS_PER_LEVEL_GAP: Record<number, number> = {
+  0: 30,
+  1: 80,
+  2: 150,
+  3: 250,
+  4: 400,
+};
+
+function estimateHours(niveauActuel: string | null | undefined, niveauVise: string): number | null {
+  if (!niveauVise) return null;
+  const currentIdx = NIVEAUX_ORDRE.indexOf((niveauActuel || 'A0') as typeof NIVEAUX_ORDRE[number]);
+  const targetIdx = NIVEAUX_ORDRE.indexOf(niveauVise as typeof NIVEAUX_ORDRE[number]);
+  if (targetIdx === -1) return null;
+  const gap = Math.max(0, targetIdx - Math.max(0, currentIdx));
+  return HOURS_PER_LEVEL_GAP[gap] ?? null;
+}
 
 interface Props {
   stagiaireId: number;
@@ -76,7 +96,7 @@ export default function AnalyseBesoinForm({
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-slate-900">Fiche d'analyse de besoin</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Fiche d&apos;analyse de besoin</h2>
         {existingAnalyse && (
           <span className="text-sm text-green-600 flex items-center gap-1">
             <CheckCircle2 className="h-4 w-4" />
@@ -225,6 +245,47 @@ export default function AnalyseBesoinForm({
               placeholder="Ex: 60"
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
             />
+
+            {/* Estimation automatique (CECRL) */}
+            {(() => {
+              const auto = estimateHours(form.niveauEstime, form.niveauVise);
+              if (auto === null) {
+                return (
+                  <p className="mt-1.5 text-[11px] text-slate-400 italic">
+                    Renseignez le niveau visé pour voir l&apos;estimation automatique.
+                  </p>
+                );
+              }
+              return (
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, dureeEstimeeFormation: String(auto) })}
+                  className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-md px-2 py-1 transition-colors"
+                  title="Utiliser cette valeur"
+                >
+                  <Sparkles className="h-3 w-3" />
+                  Estimation auto : <strong>{auto}h</strong>
+                  <span className="text-indigo-400">
+                    ({form.niveauEstime || 'A0'} → {form.niveauVise})
+                  </span>
+                </button>
+              );
+            })()}
+
+            {/* Sélection faite par l'inscrit au moment de l'inscription */}
+            {stagiaire.heuresPrevues && stagiaire.heuresPrevues > 0 && (
+              <button
+                type="button"
+                onClick={() =>
+                  setForm({ ...form, dureeEstimeeFormation: String(stagiaire.heuresPrevues) })
+                }
+                className="mt-1 ml-0 inline-flex items-center gap-1.5 text-[11px] text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 rounded-md px-2 py-1 transition-colors"
+                title="Utiliser cette valeur"
+              >
+                <UserCheck className="h-3 w-3" />
+                Choix de l&apos;inscrit : <strong>{stagiaire.heuresPrevues}h</strong>
+              </button>
+            )}
           </div>
           <div>
             <label className="block text-xs text-slate-500 mb-1">

@@ -277,6 +277,29 @@ export default function StagiaireDetailPage() {
 
       {/* Step Content */}
       <div className="bg-white rounded-xl border border-slate-200 p-6">
+        {(() => {
+          const activeIdx = STATUT_ORDER.indexOf(activeStep);
+          if (activeIdx <= 0) return null;
+          const prevStep = STATUT_ORDER[activeIdx - 1];
+          const prevLabel =
+            WORKFLOW_STEPS.find((s) => s.key === prevStep)?.label || 'Précédent';
+          return (
+            <div className="mb-4 pb-4 border-b border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveStep(prevStep);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg px-2 py-1 transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Précédent : {prevLabel}
+              </button>
+            </div>
+          );
+        })()}
+
         {activeStep === 'inscription' && (
           <FicheStagiaireCard
             stagiaireId={stagiaireId}
