@@ -82,6 +82,7 @@ export async function POST(
           besoins_vie_professionnelle: body.recueil.besoinsVieProfessionnelle,
           certification_visee: body.recueil.certificationVisee,
           certification_visee_detail: body.recueil.certificationViseeDetail,
+          besoins_specifiques: body.recueil.besoinsSpecifiques || null,
         });
       }
 

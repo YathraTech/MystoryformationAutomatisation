@@ -399,6 +399,7 @@ export interface Evaluation {
   besoinsVieProfessionnelle: number | null;
   certificationVisee: boolean | null;
   certificationViseeDetail: string | null;
+  besoinsSpecifiques: string | null;
 
   // Résultats
   profilPedagogique: ProfilPedagogique | null;

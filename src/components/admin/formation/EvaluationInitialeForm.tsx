@@ -64,6 +64,7 @@ export default function EvaluationInitialeForm({
       existingEval?.certificationViseeDetail
       ?? analyse?.typeCertificationVisee?.join(', ')
       ?? 'TEF IRN',
+    besoinsSpecifiques: existingEval?.besoinsSpecifiques ?? '',
   });
 
   const [remarques, setRemarques] = useState(existingEval?.remarques ?? '');
@@ -214,27 +215,15 @@ export default function EvaluationInitialeForm({
             />
           </div>
         )}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">Langues parlée(s) / écrite(s)</label>
-            <input
-              type="text"
-              value={recueil.languesParlees}
-              onChange={(e) => setRecueil({ ...recueil, languesParlees: e.target.value })}
-              placeholder="Ex: Arabe (parlée, écrite), Anglais (parlée)"
-              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">Diplômes de langues</label>
-            <input
-              type="text"
-              value={recueil.diplomesLangues}
-              onChange={(e) => setRecueil({ ...recueil, diplomesLangues: e.target.value })}
-              placeholder="DELF, DALF, TCF..."
-              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
-            />
-          </div>
+        <div>
+          <label className="block text-xs text-slate-500 mb-1">Langues parlée(s) / écrite(s)</label>
+          <input
+            type="text"
+            value={recueil.languesParlees}
+            onChange={(e) => setRecueil({ ...recueil, languesParlees: e.target.value })}
+            placeholder="Ex: Arabe (parlée, écrite), Anglais (parlée)"
+            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
+          />
         </div>
       </div>
 
@@ -261,21 +250,6 @@ export default function EvaluationInitialeForm({
           value={recueil.utilisationBoiteMail}
           onChange={(v) => setRecueil({ ...recueil, utilisationBoiteMail: v })}
         />
-        <OuiNon
-          label="Usage de l'ordinateur"
-          value={recueil.usageOrdinateur}
-          onChange={(v) => setRecueil({ ...recueil, usageOrdinateur: v })}
-        />
-        <OuiNon
-          label="Maîtrise du clavier"
-          value={recueil.maitriseClavier}
-          onChange={(v) => setRecueil({ ...recueil, maitriseClavier: v })}
-        />
-        <OuiNon
-          label="Session ordinateur personnelle"
-          value={recueil.sessionOrdinateur}
-          onChange={(v) => setRecueil({ ...recueil, sessionOrdinateur: v })}
-        />
       </div>
 
       {/* ===== SECTION 4 : MOTIVATION ET OBJECTIF DE L'APPRENTISSAGE ===== */}
@@ -289,18 +263,6 @@ export default function EvaluationInitialeForm({
             value={recueil.motivation}
             onChange={(e) => setRecueil({ ...recueil, motivation: e.target.value })}
             placeholder="Objectifs personnels, professionnels..."
-            rows={2}
-            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs text-slate-500 mb-1">
-            Après la formation, que souhaitez-vous faire ?
-          </label>
-          <textarea
-            value={recueil.apresFormation}
-            onChange={(e) => setRecueil({ ...recueil, apresFormation: e.target.value })}
             rows={2}
             className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
           />
@@ -339,6 +301,20 @@ export default function EvaluationInitialeForm({
             />
           )}
         </div>
+      </div>
+
+      {/* ===== Besoins spécifiques (avant la grille de résultats) ===== */}
+      <div className="mb-6">
+        <label className="block text-sm font-semibold text-slate-700 mb-2">
+          Besoins spécifiques
+        </label>
+        <textarea
+          value={recueil.besoinsSpecifiques}
+          onChange={(e) => setRecueil({ ...recueil, besoinsSpecifiques: e.target.value })}
+          placeholder="Décrivez les besoins spécifiques du stagiaire (aménagements, points à travailler en priorité...)"
+          rows={3}
+          className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
+        />
       </div>
 
       {/* ===== SECTION 5 : RÉSULTATS ÉVALUATION ===== */}

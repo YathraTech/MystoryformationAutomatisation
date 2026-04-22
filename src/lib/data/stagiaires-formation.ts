@@ -145,6 +145,7 @@ function dbToEvaluation(row: any): Evaluation {
     besoinsVieProfessionnelle: row.besoins_vie_professionnelle,
     certificationVisee: row.certification_visee,
     certificationViseeDetail: row.certification_visee_detail,
+    besoinsSpecifiques: row.besoins_specifiques ?? null,
     profilPedagogique: row.profil_pedagogique,
     scoreCe: row.score_ce != null ? Number(row.score_ce) : null,
     scoreCo: row.score_co != null ? Number(row.score_co) : null,
