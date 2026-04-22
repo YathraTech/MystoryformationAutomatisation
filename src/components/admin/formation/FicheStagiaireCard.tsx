@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Pencil, Save, X, Loader2 } from 'lucide-react';
+import { Pencil, Save, X, Loader2, ArrowRight, CheckCircle2 } from 'lucide-react';
 import type { StagiaireFormation } from '@/types/admin';
 
 interface Props {
@@ -38,9 +38,35 @@ function toDateInputValue(date: string | null): string {
 export default function FicheStagiaireCard({ stagiaireId, stagiaire, onSaved }: Props) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [advancing, setAdvancing] = useState(false);
   const [error, setError] = useState('');
 
   const [form, setForm] = useState<FicheForm>(() => makeForm(stagiaire));
+
+  const canAdvanceToTestInitial =
+    stagiaire.statut === 'inscription' && stagiaire.statutPaiement === 'Payé';
+
+  const advanceToTestInitial = async () => {
+    setAdvancing(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/stagiaires-formation/${stagiaireId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statut: 'test_initial' }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Erreur' }));
+        setError(err.error || 'Impossible de passer à l\'étape suivante');
+        return;
+      }
+      onSaved();
+    } catch {
+      setError('Erreur réseau');
+    } finally {
+      setAdvancing(false);
+    }
+  };
 
   const startEdit = () => {
     setForm(makeForm(stagiaire));
@@ -196,6 +222,43 @@ export default function FicheStagiaireCard({ stagiaireId, stagiaire, onSaved }: 
             <InfoRow label="Statut" value={stagiaire.statutPaiement || '-'} />
             <InfoRow label="N° dossier CPF" value={stagiaire.numeroDossierCpf || '-'} />
           </div>
+
+          {stagiaire.statut === 'inscription' && (
+            <div className="mt-2 pt-4 border-t border-slate-100">
+              {canAdvanceToTestInitial ? (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-800">
+                        Paiement encaissé
+                      </p>
+                      <p className="text-xs text-emerald-700">
+                        Le stagiaire peut démarrer son parcours formation.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={advanceToTestInitial}
+                    disabled={advancing}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 shrink-0"
+                  >
+                    {advancing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ArrowRight className="h-4 w-4" />
+                    )}
+                    Passer au test initial
+                  </button>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                  Le passage à l&apos;étape suivante sera débloqué une fois le statut
+                  de paiement passé à <strong>Payé</strong>.
+                </div>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-6">
