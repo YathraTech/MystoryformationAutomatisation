@@ -18,6 +18,8 @@ const SOURCES = [
 const PRESTATIONS = [
   'Formation TEF IRN', 'Examen TEF IRN', 'Examen civique', 'Pack TEF+Civique', 'Pack complet',
 ] as const;
+const MODES_PAIEMENT = ['CB', 'Espèces', 'Virement', 'CPF', 'Mixte'] as const;
+const STATUTS_PAIEMENT = ['Payé', 'En attente', 'Partiel', 'Impayé'] as const;
 
 function formatDateDisplay(date: string | null): string {
   if (!date) return '-';
@@ -56,6 +58,7 @@ export default function FicheStagiaireCard({ stagiaireId, stagiaire, onSaved }: 
     setError('');
     try {
       const payload = {
+        // Identité & contact
         civilite: form.civilite,
         nom: form.nom.trim().toUpperCase(),
         nomJeuneFille: form.nomJeuneFille.trim() || null,
@@ -70,6 +73,15 @@ export default function FicheStagiaireCard({ stagiaireId, stagiaire, onSaved }: 
         agence: form.agence || null,
         sourceProvenance: form.sourceProvenance || null,
         typePrestation: form.typePrestation,
+        // Formation
+        heuresPrevues: Number.isFinite(form.heuresPrevues) ? form.heuresPrevues : 0,
+        dateDebutFormation: form.dateDebutFormation || null,
+        dateFinFormation: form.dateFinFormation || null,
+        // Paiement
+        montantTotal: Number.isFinite(form.montantTotal) ? form.montantTotal : null,
+        modePaiement: form.modePaiement || null,
+        statutPaiement: form.statutPaiement,
+        numeroDossierCpf: form.numeroDossierCpf.trim() || null,
       };
 
       const res = await fetch(`/api/admin/stagiaires-formation/${stagiaireId}`, {
@@ -134,31 +146,62 @@ export default function FicheStagiaireCard({ stagiaireId, stagiaire, onSaved }: 
       )}
 
       {!editing ? (
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <InfoRow label="Civilité" value={stagiaire.civilite || '-'} />
-          <InfoRow label="Nom" value={stagiaire.nom || '-'} />
-          <InfoRow label="Prénom" value={stagiaire.prenom || '-'} />
-          <InfoRow label="Nom de jeune fille" value={stagiaire.nomJeuneFille || '-'} />
-          <InfoRow label="Date de naissance" value={formatDateDisplay(stagiaire.dateNaissance)} />
-          <InfoRow label="Nationalité" value={stagiaire.nationalite || '-'} />
-          <InfoRow label="Téléphone" value={stagiaire.telephone || '-'} />
-          <InfoRow label="Email" value={stagiaire.email || '-'} />
-          <InfoRow label="Adresse" value={stagiaire.adressePostale || '-'} />
-          <InfoRow
-            label="Pièce d'identité"
-            value={
-              stagiaire.typePiece || stagiaire.numeroPieceIdentite
-                ? `${stagiaire.typePiece || '-'} - ${stagiaire.numeroPieceIdentite || '-'}`
-                : '-'
-            }
-          />
-          <InfoRow label="Agence" value={stagiaire.agence || '-'} />
-          <InfoRow label="Source" value={stagiaire.sourceProvenance || '-'} />
-          <InfoRow label="Prestation" value={stagiaire.typePrestation || '-'} />
-          <InfoRow label="Commerciale" value={stagiaire.commercialeNom || '-'} />
+        <div className="space-y-5">
+          <SectionTitle>Identité & contact</SectionTitle>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <InfoRow label="Civilité" value={stagiaire.civilite || '-'} />
+            <InfoRow label="Nom" value={stagiaire.nom || '-'} />
+            <InfoRow label="Prénom" value={stagiaire.prenom || '-'} />
+            <InfoRow label="Nom de jeune fille" value={stagiaire.nomJeuneFille || '-'} />
+            <InfoRow label="Date de naissance" value={formatDateDisplay(stagiaire.dateNaissance)} />
+            <InfoRow label="Nationalité" value={stagiaire.nationalite || '-'} />
+            <InfoRow label="Téléphone" value={stagiaire.telephone || '-'} />
+            <InfoRow label="Email" value={stagiaire.email || '-'} />
+            <InfoRow label="Adresse" value={stagiaire.adressePostale || '-'} />
+            <InfoRow
+              label="Pièce d'identité"
+              value={
+                stagiaire.typePiece || stagiaire.numeroPieceIdentite
+                  ? `${stagiaire.typePiece || '-'} - ${stagiaire.numeroPieceIdentite || '-'}`
+                  : '-'
+              }
+            />
+            <InfoRow label="Agence" value={stagiaire.agence || '-'} />
+            <InfoRow label="Source" value={stagiaire.sourceProvenance || '-'} />
+            <InfoRow label="Prestation" value={stagiaire.typePrestation || '-'} />
+            <InfoRow label="Commerciale" value={stagiaire.commercialeNom || '-'} />
+          </div>
+
+          <SectionTitle>Formation</SectionTitle>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <InfoRow
+              label="Heures prévues"
+              value={stagiaire.heuresPrevues ? `${stagiaire.heuresPrevues}h` : '-'}
+            />
+            <InfoRow
+              label="Heures effectuées"
+              value={`${stagiaire.heuresEffectuees || 0}h`}
+            />
+            <InfoRow label="Date de début" value={formatDateDisplay(stagiaire.dateDebutFormation)} />
+            <InfoRow label="Date de fin" value={formatDateDisplay(stagiaire.dateFinFormation)} />
+          </div>
+
+          <SectionTitle>Paiement</SectionTitle>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <InfoRow
+              label="Montant total"
+              value={stagiaire.montantTotal ? `${stagiaire.montantTotal} €` : '-'}
+            />
+            <InfoRow label="Mode de paiement" value={stagiaire.modePaiement || '-'} />
+            <InfoRow label="Statut" value={stagiaire.statutPaiement || '-'} />
+            <InfoRow label="N° dossier CPF" value={stagiaire.numeroDossierCpf || '-'} />
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-6">
+        <div>
+          <SectionTitle>Identité & contact</SectionTitle>
+          <div className="grid grid-cols-2 gap-4">
           <Field label="Civilité">
             <select
               value={form.civilite}
@@ -303,6 +346,92 @@ export default function FicheStagiaireCard({ stagiaireId, stagiaire, onSaved }: 
               ))}
             </select>
           </Field>
+          </div>
+        </div>
+
+        <div>
+          <SectionTitle>Formation</SectionTitle>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Heures prévues">
+              <input
+                type="number"
+                min={0}
+                step={0.5}
+                value={form.heuresPrevues}
+                onChange={(e) => setForm({ ...form, heuresPrevues: parseFloat(e.target.value) || 0 })}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+              />
+            </Field>
+
+            <Field label="Date de début">
+              <input
+                type="date"
+                value={form.dateDebutFormation}
+                onChange={(e) => setForm({ ...form, dateDebutFormation: e.target.value })}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+              />
+            </Field>
+
+            <Field label="Date de fin">
+              <input
+                type="date"
+                value={form.dateFinFormation}
+                onChange={(e) => setForm({ ...form, dateFinFormation: e.target.value })}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+              />
+            </Field>
+          </div>
+        </div>
+
+        <div>
+          <SectionTitle>Paiement</SectionTitle>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Montant total (€)">
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                value={form.montantTotal}
+                onChange={(e) => setForm({ ...form, montantTotal: parseFloat(e.target.value) || 0 })}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+              />
+            </Field>
+
+            <Field label="Mode de paiement">
+              <select
+                value={form.modePaiement}
+                onChange={(e) => setForm({ ...form, modePaiement: e.target.value })}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+              >
+                <option value="">-</option>
+                {MODES_PAIEMENT.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Statut paiement">
+              <select
+                value={form.statutPaiement}
+                onChange={(e) => setForm({ ...form, statutPaiement: e.target.value })}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+              >
+                {STATUTS_PAIEMENT.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="N° dossier CPF">
+              <input
+                type="text"
+                value={form.numeroDossierCpf}
+                onChange={(e) => setForm({ ...form, numeroDossierCpf: e.target.value })}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+              />
+            </Field>
+          </div>
+        </div>
         </div>
       )}
     </div>
@@ -324,6 +453,13 @@ interface FicheForm {
   agence: string;
   sourceProvenance: string;
   typePrestation: string;
+  heuresPrevues: number;
+  dateDebutFormation: string;
+  dateFinFormation: string;
+  montantTotal: number;
+  modePaiement: string;
+  statutPaiement: string;
+  numeroDossierCpf: string;
 }
 
 function makeForm(s: StagiaireFormation): FicheForm {
@@ -342,6 +478,13 @@ function makeForm(s: StagiaireFormation): FicheForm {
     agence: s.agence || '',
     sourceProvenance: s.sourceProvenance || '',
     typePrestation: s.typePrestation || 'Formation TEF IRN',
+    heuresPrevues: s.heuresPrevues || 0,
+    dateDebutFormation: toDateInputValue(s.dateDebutFormation),
+    dateFinFormation: toDateInputValue(s.dateFinFormation),
+    montantTotal: s.montantTotal ?? 0,
+    modePaiement: s.modePaiement || '',
+    statutPaiement: s.statutPaiement || 'En attente',
+    numeroDossierCpf: s.numeroDossierCpf || '',
   };
 }
 
@@ -360,5 +503,13 @@ function Field({ label, children, wide }: { label: string; children: React.React
       <label className="block text-xs font-medium text-slate-600 mb-1">{label}</label>
       {children}
     </div>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 pb-2 border-b border-slate-100">
+      {children}
+    </h3>
   );
 }
