@@ -84,9 +84,13 @@ export async function POST(
       }
 
       if (analyse) {
-        dbFields.certification_visee_detail = analyse.typeCertificationVisee?.join(', ');
+        // Ne surchage que si le recueil n'a rien renseigné
+        if (!dbFields.certification_visee_detail) {
+          dbFields.certification_visee_detail = analyse.typeCertificationVisee?.join(', ');
+        }
       }
 
+      dbFields.remarques = body.remarques || null;
       dbFields.signature_intervenant = body.signatureIntervenant || null;
 
     } else {

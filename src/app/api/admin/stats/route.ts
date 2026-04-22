@@ -6,6 +6,10 @@ import { getSafeUsers } from '@/lib/auth/users';
 import { getCaMensuelHistory } from '@/lib/data/ca-mensuel';
 import type { DashboardStats, InscriptionStatus, RevenueStats, CommercialRevenue, CentreRevenue, CentreExamenStats, FeuilleAppelData, FeuilleAppelExamen, Inscription } from '@/types/admin';
 
+// Évite tout cache côté Next — on veut toujours la donnée fraîche au dashboard
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // Helper pour formater le nom du mois
 function getMonthLabel(year: number, month: number): string {
   const date = new Date(year, month, 1);
@@ -164,9 +168,11 @@ export async function GET() {
       .map(([month, count]) => ({ month, count }))
       .sort((a, b) => a.month.localeCompare(b.month));
 
+    // On renvoie plus large (20) pour que le dashboard puisse filtrer côté client
+    // entre formations et examens sans se retrouver à court de lignes à afficher.
     const recentInscriptions = [...inscriptions]
       .reverse()
-      .slice(0, 5);
+      .slice(0, 20);
 
     // Créer une map email -> inscription ID pour les examens
     const emailToInscriptionId = new Map<string, number>();

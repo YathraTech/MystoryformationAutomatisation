@@ -13,34 +13,65 @@ interface Props {
   onSaved: () => void;
 }
 
+const NIVEAUX_GRILLE = ['A0', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
+type NiveauGrille = typeof NIVEAUX_GRILLE[number];
+
+function niveauFromScore(score: number | null | undefined): NiveauGrille {
+  if (score === null || score === undefined) return 'A0';
+  if (score >= 19) return 'C2';
+  if (score >= 17) return 'C1';
+  if (score >= 15) return 'B2';
+  if (score >= 12) return 'B1';
+  if (score >= 8) return 'A2';
+  if (score >= 4) return 'A1';
+  return 'A0';
+}
+
 export default function EvaluationInitialeForm({
   stagiaireId, existingEval, testInitial, analyse, stagiaire, onSaved,
 }: Props) {
   const [saving, setSaving] = useState(false);
   const [advancing, setAdvancing] = useState(false);
+
   const [recueil, setRecueil] = useState({
+    // FORMATION
     scolarisationFrance: existingEval?.scolarisationFrance ?? false,
     scolarisationEtranger: existingEval?.scolarisationEtranger ?? false,
     alphabetisation: existingEval?.alphabetisation ?? false,
+    // FORMATION LINGUISTIQUE
     coursFrancais: existingEval?.coursFrancais ?? false,
     coursFrancaisDetail: existingEval?.coursFrancaisDetail ?? '',
-    diplomesLangues: existingEval?.diplomesLangues ?? '',
     anglais: existingEval?.anglais ?? false,
+    diplomesLangues: existingEval?.diplomesLangues ?? '',
     languesParlees: existingEval?.languesParlees ?? '',
-    usageOrdinateur: existingEval?.usageOrdinateur ?? true,
-    maitriseClavier: existingEval?.maitriseClavier ?? true,
+    // OUTILS INFORMATIQUES
     smartphoneTablette: existingEval?.smartphoneTablette ?? false,
     ordinateurMaison: existingEval?.ordinateurMaison ?? false,
     accesInternet: existingEval?.accesInternet ?? false,
     utilisationBoiteMail: existingEval?.utilisationBoiteMail ?? false,
+    usageOrdinateur: existingEval?.usageOrdinateur ?? true,
+    maitriseClavier: existingEval?.maitriseClavier ?? true,
     sessionOrdinateur: existingEval?.sessionOrdinateur ?? false,
+    // MOTIVATION & OBJECTIF
     motivation: existingEval?.motivation ?? '',
     apresFormation: existingEval?.apresFormation ?? '',
     besoinsVieQuotidienne: existingEval?.besoinsVieQuotidienne ?? 0,
     besoinsVieProfessionnelle: existingEval?.besoinsVieProfessionnelle ?? 0,
     certificationVisee: existingEval?.certificationVisee ?? true,
-    certificationViseeDetail: existingEval?.certificationViseeDetail ?? 'TEF IRN',
+    certificationViseeDetail:
+      existingEval?.certificationViseeDetail
+      ?? analyse?.typeCertificationVisee?.join(', ')
+      ?? 'TEF IRN',
   });
+
+  const [remarques, setRemarques] = useState(existingEval?.remarques ?? '');
+
+  const grilleFromTest: Record<'CE' | 'CO' | 'EE' | 'EO', NiveauGrille> = {
+    CE: niveauFromScore(testInitial?.scoreCe),
+    CO: niveauFromScore(testInitial?.scoreCo),
+    EE: niveauFromScore(testInitial?.scoreEe),
+    EO: niveauFromScore(testInitial?.scoreEo),
+  };
 
   const handleSubmit = async () => {
     setSaving(true);
@@ -51,7 +82,8 @@ export default function EvaluationInitialeForm({
         body: JSON.stringify({
           typeEvaluation: 'initiale',
           recueil,
-          signatureIntervenant: stagiaire.commercialeNom,
+          remarques,
+          signatureIntervenant: stagiaire.formatriceNom || stagiaire.commercialeNom,
         }),
       });
       onSaved();
@@ -78,9 +110,11 @@ export default function EvaluationInitialeForm({
     }
   };
 
+  const formateurNom = stagiaire.formatriceNom || stagiaire.commercialeNom || '—';
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold text-slate-900">Évaluation initiale</h2>
         {existingEval && (
           <span className="text-sm text-green-600 flex items-center gap-1">
@@ -90,145 +124,265 @@ export default function EvaluationInitialeForm({
         )}
       </div>
 
-      {/* Résultats test (auto) */}
-      {testInitial && (
-        <div className="mb-6 bg-blue-50 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-blue-700 mb-2">
-            Résultats du test initial (automatique)
-          </h3>
-          <div className="grid grid-cols-5 gap-3 text-center">
-            {[
-              { label: 'CE', score: testInitial.scoreCe },
-              { label: 'CO', score: testInitial.scoreCo },
-              { label: 'EE', score: testInitial.scoreEe },
-              { label: 'EO', score: testInitial.scoreEo },
-              { label: 'Global', score: testInitial.scoreGlobal },
-            ].map(({ label, score }) => (
-              <div key={label} className="bg-white rounded-lg p-2">
-                <p className="text-xs text-slate-500">{label}</p>
-                <p className="text-xl font-bold text-slate-900">
-                  {score}/{label === 'Global' ? 80 : 20}
-                </p>
-              </div>
-            ))}
-          </div>
-          <p className="text-center mt-2 text-sm font-medium text-blue-700">
-            Niveau: {testInitial.niveauEstime} | Profil: {testInitial.profilPedagogique}
-          </p>
+      {/* ===== Identification (auto-remplie depuis la fiche) ===== */}
+      <div className="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <InfoRead label="Nom" value={stagiaire.nom} />
+          <InfoRead label="Nom de jeune fille" value={stagiaire.nomJeuneFille || '—'} />
+          <InfoRead label="Prénom" value={stagiaire.prenom} />
+          <InfoRead label="Formateur" value={formateurNom} />
         </div>
-      )}
+      </div>
 
-      {/* Page 1: Recueil d'informations */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-medium text-slate-700">
-          Recueil d&apos;informations complémentaires
-        </h3>
+      {/* ===== SECTION 1 : FORMATION ===== */}
+      <SectionHeader title="FORMATION" />
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <OuiNon
+          label="Scolarisation en France"
+          value={recueil.scolarisationFrance}
+          onChange={(v) => setRecueil({ ...recueil, scolarisationFrance: v })}
+        />
+        <OuiNon
+          label="Scolarisation à l'étranger"
+          value={recueil.scolarisationEtranger}
+          onChange={(v) => setRecueil({ ...recueil, scolarisationEtranger: v })}
+        />
+        <OuiNon
+          label="Alphabétisation"
+          value={recueil.alphabetisation}
+          onChange={(v) => setRecueil({ ...recueil, alphabetisation: v })}
+        />
+      </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            { key: 'scolarisationFrance', label: 'Scolarisation en France' },
-            { key: 'scolarisationEtranger', label: 'Scolarisation à l\'étranger' },
-            { key: 'alphabetisation', label: 'Alphabétisation' },
-            { key: 'coursFrancais', label: 'Cours de français suivis' },
-            { key: 'anglais', label: 'Parle anglais' },
-            { key: 'usageOrdinateur', label: 'Usage ordinateur' },
-            { key: 'maitriseClavier', label: 'Maîtrise du clavier' },
-            { key: 'smartphoneTablette', label: 'Smartphone / tablette' },
-            { key: 'ordinateurMaison', label: 'Ordinateur à la maison' },
-            { key: 'accesInternet', label: 'Accès internet' },
-            { key: 'utilisationBoiteMail', label: 'Utilise boîte mail' },
-            { key: 'sessionOrdinateur', label: 'Session ordinateur' },
-          ].map(({ key, label }) => (
-            <label key={key} className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="checkbox"
-                checked={recueil[key as keyof typeof recueil] as boolean}
-                onChange={(e) =>
-                  setRecueil({ ...recueil, [key]: e.target.checked })
-                }
-                className="rounded border-slate-300"
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-
-        {recueil.coursFrancais && (
-          <input
-            type="text"
-            placeholder="Précisez (où, quand)"
-            value={recueil.coursFrancaisDetail}
-            onChange={(e) => setRecueil({ ...recueil, coursFrancaisDetail: e.target.value })}
-            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
+      {/* ===== SECTION 2 : FORMATION LINGUISTIQUE ===== */}
+      <SectionHeader title="FORMATION LINGUISTIQUE" />
+      <div className="mb-6 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <OuiNon
+            label="Cours dans la langue étudiée"
+            value={recueil.coursFrancais}
+            onChange={(v) => setRecueil({ ...recueil, coursFrancais: v })}
           />
-        )}
-
-        <div className="grid grid-cols-2 gap-4">
+          <OuiNon
+            label="Anglais"
+            value={recueil.anglais}
+            onChange={(v) => setRecueil({ ...recueil, anglais: v })}
+          />
+        </div>
+        {recueil.coursFrancais && (
           <div>
-            <label className="block text-xs text-slate-500 mb-1">Diplômes de langues</label>
+            <label className="block text-xs text-slate-500 mb-1">Précisez (où, quand)</label>
             <input
               type="text"
-              placeholder="DELF, DALF, TCF..."
-              value={recueil.diplomesLangues}
-              onChange={(e) => setRecueil({ ...recueil, diplomesLangues: e.target.value })}
+              value={recueil.coursFrancaisDetail}
+              onChange={(e) => setRecueil({ ...recueil, coursFrancaisDetail: e.target.value })}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
             />
           </div>
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-slate-500 mb-1">Langues parlées / écrites</label>
+            <label className="block text-xs text-slate-500 mb-1">Langues parlée(s) / écrite(s)</label>
             <input
               type="text"
               value={recueil.languesParlees}
               onChange={(e) => setRecueil({ ...recueil, languesParlees: e.target.value })}
+              placeholder="Ex: Arabe (parlée, écrite), Anglais (parlée)"
+              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Diplômes de langues</label>
+            <input
+              type="text"
+              value={recueil.diplomesLangues}
+              onChange={(e) => setRecueil({ ...recueil, diplomesLangues: e.target.value })}
+              placeholder="DELF, DALF, TCF..."
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
             />
           </div>
         </div>
+      </div>
 
+      {/* ===== SECTION 3 : OUTILS INFORMATIQUES ET NUMÉRIQUES ===== */}
+      <SectionHeader title="OUTILS INFORMATIQUES ET NUMÉRIQUES" />
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-3">
+        <OuiNon
+          label="Smartphone / tablette"
+          value={recueil.smartphoneTablette}
+          onChange={(v) => setRecueil({ ...recueil, smartphoneTablette: v })}
+        />
+        <OuiNon
+          label="Ordinateur à la maison"
+          value={recueil.ordinateurMaison}
+          onChange={(v) => setRecueil({ ...recueil, ordinateurMaison: v })}
+        />
+        <OuiNon
+          label="Accès à internet"
+          value={recueil.accesInternet}
+          onChange={(v) => setRecueil({ ...recueil, accesInternet: v })}
+        />
+        <OuiNon
+          label="Utilisation boîte mail"
+          value={recueil.utilisationBoiteMail}
+          onChange={(v) => setRecueil({ ...recueil, utilisationBoiteMail: v })}
+        />
+        <OuiNon
+          label="Usage de l'ordinateur"
+          value={recueil.usageOrdinateur}
+          onChange={(v) => setRecueil({ ...recueil, usageOrdinateur: v })}
+        />
+        <OuiNon
+          label="Maîtrise du clavier"
+          value={recueil.maitriseClavier}
+          onChange={(v) => setRecueil({ ...recueil, maitriseClavier: v })}
+        />
+        <OuiNon
+          label="Session ordinateur personnelle"
+          value={recueil.sessionOrdinateur}
+          onChange={(v) => setRecueil({ ...recueil, sessionOrdinateur: v })}
+        />
+      </div>
+
+      {/* ===== SECTION 4 : MOTIVATION ET OBJECTIF DE L'APPRENTISSAGE ===== */}
+      <SectionHeader title="MOTIVATION ET OBJECTIF DE L'APPRENTISSAGE" />
+      <div className="mb-6 space-y-4">
         <div>
           <label className="block text-xs text-slate-500 mb-1">
-            Motivation : pourquoi apprendre le français ? <span className="text-red-500">*</span>
+            Pourquoi voulez-vous apprendre ? <span className="text-red-500">*</span>
           </label>
           <textarea
             value={recueil.motivation}
             onChange={(e) => setRecueil({ ...recueil, motivation: e.target.value })}
-            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
+            placeholder="Objectifs personnels, professionnels..."
             rows={2}
+            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">
-              Besoins vie quotidienne (0-5)
-            </label>
-            <input
-              type="number"
-              min={0}
-              max={5}
-              value={recueil.besoinsVieQuotidienne}
-              onChange={(e) =>
-                setRecueil({ ...recueil, besoinsVieQuotidienne: parseInt(e.target.value) || 0 })
-              }
-              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">
-              Besoins vie professionnelle (0-5)
-            </label>
-            <input
-              type="number"
-              min={0}
-              max={5}
-              value={recueil.besoinsVieProfessionnelle}
-              onChange={(e) =>
-                setRecueil({ ...recueil, besoinsVieProfessionnelle: parseInt(e.target.value) || 0 })
-              }
-              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
-            />
-          </div>
+        <div>
+          <label className="block text-xs text-slate-500 mb-1">
+            Après la formation, que souhaitez-vous faire ?
+          </label>
+          <textarea
+            value={recueil.apresFormation}
+            onChange={(e) => setRecueil({ ...recueil, apresFormation: e.target.value })}
+            rows={2}
+            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
+          />
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ScaleField
+            label="Besoins — vie quotidienne (0 à 5)"
+            value={recueil.besoinsVieQuotidienne}
+            onChange={(v) => setRecueil({ ...recueil, besoinsVieQuotidienne: v })}
+          />
+          <ScaleField
+            label="Besoins — vie professionnelle (0 à 5)"
+            value={recueil.besoinsVieProfessionnelle}
+            onChange={(v) => setRecueil({ ...recueil, besoinsVieProfessionnelle: v })}
+          />
+        </div>
+
+        <div>
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+            <input
+              type="checkbox"
+              checked={recueil.certificationVisee}
+              onChange={(e) => setRecueil({ ...recueil, certificationVisee: e.target.checked })}
+              className="rounded border-slate-300"
+            />
+            Certificat visé
+          </label>
+          {recueil.certificationVisee && (
+            <input
+              type="text"
+              placeholder="TEF IRN, DELF, DALF..."
+              value={recueil.certificationViseeDetail}
+              onChange={(e) => setRecueil({ ...recueil, certificationViseeDetail: e.target.value })}
+              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
+            />
+          )}
+        </div>
+      </div>
+
+      {/* ===== SECTION 5 : RÉSULTATS ÉVALUATION ===== */}
+      <SectionHeader title="RÉSULTATS ÉVALUATION" />
+      {testInitial ? (
+        <div className="mb-6 overflow-x-auto">
+          <table className="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="text-left px-3 py-2 font-medium text-slate-600 border-b border-slate-200">
+                  Compétence
+                </th>
+                {NIVEAUX_GRILLE.map((n) => (
+                  <th
+                    key={n}
+                    className="text-center px-2 py-2 font-semibold text-slate-600 border-b border-slate-200 w-12"
+                  >
+                    {n}
+                  </th>
+                ))}
+                <th className="text-center px-3 py-2 font-medium text-slate-600 border-b border-slate-200">
+                  Score
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { label: 'Compréhension écrite', key: 'CE' as const, score: testInitial.scoreCe },
+                { label: 'Compréhension orale', key: 'CO' as const, score: testInitial.scoreCo },
+                { label: 'Expression écrite', key: 'EE' as const, score: testInitial.scoreEe },
+                { label: 'Expression orale', key: 'EO' as const, score: testInitial.scoreEo },
+              ].map(({ label, key, score }) => {
+                const niveau = grilleFromTest[key];
+                return (
+                  <tr key={key} className="border-b border-slate-100 last:border-0">
+                    <td className="px-3 py-2 font-medium text-slate-700">{label}</td>
+                    {NIVEAUX_GRILLE.map((n) => (
+                      <td key={n} className="text-center px-2 py-2">
+                        <span
+                          className={`inline-flex h-5 w-5 items-center justify-center rounded-full ${
+                            niveau === n
+                              ? 'bg-blue-600 text-white font-bold'
+                              : 'bg-slate-50 text-slate-300'
+                          }`}
+                        >
+                          {niveau === n ? '✓' : ''}
+                        </span>
+                      </td>
+                    ))}
+                    <td className="text-center px-3 py-2 font-bold text-slate-900">
+                      {score}/20
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <p className="text-xs text-slate-500 mt-2">
+            Niveau global estimé : <strong className="text-slate-700">{testInitial.niveauEstime}</strong> —
+            Profil : <strong className="text-slate-700">{testInitial.profilPedagogique || '—'}</strong>
+          </p>
+        </div>
+      ) : (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          Aucun test initial enregistré. Retournez à l&apos;étape « Test initial » pour saisir les scores.
+        </div>
+      )}
+
+      {/* ===== Remarques ===== */}
+      <div className="mb-6">
+        <label className="block text-sm font-semibold text-slate-700 mb-2">Remarques</label>
+        <textarea
+          value={remarques}
+          onChange={(e) => setRemarques(e.target.value)}
+          placeholder="Observations, points d'attention, besoins spécifiques..."
+          rows={3}
+          className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
+        />
       </div>
 
       <div className="mt-6 flex items-center justify-end gap-2">
@@ -251,6 +405,95 @@ export default function EvaluationInitialeForm({
             Passer à la formation
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+function SectionHeader({ title }: { title: string }) {
+  return (
+    <div className="mb-3 mt-2 rounded-md bg-slate-800 px-3 py-1.5">
+      <h3 className="text-xs font-bold text-white uppercase tracking-wider">{title}</h3>
+    </div>
+  );
+}
+
+function InfoRead({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[10px] text-slate-500 uppercase tracking-wider">{label}</p>
+      <p className="font-medium text-slate-900">{value || '—'}</p>
+    </div>
+  );
+}
+
+function OuiNon({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
+      <span className="text-sm text-slate-700">{label}</span>
+      <div className="flex items-center gap-1 shrink-0">
+        <button
+          type="button"
+          onClick={() => onChange(true)}
+          className={`px-2.5 py-1 text-xs font-semibold rounded transition-colors ${
+            value
+              ? 'bg-emerald-600 text-white'
+              : 'bg-slate-100 text-slate-500 hover:bg-emerald-50 hover:text-emerald-700'
+          }`}
+        >
+          OUI
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(false)}
+          className={`px-2.5 py-1 text-xs font-semibold rounded transition-colors ${
+            !value
+              ? 'bg-red-600 text-white'
+              : 'bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-700'
+          }`}
+        >
+          NON
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ScaleField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div>
+      <label className="block text-xs text-slate-500 mb-1">{label}</label>
+      <div className="flex items-center gap-1">
+        {[0, 1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(n)}
+            className={`h-8 w-8 rounded border text-sm font-semibold transition-colors ${
+              value === n
+                ? 'bg-blue-600 border-blue-600 text-white'
+                : 'bg-white border-slate-200 text-slate-500 hover:border-blue-300'
+            }`}
+          >
+            {n}
+          </button>
+        ))}
       </div>
     </div>
   );
