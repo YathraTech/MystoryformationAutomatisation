@@ -378,6 +378,8 @@ export interface Evaluation {
   // Recueil d'infos (éval initiale)
   scolarisationFrance: boolean | null;
   scolarisationEtranger: boolean | null;
+  scolarisationOu: string | null;
+  scolarisationQuand: string | null;
   alphabetisation: boolean | null;
   coursFrancais: boolean | null;
   coursFrancaisDetail: string | null;

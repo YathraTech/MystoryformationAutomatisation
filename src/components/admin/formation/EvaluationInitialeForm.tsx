@@ -37,6 +37,8 @@ export default function EvaluationInitialeForm({
     // FORMATION
     scolarisationFrance: existingEval?.scolarisationFrance ?? false,
     scolarisationEtranger: existingEval?.scolarisationEtranger ?? false,
+    scolarisationOu: existingEval?.scolarisationOu ?? '',
+    scolarisationQuand: existingEval?.scolarisationQuand ?? '',
     alphabetisation: existingEval?.alphabetisation ?? false,
     // FORMATION LINGUISTIQUE
     coursFrancais: existingEval?.coursFrancais ?? false,
@@ -136,22 +138,54 @@ export default function EvaluationInitialeForm({
 
       {/* ===== SECTION 1 : FORMATION ===== */}
       <SectionHeader title="FORMATION" />
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-3">
-        <OuiNon
-          label="Scolarisation en France"
-          value={recueil.scolarisationFrance}
-          onChange={(v) => setRecueil({ ...recueil, scolarisationFrance: v })}
-        />
-        <OuiNon
-          label="Scolarisation à l'étranger"
-          value={recueil.scolarisationEtranger}
-          onChange={(v) => setRecueil({ ...recueil, scolarisationEtranger: v })}
-        />
-        <OuiNon
-          label="Alphabétisation"
-          value={recueil.alphabetisation}
-          onChange={(v) => setRecueil({ ...recueil, alphabetisation: v })}
-        />
+      <div className="mb-6 space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <OuiNon
+            label="Scolarisation en France"
+            value={recueil.scolarisationFrance}
+            onChange={(v) =>
+              setRecueil({
+                ...recueil,
+                scolarisationFrance: v,
+                // Exclusion mutuelle : si OUI ici, l'étranger passe à NON
+                scolarisationEtranger: v ? false : recueil.scolarisationEtranger,
+              })
+            }
+          />
+          <OuiNon
+            label="Scolarisation à l'étranger"
+            value={recueil.scolarisationEtranger}
+            onChange={(v) =>
+              setRecueil({
+                ...recueil,
+                scolarisationEtranger: v,
+                scolarisationFrance: v ? false : recueil.scolarisationFrance,
+              })
+            }
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Où</label>
+            <input
+              type="text"
+              placeholder="Pays, ville, établissement..."
+              value={recueil.scolarisationOu}
+              onChange={(e) => setRecueil({ ...recueil, scolarisationOu: e.target.value })}
+              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Quand</label>
+            <input
+              type="text"
+              placeholder="Années, période..."
+              value={recueil.scolarisationQuand}
+              onChange={(e) => setRecueil({ ...recueil, scolarisationQuand: e.target.value })}
+              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
+            />
+          </div>
+        </div>
       </div>
 
       {/* ===== SECTION 2 : FORMATION LINGUISTIQUE ===== */}

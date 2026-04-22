@@ -124,6 +124,8 @@ function dbToEvaluation(row: any): Evaluation {
     typeEvaluation: row.type_evaluation,
     scolarisationFrance: row.scolarisation_france,
     scolarisationEtranger: row.scolarisation_etranger,
+    scolarisationOu: row.scolarisation_ou ?? null,
+    scolarisationQuand: row.scolarisation_quand ?? null,
     alphabetisation: row.alphabetisation,
     coursFrancais: row.cours_francais,
     coursFrancaisDetail: row.cours_francais_detail,

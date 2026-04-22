@@ -61,6 +61,8 @@ export async function POST(
         Object.assign(dbFields, {
           scolarisation_france: body.recueil.scolarisationFrance,
           scolarisation_etranger: body.recueil.scolarisationEtranger,
+          scolarisation_ou: body.recueil.scolarisationOu || null,
+          scolarisation_quand: body.recueil.scolarisationQuand || null,
           alphabetisation: body.recueil.alphabetisation,
           cours_francais: body.recueil.coursFrancais,
           cours_francais_detail: body.recueil.coursFrancaisDetail,
