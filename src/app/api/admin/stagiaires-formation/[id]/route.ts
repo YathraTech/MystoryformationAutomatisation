@@ -77,17 +77,37 @@ export async function PATCH(
     // Mapper camelCase → snake_case
     const dbFields: Record<string, unknown> = {};
     const fieldMap: Record<string, string> = {
+      // Identité & contact
+      civilite: 'civilite',
+      nom: 'nom',
+      nomJeuneFille: 'nom_jeune_fille',
+      prenom: 'prenom',
+      dateNaissance: 'date_naissance',
+      nationalite: 'nationalite',
+      telephone: 'telephone',
+      email: 'email',
+      adressePostale: 'adresse_postale',
+      numeroPieceIdentite: 'numero_piece_identite',
+      typePiece: 'type_piece',
+      // Agence / commercial / source
+      agence: 'agence',
+      sourceProvenance: 'source_provenance',
+      typePrestation: 'type_prestation',
+      commercialeId: 'commerciale_id',
+      commercialeNom: 'commerciale_nom',
+      // Formatrice & planning
       formatriceId: 'formatrice_id',
       formatriceNom: 'formatrice_nom',
-      agence: 'agence',
       joursFormation: 'jours_formation',
       horairesFormation: 'horaires_formation',
+      // Paiement
       modePaiement: 'mode_paiement',
       montantTotal: 'montant_total',
       paiementPlusieursFois: 'paiement_plusieurs_fois',
       nombreEcheances: 'nombre_echeances',
       numeroDossierCpf: 'numero_dossier_cpf',
       statutPaiement: 'statut_paiement',
+      // Suivi
       statut: 'statut',
       heuresPrevues: 'heures_prevues',
       heuresEffectuees: 'heures_effectuees',
@@ -95,6 +115,7 @@ export async function PATCH(
       dateFinFormation: 'date_fin_formation',
       referentHandicap: 'referent_handicap',
       situationHandicapDetail: 'situation_handicap_detail',
+      // Documents
       pdfConvention: 'pdf_convention',
       pdfConvocation: 'pdf_convocation',
       pdfProgramme: 'pdf_programme',
@@ -102,8 +123,6 @@ export async function PATCH(
       mailInscriptionEnvoye: 'mail_inscription_envoye',
       mailRappelEnvoye: 'mail_rappel_envoye',
       mailAttestationEnvoye: 'mail_attestation_envoye',
-      commercialeId: 'commerciale_id',
-      commercialeNom: 'commerciale_nom',
       photoPieceIdentite: 'photo_piece_identite',
       photoCandidat: 'photo_candidat',
     };

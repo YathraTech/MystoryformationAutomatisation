@@ -36,6 +36,7 @@ import EmargementSection from '@/components/admin/formation/EmargementSection';
 import SatisfactionChaudForm from '@/components/admin/formation/SatisfactionChaudForm';
 import TestFinalSection from '@/components/admin/formation/TestFinalSection';
 import SatisfactionFroidSection from '@/components/admin/formation/SatisfactionFroidSection';
+import FicheStagiaireCard from '@/components/admin/formation/FicheStagiaireCard';
 
 interface StagiaireData {
   stagiaire: StagiaireFormation;
@@ -277,25 +278,11 @@ export default function StagiaireDetailPage() {
       {/* Step Content */}
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         {activeStep === 'inscription' && (
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">
-              Fiche stagiaire
-            </h2>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <InfoRow label="Civilité" value={stagiaire.civilite} />
-              <InfoRow label="Nom" value={stagiaire.nom} />
-              <InfoRow label="Prénom" value={stagiaire.prenom} />
-              <InfoRow label="Nom de jeune fille" value={stagiaire.nomJeuneFille || '-'} />
-              <InfoRow label="Date de naissance" value={formatDate(stagiaire.dateNaissance)} />
-              <InfoRow label="Nationalité" value={stagiaire.nationalite} />
-              <InfoRow label="Téléphone" value={stagiaire.telephone} />
-              <InfoRow label="Email" value={stagiaire.email} />
-              <InfoRow label="Adresse" value={stagiaire.adressePostale} />
-              <InfoRow label="Pièce d'identité" value={`${stagiaire.typePiece} - ${stagiaire.numeroPieceIdentite}`} />
-              <InfoRow label="Agence" value={stagiaire.agence} />
-              <InfoRow label="Source" value={stagiaire.sourceProvenance || '-'} />
-            </div>
-          </div>
+          <FicheStagiaireCard
+            stagiaireId={stagiaireId}
+            stagiaire={stagiaire}
+            onSaved={fetchData}
+          />
         )}
 
         {activeStep === 'test_initial' && (
@@ -434,7 +421,7 @@ export default function StagiaireDetailPage() {
                 }}
                 className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
               >
-                Générer l'évaluation finale
+                Générer l&apos;évaluation finale
               </button>
             )}
           </div>
@@ -461,20 +448,3 @@ export default function StagiaireDetailPage() {
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className="font-medium text-slate-900">{value}</p>
-    </div>
-  );
-}
-
-function formatDate(date: string | null): string {
-  if (!date) return '-';
-  return new Date(date).toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}

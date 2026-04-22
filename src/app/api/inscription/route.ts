@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Save to Supabase
-    await addInscription({
+    const inscription = await addInscription({
       clientId: clientId as number | undefined,
       timestamp: new Date().toISOString(),
       civilite: data.civilite,
@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
         .join(', ');
 
       await createStagiaireFormation({
+        inscription_id: inscription.rowIndex,
         client_id: (clientId as number | undefined) ?? null,
         civilite: data.civilite,
         nom: data.nom.toUpperCase(),
