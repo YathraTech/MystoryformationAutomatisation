@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, FileText } from 'lucide-react';
+import { CheckCircle2, FileText, ArrowRight, Loader2 } from 'lucide-react';
 import type { Evaluation, TestFormation, AnalyseBesoin, StagiaireFormation } from '@/types/admin';
 
 interface Props {
@@ -17,6 +17,7 @@ export default function EvaluationInitialeForm({
   stagiaireId, existingEval, testInitial, analyse, stagiaire, onSaved,
 }: Props) {
   const [saving, setSaving] = useState(false);
+  const [advancing, setAdvancing] = useState(false);
   const [recueil, setRecueil] = useState({
     scolarisationFrance: existingEval?.scolarisationFrance ?? false,
     scolarisationEtranger: existingEval?.scolarisationEtranger ?? false,
@@ -58,6 +59,22 @@ export default function EvaluationInitialeForm({
       console.error(err);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAdvance = async () => {
+    setAdvancing(true);
+    try {
+      await fetch(`/api/admin/stagiaires-formation/${stagiaireId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statut: 'en_formation' }),
+      });
+      onSaved();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAdvancing(false);
     }
   };
 
@@ -104,7 +121,7 @@ export default function EvaluationInitialeForm({
       {/* Page 1: Recueil d'informations */}
       <div className="space-y-4">
         <h3 className="text-sm font-medium text-slate-700">
-          Recueil d'informations complémentaires
+          Recueil d&apos;informations complémentaires
         </h3>
 
         <div className="grid grid-cols-2 gap-4">
@@ -214,15 +231,26 @@ export default function EvaluationInitialeForm({
         </div>
       </div>
 
-      <div className="mt-6 flex justify-end">
+      <div className="mt-6 flex items-center justify-end gap-2">
         <button
           disabled={saving}
           onClick={handleSubmit}
           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
         >
-          <FileText className="h-4 w-4" />
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
           {saving ? 'Génération...' : existingEval ? 'Mettre à jour' : 'Générer l\'évaluation initiale'}
         </button>
+
+        {existingEval && (
+          <button
+            onClick={handleAdvance}
+            disabled={advancing}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
+          >
+            {advancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+            Passer à la formation
+          </button>
+        )}
       </div>
     </div>
   );

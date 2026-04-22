@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, Save, Sparkles, UserCheck } from 'lucide-react';
+import { CheckCircle2, Save, Sparkles, UserCheck, ArrowRight, Loader2 } from 'lucide-react';
 import type { AnalyseBesoin, TestFormation, StagiaireFormation, Inscription } from '@/types/admin';
 
 const NIVEAUX_ORDRE = ['A0', 'A1', 'A2', 'B1', 'B2'] as const;
@@ -66,6 +66,7 @@ export default function AnalyseBesoinForm({
   stagiaireId, existingAnalyse, testInitial, stagiaire, inscription, onSaved,
 }: Props) {
   const [saving, setSaving] = useState(false);
+  const [advancing, setAdvancing] = useState(false);
   const inscriptionModeFinancement = mapModeFinancementFromInscription(inscription?.modeFinancement);
   const [form, setForm] = useState({
     objectifFormation: existingAnalyse?.objectifFormation ?? [],
@@ -118,6 +119,22 @@ export default function AnalyseBesoinForm({
       console.error(err);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAdvance = async () => {
+    setAdvancing(true);
+    try {
+      await fetch(`/api/admin/stagiaires-formation/${stagiaireId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statut: 'evaluation_initiale' }),
+      });
+      onSaved();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAdvancing(false);
     }
   };
 
@@ -403,16 +420,27 @@ export default function AnalyseBesoinForm({
         </div>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-2">
         <button
           disabled={saving || !canSave}
           onClick={handleSubmit}
           title={!canSave ? 'Complétez tous les champs obligatoires' : undefined}
           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Save className="h-4 w-4" />
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {saving ? 'Enregistrement...' : existingAnalyse ? 'Mettre à jour' : 'Enregistrer'}
         </button>
+
+        {existingAnalyse && (
+          <button
+            onClick={handleAdvance}
+            disabled={advancing}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
+          >
+            {advancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+            Passer à l&apos;évaluation initiale
+          </button>
+        )}
       </div>
     </div>
   );

@@ -3,9 +3,18 @@ import {
   createAnalyseBesoin,
   updateAnalyseBesoin,
   getAnalyseBesoin,
+  updateStagiaireFormation,
   updateStagiaireStatut,
 } from '@/lib/data/stagiaires-formation';
 import { analyseBesoinSchema } from '@/lib/validations/formation.schema';
+
+// Extrait le premier nombre de la chaîne "durée estimée" (ex: "60", "60h", "60 heures")
+function parseHeuresFromDuree(duree: string): number | null {
+  const m = duree.match(/(\d+(?:[.,]\d+)?)/);
+  if (!m) return null;
+  const value = parseFloat(m[1].replace(',', '.'));
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
 
 export async function POST(
   request: NextRequest,
@@ -47,6 +56,12 @@ export async function POST(
       commentaires: d.commentaires || null,
       commerciale_nom: body.commercialeNom || null,
     };
+
+    // Reporter la durée estimée comme heures_prevues sur la fiche stagiaire
+    const heures = parseHeuresFromDuree(d.dureeEstimeeFormation);
+    if (heures !== null) {
+      await updateStagiaireFormation(stagiaireId, { heures_prevues: heures });
+    }
 
     if (existing) {
       await updateAnalyseBesoin(existing.id, dbFields);
