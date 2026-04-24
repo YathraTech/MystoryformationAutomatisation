@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Save, Clock, MapPin, Users } from 'lucide-react';
+import { Save, Clock, MapPin, Users, RefreshCw, Loader2 } from 'lucide-react';
 import type { StagiaireFormation } from '@/types/admin';
 
 interface Creneau {
@@ -96,8 +96,12 @@ export default function DesignationForm({ stagiaireId, stagiaire, onSaved }: Pro
 
   const canSave = missingFields.length === 0;
 
+  const [planningFeedback, setPlanningFeedback] = useState<string>('');
+  const [regenerating, setRegenerating] = useState(false);
+
   const handleSubmit = async () => {
     setSaving(true);
+    setPlanningFeedback('');
     try {
       await fetch(`/api/admin/stagiaires-formation/${stagiaireId}`, {
         method: 'PATCH',
@@ -107,11 +111,57 @@ export default function DesignationForm({ stagiaireId, stagiaire, onSaved }: Pro
           statut: 'en_formation',
         }),
       });
+
+      // Génération automatique du planning (idempotent : ne fait rien si déjà fait)
+      try {
+        const res = await fetch(
+          `/api/admin/stagiaires-formation/${stagiaireId}/planning/generate`,
+          { method: 'POST' },
+        );
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.sessionsCreated > 0) {
+          setPlanningFeedback(
+            `Planning généré automatiquement : ${data.sessionsCreated} séances programmées pour un total de ${data.totalHours}h.`
+          );
+        } else if (data.skipped) {
+          setPlanningFeedback(
+            'Désignation enregistrée. Le planning existait déjà — utilisez « Régénérer » pour reconstruire.'
+          );
+        }
+      } catch {
+        // silencieux
+      }
+
       onSaved();
     } catch (err) {
       console.error(err);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRegeneratePlanning = async () => {
+    if (!confirm('Supprimer les émargements non marqués et recréer le planning depuis la date de début ? Les présences déjà enregistrées ne seront pas supprimées.')) return;
+    setRegenerating(true);
+    setPlanningFeedback('');
+    try {
+      const res = await fetch(
+        `/api/admin/stagiaires-formation/${stagiaireId}/planning/generate?force=true`,
+        { method: 'POST' },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setPlanningFeedback(
+          `Planning régénéré : ${data.sessionsCreated || 0} séances pour ${data.totalHours || 0}h.`
+        );
+        onSaved();
+      } else {
+        setPlanningFeedback(data.error || 'Échec de la régénération');
+      }
+    } catch {
+      setPlanningFeedback('Erreur réseau');
+    } finally {
+      setRegenerating(false);
     }
   };
 
@@ -239,14 +289,31 @@ export default function DesignationForm({ stagiaireId, stagiaire, onSaved }: Pro
         </div>
       )}
 
-      <div className="mt-4 flex justify-end">
+      {planningFeedback && (
+        <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
+          {planningFeedback}
+        </div>
+      )}
+
+      <div className="mt-4 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={handleRegeneratePlanning}
+          disabled={regenerating || !canSave}
+          title="Supprime les émargements non marqués et reconstruit les séances depuis la date de début"
+          className="inline-flex items-center gap-2 px-3 py-2 bg-slate-100 text-slate-700 text-xs rounded-lg hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+          Régénérer le planning
+        </button>
+
         <button
           disabled={saving || !canSave}
           onClick={handleSubmit}
           title={!canSave ? 'Complétez tous les champs obligatoires' : undefined}
           className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Save className="h-4 w-4" />
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {saving ? 'Enregistrement...' : 'Enregistrer'}
         </button>
       </div>
