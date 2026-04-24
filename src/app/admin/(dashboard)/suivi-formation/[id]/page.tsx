@@ -504,24 +504,40 @@ function EnFormationStep({
     setSendResult('idle');
     setErrMsg('');
     try {
-      // 1. Génère le PDF emploi du temps côté client
-      let emploiDuTempsPdf: string | null = null;
+      // 1. Génère le PDF emploi du temps et l'upload vers Supabase Storage
+      //    (via l'endpoint /upload existant, en multipart pour éviter la limite JSON 4.5MB)
+      let emploiDuTempsPath: string | null = null;
       try {
         const doc = await generateEmploiDuTempsPdf(stagiaire, emargements);
-        // output('datauristring') → "data:application/pdf;filename=...;base64,XXXX"
-        const dataUri = doc.output('datauristring');
-        emploiDuTempsPdf = dataUri.split(',')[1] || null;
+        const pdfBlob = doc.output('blob');
+        const filename = `programme-formation-${(stagiaire.nom || 'stagiaire').replace(/\s+/g, '_')}-${Date.now()}.pdf`;
+        const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('folder', 'programmes');
+
+        const upRes = await fetch(
+          `/api/admin/stagiaires-formation/${stagiaireId}/upload`,
+          { method: 'POST', body: fd },
+        );
+        if (upRes.ok) {
+          const upData = await upRes.json();
+          emploiDuTempsPath = upData.path || null;
+        } else {
+          console.warn('[upload PDF] échec', await upRes.text().catch(() => ''));
+        }
       } catch (e) {
-        console.warn('[PDF emploi du temps] génération échouée:', e);
+        console.warn('[PDF emploi du temps] génération/upload échoués:', e);
       }
 
-      // 2. Envoie à l'endpoint (qui forwarde à Make avec l'attachement)
+      // 2. Envoie à l'endpoint (qui génère une URL signée et forwarde à Make)
       const res = await fetch(
         `/api/admin/stagiaires-formation/${stagiaireId}/send-program-docs`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ emploiDuTempsPdf }),
+          body: JSON.stringify({ emploiDuTempsPath }),
         },
       );
       if (!res.ok) {

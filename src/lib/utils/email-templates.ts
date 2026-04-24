@@ -200,20 +200,14 @@ export function buildProgramFormationEmail(
   joursFormation: string[] | null,
   horaires: string | null,
   agence: string | null,
+  programmeUrl: string | null = null,
 ): string {
   const body = `
     <p style="margin:0 0 20px;font-size:16px;color:#1e1e1e;">Bonjour <strong>${prenom} ${nom}</strong>,</p>
-    <p style="margin:0 0 20px;font-size:15px;color:#3f3f46;line-height:1.6;">
-      Votre inscription à la formation est <strong>validée</strong>. Vous trouverez ci-joint les documents de votre formation :
+    <p style="margin:0 0 24px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      Votre inscription à la formation est <strong>validée</strong>.
+      Voici le récapitulatif de votre parcours :
     </p>
-    <ul style="margin:0 0 24px 20px;padding:0;font-size:14px;color:#3f3f46;line-height:1.8;">
-      <li>Convention de formation</li>
-      <li>Livret d'accueil</li>
-      <li>Règlement intérieur</li>
-      <li>Conditions générales de vente</li>
-      <li>Convocation</li>
-      <li>Programme pédagogique</li>
-    </ul>
     ${recapTable(
       recapRow('Date de début', formatDate(dateDebut), true) +
       recapRow('Heures prévues', heuresPrevues ? `${heuresPrevues}h` : '-', false) +
@@ -222,11 +216,30 @@ export function buildProgramFormationEmail(
       recapRow('Centre', agence || '-', false) +
       recapRow('Formateur', formateur || '-', false)
     )}
+    ${programmeUrl ? `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f8fafc;border:1px solid #e4e4e7;border-radius:12px;margin:0 0 24px;">
+      <tr>
+        <td style="padding:28px 24px;text-align:center;">
+          <p style="margin:0 0 6px;font-size:14px;font-weight:600;color:#1e1e1e;letter-spacing:0.3px;text-transform:uppercase;">
+            Votre programme de formation
+          </p>
+          <p style="margin:0 0 20px;font-size:13px;color:#71717a;line-height:1.5;">
+            Emploi du temps détaillé, récapitulatif de votre parcours, dates et horaires.
+          </p>
+          <a href="${programmeUrl}" target="_blank" style="display:inline-block;background-color:#1e1e1e;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:8px;letter-spacing:0.3px;">
+            Consulter mon programme
+          </a>
+          <p style="margin:16px 0 0;font-size:11px;color:#a1a1aa;">
+            Cliquez pour ouvrir votre programme directement dans votre navigateur.
+          </p>
+        </td>
+      </tr>
+    </table>` : ''}
     <p style="margin:0;font-size:14px;color:#71717a;line-height:1.5;">
-      Merci de confirmer votre présence et de bien conserver ces documents.
-      Une convocation vous sera rappelée avant le démarrage.
+      Merci de confirmer votre présence avant le démarrage.
+      Pour toute question, répondez directement à ce mail ou contactez-nous au 01 43 09 15 40.
     </p>`;
-  return emailLayout('Documents de votre formation', body);
+  return emailLayout('Votre formation est confirmée', body);
 }
 
 export function buildSatisfactionChaudEmail(

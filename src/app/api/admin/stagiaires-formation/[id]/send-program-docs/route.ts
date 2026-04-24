@@ -28,16 +28,27 @@ export async function POST(
       );
     }
 
-    // Récupération du PDF emploi du temps (base64) envoyé par le front
-    let emploiDuTempsBase64: string | null = null;
+    // Récupération du chemin Storage du PDF uploadé par le front
+    // et enregistrement dans stagiaire.pdf_programme pour que
+    // /api/public/programme/<token> puisse le servir ensuite.
+    let pdfProgrammePath: string | null = null;
     try {
       const body = await request.json().catch(() => ({}));
-      if (typeof body?.emploiDuTempsPdf === 'string' && body.emploiDuTempsPdf.length > 100) {
-        emploiDuTempsBase64 = body.emploiDuTempsPdf;
+      if (typeof body?.emploiDuTempsPath === 'string' && body.emploiDuTempsPath.length > 0) {
+        pdfProgrammePath = body.emploiDuTempsPath;
+        await updateStagiaireFormation(stagiaireId, { pdf_programme: pdfProgrammePath });
       }
     } catch {
-      // body vide ou invalide : on continue sans PDF
+      // body vide ou path invalide : on continue sans PDF
     }
+
+    // URL publique stable sur notre domaine qui redirige vers le PDF (URL signée régénérée
+    // à chaque clic). Permet d'envoyer un lien beau et pérenne dans le mail.
+    const origin = request.nextUrl.origin;
+    const token = Buffer.from(stagiaireId.toString()).toString('base64');
+    const programmeUrl = pdfProgrammePath
+      ? `${origin}/api/public/programme/${token}`
+      : null;
 
     const webhookUrl = process.env.MAKE_ATTESTATION_WEBHOOK_URL;
     if (!webhookUrl) {
@@ -56,17 +67,8 @@ export async function POST(
       stagiaire.joursFormation,
       stagiaire.horairesFormation,
       stagiaire.agence,
+      programmeUrl,
     );
-
-    const attachments: { filename: string; content: string; contentType: string; encoding: string }[] = [];
-    if (emploiDuTempsBase64) {
-      attachments.push({
-        filename: `programme-formation-${(stagiaire.nom || 'stagiaire').replace(/\s+/g, '_')}.pdf`,
-        content: emploiDuTempsBase64,
-        contentType: 'application/pdf',
-        encoding: 'base64',
-      });
-    }
 
     const webhookRes = await fetch(webhookUrl, {
       method: 'POST',
@@ -79,14 +81,9 @@ export async function POST(
           prenom: stagiaire.prenom,
           nom: stagiaire.nom,
         },
-        email_subject: 'MYSTORYFormation - Documents de votre formation',
+        email_subject: 'MYSTORYFormation - Votre formation est confirmée',
         email_html: emailHtml,
-        attachments,
-        pdfs: {
-          convention: stagiaire.pdfConvention,
-          convocation: stagiaire.pdfConvocation,
-          programme: stagiaire.pdfProgramme,
-        },
+        programme_url: programmeUrl,
       }),
     });
 
