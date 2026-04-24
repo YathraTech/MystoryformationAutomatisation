@@ -525,7 +525,8 @@ function EnFormationStep({
           const upData = await upRes.json();
           emploiDuTempsPath = upData.path || null;
         } else {
-          console.warn('[upload PDF] échec', await upRes.text().catch(() => ''));
+          const txt = await upRes.text().catch(() => '');
+          console.warn('[upload PDF] échec HTTP', upRes.status, txt);
         }
       } catch (e) {
         console.warn('[PDF emploi du temps] génération/upload échoués:', e);
@@ -546,7 +547,15 @@ function EnFormationStep({
         setErrMsg(err.error || 'Envoi échoué');
         return;
       }
-      setSendResult('ok');
+      const data = await res.json().catch(() => ({}));
+      if (data?.pdfReady === false) {
+        setSendResult('err');
+        setErrMsg(
+          'Mail envoyé mais le PDF du programme n\'a pas pu être uploadé (bucket Supabase ?). Le lien du mail affichera « programme indisponible » — vérifiez la configuration du bucket « documents ».',
+        );
+      } else {
+        setSendResult('ok');
+      }
       onSaved();
     } catch {
       setSendResult('err');
