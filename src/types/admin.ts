@@ -451,9 +451,12 @@ export interface Emargement {
   mailRelanceEnvoye: boolean;
   dateRelance: string | null;
 
-  // Enrichi côté client
+  // Enrichi côté client (join cours_sessions / stagiaires_formation)
   stagiaireNom?: string;
   stagiairePrenom?: string;
+  dateCours?: string | null;
+  horaire?: string | null;
+  dureeHeures?: number | null;
 
   createdAt: string;
   updatedAt: string;

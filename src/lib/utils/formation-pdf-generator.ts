@@ -4,6 +4,7 @@ import type {
   TestFormation,
   AnalyseBesoin,
   Evaluation,
+  Emargement,
 } from '@/types/admin';
 
 // ============================================================
@@ -935,6 +936,164 @@ export async function generateProgrammePdf(
   doc.text('- Évaluations continues en cours de formation', 20, y); y += 5;
   doc.text('- Test final comparatif', 20, y); y += 5;
   doc.text('- Attestation de fin de formation', 20, y);
+
+  addFooter(doc, 1, 1);
+  return doc;
+}
+
+// ============================================================
+// PDF: Emploi du temps + récapitulatif de la formation
+// ============================================================
+export async function generateEmploiDuTempsPdf(
+  stagiaire: StagiaireFormation,
+  emargements: Emargement[],
+): Promise<jsPDF> {
+  const doc = new jsPDF();
+  const logo = await loadLogo();
+  const marginX = 15;
+  const pageW = 210;
+  const contentW = pageW - marginX * 2;
+
+  let y = addHeader(doc, logo, 'PROGRAMME DE FORMATION');
+  y += 2;
+
+  // Helper : petit bandeau titre de section
+  const sectionHeader = (title: string, yPos: number): number => {
+    doc.setFillColor(30, 30, 30);
+    doc.rect(marginX, yPos, contentW, 6, 'F');
+    doc.setTextColor(255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text(title, marginX + 2, yPos + 4);
+    doc.setTextColor(0);
+    return yPos + 8;
+  };
+
+  const kv = (label: string, value: string, yPos: number, labelW = 40): number => {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text(label, marginX + 2, yPos + 4);
+    doc.setFont('helvetica', 'bold');
+    const wrapped = doc.splitTextToSize(value || '—', contentW - labelW - 4);
+    doc.text(wrapped, marginX + labelW, yPos + 4);
+    doc.setFont('helvetica', 'normal');
+    return yPos + 4 + wrapped.length * 4;
+  };
+
+  // ===== Section Stagiaire =====
+  y = sectionHeader('STAGIAIRE', y);
+  y = kv('Nom :', `${stagiaire.civilite || ''} ${stagiaire.nom || ''}`.trim(), y, 22);
+  y = kv('Prénom :', stagiaire.prenom || '', y, 22);
+  y = kv('Email :', stagiaire.email || '', y, 22);
+  y = kv('Téléphone :', stagiaire.telephone || '', y, 28);
+  if (stagiaire.adressePostale) {
+    y = kv('Adresse :', stagiaire.adressePostale, y, 24);
+  }
+  y += 3;
+
+  // ===== Section Formation =====
+  y = sectionHeader('FORMATION', y);
+  y = kv('Prestation :', stagiaire.typePrestation || '—', y, 28);
+  y = kv('Formatrice :', stagiaire.formatriceNom || stagiaire.commercialeNom || '—', y, 28);
+  y = kv('Centre :', stagiaire.agence || '—', y, 22);
+  y = kv('Heures prévues :', `${stagiaire.heuresPrevues}h`, y, 34);
+  y = kv(
+    'Période :',
+    stagiaire.dateDebutFormation
+      ? `${formatDateLong(stagiaire.dateDebutFormation)}${
+          stagiaire.dateFinFormation ? ` → ${formatDateLong(stagiaire.dateFinFormation)}` : ''
+        }`
+      : '—',
+    y,
+    22,
+  );
+  y = kv(
+    'Rythme :',
+    (stagiaire.joursFormation || []).join(', ') + (stagiaire.horairesFormation ? ` · ${stagiaire.horairesFormation}` : ''),
+    y,
+    22,
+  );
+  y += 3;
+
+  // ===== Section Emploi du temps (liste des séances) =====
+  const sessions = [...emargements]
+    .filter((e) => e.dateCours)
+    .sort((a, b) => (a.dateCours || '').localeCompare(b.dateCours || ''));
+
+  y = sectionHeader(`EMPLOI DU TEMPS — ${sessions.length} séance${sessions.length > 1 ? 's' : ''}`, y);
+
+  if (sessions.length === 0) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(9);
+    doc.text("Aucune séance planifiée pour le moment.", marginX + 2, y + 4);
+    y += 8;
+  } else {
+    // Tableau : #  Date  Horaire  Durée
+    const cols = [
+      { label: '#', x: marginX, w: 12 },
+      { label: 'Date', x: marginX + 12, w: 100 },
+      { label: 'Horaire', x: marginX + 112, w: 45 },
+      { label: 'Durée', x: marginX + 157, w: 23 },
+    ];
+    const rowH = 7;
+
+    // Header row
+    doc.setFillColor(240, 240, 240);
+    doc.rect(marginX, y, contentW, rowH, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    cols.forEach((c) => doc.text(c.label, c.x + 2, y + 5));
+    doc.setDrawColor(180);
+    doc.rect(marginX, y, contentW, rowH);
+    y += rowH;
+
+    // Lignes
+    doc.setFont('helvetica', 'normal');
+    let totalHeures = 0;
+    sessions.forEach((e, i) => {
+      // Saut de page si nécessaire
+      if (y > 270) {
+        addFooter(doc, 1, 1);
+        doc.addPage();
+        y = 20;
+      }
+      const dureeH = Number(e.dureeHeures ?? 0);
+      totalHeures += dureeH;
+      doc.text(String(i + 1), cols[0].x + 2, y + 5);
+      doc.text(formatDateLong(e.dateCours || ''), cols[1].x + 2, y + 5);
+      doc.text(e.horaire || '—', cols[2].x + 2, y + 5);
+      doc.text(dureeH ? `${dureeH}h` : '—', cols[3].x + 2, y + 5);
+      doc.setDrawColor(220);
+      cols.forEach((c) => doc.rect(c.x, y, c.w, rowH));
+      y += rowH;
+    });
+
+    // Ligne total
+    doc.setFillColor(245, 247, 250);
+    doc.rect(marginX, y, contentW, rowH, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.text('Total', cols[1].x + 2, y + 5);
+    doc.text(`${Math.round(totalHeures * 10) / 10}h`, cols[3].x + 2, y + 5);
+    doc.setDrawColor(180);
+    doc.rect(marginX, y, contentW, rowH);
+    y += rowH + 4;
+  }
+
+  // ===== Footer note =====
+  if (y > 265) {
+    addFooter(doc, 1, 1);
+    doc.addPage();
+    y = 20;
+  }
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(8);
+  doc.setTextColor(100);
+  const note = doc.splitTextToSize(
+    'Ce planning est prévisionnel. Les présences seront relevées à chaque séance via émargement signé. En cas d\'absence, un justificatif doit être transmis sous 48h.',
+    contentW,
+  );
+  doc.text(note, marginX, y + 4);
+  doc.setTextColor(0);
 
   addFooter(doc, 1, 1);
   return doc;

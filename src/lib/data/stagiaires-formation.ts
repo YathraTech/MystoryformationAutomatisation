@@ -193,6 +193,9 @@ function dbToEmargement(row: any): Emargement {
     dateRelance: row.date_relance,
     stagiaireNom: row.stagiaires_formation?.nom,
     stagiairePrenom: row.stagiaires_formation?.prenom,
+    dateCours: row.cours_sessions?.date_cours ?? null,
+    horaire: row.cours_sessions?.horaire ?? null,
+    dureeHeures: row.cours_sessions?.duree_heures != null ? Number(row.cours_sessions.duree_heures) : null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -569,7 +572,7 @@ export async function getEmargementsByStagiaire(stagiaireId: number): Promise<Em
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('emargements')
-    .select('*')
+    .select('*, cours_sessions(date_cours, horaire, duree_heures)')
     .eq('stagiaire_id', stagiaireId)
     .order('created_at', { ascending: false });
 

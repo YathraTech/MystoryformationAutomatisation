@@ -38,6 +38,7 @@ import EmargementSection from '@/components/admin/formation/EmargementSection';
 import TestFinalSection from '@/components/admin/formation/TestFinalSection';
 import SatisfactionFroidSection from '@/components/admin/formation/SatisfactionFroidSection';
 import FicheStagiaireCard from '@/components/admin/formation/FicheStagiaireCard';
+import { generateEmploiDuTempsPdf } from '@/lib/utils/formation-pdf-generator';
 
 interface StagiaireData {
   stagiaire: StagiaireFormation;
@@ -503,9 +504,25 @@ function EnFormationStep({
     setSendResult('idle');
     setErrMsg('');
     try {
+      // 1. Génère le PDF emploi du temps côté client
+      let emploiDuTempsPdf: string | null = null;
+      try {
+        const doc = await generateEmploiDuTempsPdf(stagiaire, emargements);
+        // output('datauristring') → "data:application/pdf;filename=...;base64,XXXX"
+        const dataUri = doc.output('datauristring');
+        emploiDuTempsPdf = dataUri.split(',')[1] || null;
+      } catch (e) {
+        console.warn('[PDF emploi du temps] génération échouée:', e);
+      }
+
+      // 2. Envoie à l'endpoint (qui forwarde à Make avec l'attachement)
       const res = await fetch(
         `/api/admin/stagiaires-formation/${stagiaireId}/send-program-docs`,
-        { method: 'POST' },
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ emploiDuTempsPdf }),
+        },
       );
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Erreur' }));
