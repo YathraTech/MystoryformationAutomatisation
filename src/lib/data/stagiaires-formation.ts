@@ -940,6 +940,72 @@ export async function getEmargementsForDate(date: string): Promise<EmargementJou
   /* eslint-enable @typescript-eslint/no-explicit-any */
 }
 
+// Résumé des derniers jours passés ayant donné lieu à des émargements.
+// Sert au widget "Dernières feuilles d'émargement" sous la page jour.
+export interface EmargementJourResume {
+  date: string;
+  totalSessions: number;
+  totalStagiaires: number;
+  presents: number;
+  retards: number;
+  absents: number;
+  justifies: number;
+}
+
+export async function getRecentEmargementsByDay(limitDays = 10): Promise<EmargementJourResume[]> {
+  const supabase = await createClient();
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  // On charge les émargements des sessions passées (max ~3 mois pour borner)
+  const cutoff = new Date(today);
+  cutoff.setMonth(cutoff.getMonth() - 3);
+  const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`;
+
+  const { data, error } = await supabase
+    .from('emargements')
+    .select(`
+      cours_session_id, present, retard, justificatif_recu,
+      cours_sessions!inner(date_cours)
+    `)
+    .lt('cours_sessions.date_cours', todayStr)
+    .gte('cours_sessions.date_cours', cutoffStr);
+
+  if (error) throw new Error(error.message);
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const byDate = new Map<string, { sessionIds: Set<number>; presents: number; retards: number; absents: number; justifies: number; total: number }>();
+  for (const row of (data || []) as any[]) {
+    const session = Array.isArray(row.cours_sessions) ? row.cours_sessions[0] : row.cours_sessions;
+    const dateStr: string = session?.date_cours;
+    if (!dateStr) continue;
+    if (!byDate.has(dateStr)) {
+      byDate.set(dateStr, { sessionIds: new Set(), presents: 0, retards: 0, absents: 0, justifies: 0, total: 0 });
+    }
+    const agg = byDate.get(dateStr)!;
+    agg.sessionIds.add(row.cours_session_id);
+    agg.total++;
+    if (row.present && row.retard) agg.retards++;
+    else if (row.present) agg.presents++;
+    else if (row.justificatif_recu) agg.justifies++;
+    else agg.absents++;
+  }
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+
+  return Array.from(byDate.entries())
+    .map(([date, agg]) => ({
+      date,
+      totalSessions: agg.sessionIds.size,
+      totalStagiaires: agg.total,
+      presents: agg.presents,
+      retards: agg.retards,
+      absents: agg.absents,
+      justifies: agg.justifies,
+    }))
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, limitDays);
+}
+
 export async function getAbsencesNonRelancees(): Promise<
   (Emargement & { stagiaireEmail?: string })[]
 > {

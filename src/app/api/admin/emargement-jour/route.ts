@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getEmargementsForDate } from '@/lib/data/stagiaires-formation';
+import { getEmargementsForDate, getRecentEmargementsByDay } from '@/lib/data/stagiaires-formation';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -20,8 +20,11 @@ export async function GET(request: NextRequest) {
     })();
 
     const date = dateParam || fallback;
-    const entries = await getEmargementsForDate(date);
-    return NextResponse.json({ date, entries });
+    const [entries, recent] = await Promise.all([
+      getEmargementsForDate(date),
+      getRecentEmargementsByDay(10),
+    ]);
+    return NextResponse.json({ date, entries, recent });
   } catch (error) {
     console.error('[GET emargement-jour]', error);
     return NextResponse.json({ error: 'Erreur de chargement' }, { status: 500 });

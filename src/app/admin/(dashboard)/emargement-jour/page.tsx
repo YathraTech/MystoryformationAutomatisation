@@ -16,6 +16,8 @@ import {
   ChevronRight,
   Building2,
   GraduationCap,
+  History,
+  ChevronRight as ChevronRightSm,
 } from 'lucide-react';
 
 interface EmargementEntry {
@@ -35,6 +37,16 @@ interface EmargementEntry {
   present: boolean;
   retard: boolean;
   justificatifRecu: boolean;
+}
+
+interface RecentDay {
+  date: string;
+  totalSessions: number;
+  totalStagiaires: number;
+  presents: number;
+  retards: number;
+  absents: number;
+  justifies: number;
 }
 
 type StatutChoix = 'present' | 'retard' | 'absent' | 'absent_justifie';
@@ -110,6 +122,7 @@ function getNowParis(): { hour: number; minute: number } {
 export default function EmargementJourPage() {
   const [date, setDate] = useState(() => formatDateISO(new Date()));
   const [entries, setEntries] = useState<EmargementEntry[]>([]);
+  const [recent, setRecent] = useState<RecentDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [savingId, setSavingId] = useState<number | null>(null);
@@ -122,6 +135,7 @@ export default function EmargementJourPage() {
       if (!res.ok) throw new Error('Erreur de chargement');
       const data = await res.json();
       setEntries(data.entries || []);
+      setRecent(data.recent || []);
     } catch {
       setError('Impossible de charger les émargements du jour');
     } finally {
@@ -271,7 +285,109 @@ export default function EmargementJourPage() {
           />
         </>
       )}
+
+      {/* Dernières feuilles d'émargement réalisées */}
+      <RecentEmargementsSection
+        recent={recent}
+        currentDate={date}
+        onSelect={setDate}
+      />
     </div>
+  );
+}
+
+// ============================================================
+// Section "Dernières feuilles d'émargement"
+// ============================================================
+function RecentEmargementsSection({
+  recent,
+  currentDate,
+  onSelect,
+}: {
+  recent: RecentDay[];
+  currentDate: string;
+  onSelect: (date: string) => void;
+}) {
+  if (recent.length === 0) return null;
+
+  return (
+    <section className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <header className="flex items-center gap-3 px-5 py-4 border-b border-slate-200 bg-slate-50">
+        <div className="rounded-lg bg-white p-2 border border-slate-200">
+          <History className="h-5 w-5 text-slate-700" />
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold text-slate-800">Dernières feuilles d&apos;émargement</h2>
+          <p className="text-xs text-slate-500">Cliquer sur une date pour rouvrir la feuille et la modifier si besoin</p>
+        </div>
+      </header>
+
+      <ul className="divide-y divide-slate-100">
+        {recent.map((d) => {
+          const tauxPresence = d.totalStagiaires > 0
+            ? Math.round(((d.presents + d.retards) / d.totalStagiaires) * 100)
+            : 0;
+          const isCurrent = d.date === currentDate;
+          return (
+            <li key={d.date}>
+              <button
+                type="button"
+                onClick={() => onSelect(d.date)}
+                className={`w-full flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-left transition-colors ${
+                  isCurrent ? 'bg-blue-50/50' : 'hover:bg-slate-50'
+                }`}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-slate-800 capitalize">{formatDateLong(d.date)}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {d.totalSessions} session{d.totalSessions > 1 ? 's' : ''} · {d.totalStagiaires} stagiaire{d.totalStagiaires > 1 ? 's' : ''} · {tauxPresence}% de présence
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  {d.presents > 0 && (
+                    <Badge tone="emerald" icon={CheckCircle2}>{d.presents}</Badge>
+                  )}
+                  {d.retards > 0 && (
+                    <Badge tone="amber" icon={Clock}>{d.retards}</Badge>
+                  )}
+                  {d.absents > 0 && (
+                    <Badge tone="red" icon={XCircle}>{d.absents}</Badge>
+                  )}
+                  {d.justifies > 0 && (
+                    <Badge tone="slate" icon={FileCheck2}>{d.justifies}</Badge>
+                  )}
+                  <ChevronRightSm className="h-4 w-4 text-slate-300 ml-1" />
+                </div>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function Badge({
+  tone,
+  icon: Icon,
+  children,
+}: {
+  tone: 'emerald' | 'amber' | 'red' | 'slate';
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+}) {
+  const palette = {
+    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    amber: 'bg-amber-50 text-amber-700 border-amber-200',
+    red: 'bg-red-50 text-red-700 border-red-200',
+    slate: 'bg-slate-100 text-slate-700 border-slate-200',
+  }[tone];
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium ${palette}`}>
+      <Icon className="h-3 w-3" />
+      {children}
+    </span>
   );
 }
 
