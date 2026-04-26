@@ -111,7 +111,12 @@ export default function EmargementSection({ stagiaireId, stagiaire, emargements,
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {e.present && (
+                  {e.present && e.retard && (
+                    <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded">
+                      Retard
+                    </span>
+                  )}
+                  {e.present && !e.retard && (
                     <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded">
                       Présent
                     </span>

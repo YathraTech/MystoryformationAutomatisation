@@ -445,6 +445,7 @@ export interface Emargement {
   stagiaireId: number;
 
   present: boolean;
+  retard: boolean;
   signatureElectronique: string | null;
   justificatifRecu: boolean;
   justificatifUpload: string | null;

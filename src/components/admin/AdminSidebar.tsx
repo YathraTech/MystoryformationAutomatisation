@@ -17,6 +17,7 @@ import {
   Building2,
   GraduationCap,
   FileQuestion,
+  CheckSquare,
 } from 'lucide-react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { useFeuilleAppelBadge } from '@/hooks/useFeuilleAppelBadge';
@@ -26,6 +27,7 @@ const mainNavItems = [
   { href: '/admin/feuilles-appel', label: "Suivi des examens", icon: ClipboardList },
   { href: '/admin/clients', label: 'Clients', icon: Users },
   { href: '/admin/suivi-formation', label: 'Suivi Formation', icon: GraduationCap },
+  { href: '/admin/emargement-jour', label: 'Émargement du jour', icon: CheckSquare },
   { href: '/admin/examens', label: 'Candidats d\'examens', icon: ClipboardCheck },
   { href: '/admin/planning', label: 'Planning', icon: Calendar },
   { href: '/admin/partenaires', label: 'Partenaires', icon: Building2 },

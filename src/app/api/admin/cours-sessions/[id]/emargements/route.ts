@@ -85,19 +85,27 @@ export async function PATCH(
   try {
     await params; // Consume params
     const body = await request.json();
-    const { emargementId, ...fields } = body;
+    const { emargementId, stagiaireId, ...fields } = body;
 
     if (!emargementId) {
       return NextResponse.json({ error: 'emargementId requis' }, { status: 400 });
     }
 
     const dbFields: Record<string, unknown> = {};
+    if (fields.present !== undefined) dbFields.present = fields.present;
+    if (fields.retard !== undefined) dbFields.retard = fields.retard;
     if (fields.justificatifRecu !== undefined) dbFields.justificatif_recu = fields.justificatifRecu;
     if (fields.justificatifUpload !== undefined) dbFields.justificatif_upload = fields.justificatifUpload;
     if (fields.mailRelanceEnvoye !== undefined) dbFields.mail_relance_envoye = fields.mailRelanceEnvoye;
     if (fields.dateRelance !== undefined) dbFields.date_relance = fields.dateRelance;
 
     await updateEmargement(emargementId, dbFields);
+
+    // Si le statut de présence a changé, recalculer les heures effectuées
+    if (fields.present !== undefined && stagiaireId) {
+      await recalculerHeuresEffectuees(Number(stagiaireId));
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('[PATCH emargements]', error);

@@ -186,6 +186,7 @@ function dbToEmargement(row: any): Emargement {
     coursSessionId: row.cours_session_id,
     stagiaireId: row.stagiaire_id,
     present: row.present || false,
+    retard: row.retard || false,
     signatureElectronique: row.signature_electronique,
     justificatifRecu: row.justificatif_recu || false,
     justificatifUpload: row.justificatif_upload,
@@ -867,6 +868,73 @@ export async function getCoursSessionsForPlanning(
       prenom: stagiaire?.prenom || '',
       email: stagiaire?.email || '',
       formatriceNom: session?.formatrice_nom ?? null,
+    };
+  });
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+}
+
+// Émargements d'une date donnée avec session + stagiaire (page émargement-jour)
+export interface EmargementJourEntry {
+  emargementId: number;
+  sessionId: number;
+  stagiaireId: number;
+  date: string;
+  horaire: string;       // ex "09:30-12:30"
+  heureDebut: string;    // ex "09:30"
+  heureFin: string;      // ex "12:30"
+  agence: string;
+  formatriceNom: string | null;
+  dureeHeures: number;
+  nom: string;
+  prenom: string;
+  email: string;
+  present: boolean;
+  retard: boolean;
+  justificatifRecu: boolean;
+}
+
+function parseHeure(s: string): string {
+  const m = s.match(/(\d{1,2})[h:](\d{2})?/);
+  if (!m) return '';
+  return `${m[1].padStart(2, '0')}:${m[2] || '00'}`;
+}
+
+export async function getEmargementsForDate(date: string): Promise<EmargementJourEntry[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('emargements')
+    .select(`
+      id, cours_session_id, stagiaire_id, present, retard, justificatif_recu,
+      cours_sessions!inner(date_cours, horaire, agence, formatrice_nom, duree_heures),
+      stagiaires_formation!inner(nom, prenom, email)
+    `)
+    .eq('cours_sessions.date_cours', date);
+
+  if (error) throw new Error(error.message);
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  return (data || []).map((row: any) => {
+    const session = Array.isArray(row.cours_sessions) ? row.cours_sessions[0] : row.cours_sessions;
+    const stagiaire = Array.isArray(row.stagiaires_formation) ? row.stagiaires_formation[0] : row.stagiaires_formation;
+    const horaire: string = session?.horaire || '';
+    const parts = horaire.split('-');
+    return {
+      emargementId: row.id,
+      sessionId: row.cours_session_id,
+      stagiaireId: row.stagiaire_id,
+      date: session?.date_cours || '',
+      horaire,
+      heureDebut: parts[0] ? parseHeure(parts[0]) : '',
+      heureFin: parts[1] ? parseHeure(parts[1]) : '',
+      agence: session?.agence || '',
+      formatriceNom: session?.formatrice_nom ?? null,
+      dureeHeures: session?.duree_heures ? Number(session.duree_heures) : 0,
+      nom: stagiaire?.nom || '',
+      prenom: stagiaire?.prenom || '',
+      email: stagiaire?.email || '',
+      present: row.present || false,
+      retard: row.retard || false,
+      justificatifRecu: row.justificatif_recu || false,
     };
   });
   /* eslint-enable @typescript-eslint/no-explicit-any */
