@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft,
+  ArrowRight,
   User,
   FileText,
   ClipboardList,
@@ -568,18 +569,12 @@ function EnFormationStep({
   // Sous-étape 2 : émargements (une fois le mail envoyé)
   if (stagiaire.mailInscriptionEnvoye) {
     return (
-      <div className="space-y-6">
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4" />
-          Documents du programme envoyés au stagiaire. Vous pouvez désormais suivre les émargements.
-        </div>
-        <EmargementSection
-          stagiaireId={stagiaireId}
-          stagiaire={stagiaire}
-          emargements={emargements}
-          onRefresh={onSaved}
-        />
-      </div>
+      <EmargementsAndAdvance
+        stagiaireId={stagiaireId}
+        stagiaire={stagiaire}
+        emargements={emargements}
+        onSaved={onSaved}
+      />
     );
   }
 
@@ -636,6 +631,154 @@ function EnFormationStep({
         >
           {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           Valider et envoyer le mail du programme
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// EmargementsAndAdvance : émargements + bouton "Passer au test final"
+// quand toutes les heures sont réalisées (présent ou absent
+// sans justificatif)
+// ============================================================
+function EmargementsAndAdvance({
+  stagiaireId,
+  stagiaire,
+  emargements,
+  onSaved,
+}: {
+  stagiaireId: number;
+  stagiaire: StagiaireFormation;
+  emargements: Emargement[];
+  onSaved: () => void;
+}) {
+  const [advancing, setAdvancing] = useState(false);
+  const [advanceErr, setAdvanceErr] = useState('');
+
+  // Heures comptées comme "réalisées" du point de vue de la fin de formation :
+  // - présences (présent = true) → heuresEffectuees déjà calculé
+  // - absences sans justificatif → comptent aussi (le stagiaire ne rattrape pas)
+  const today = new Date();
+  const heuresAbsenceSansJustif = emargements
+    .filter(
+      (e) =>
+        !e.present
+        && !e.justificatifRecu
+        && e.dateCours
+        && new Date(e.dateCours) < today,
+    )
+    .reduce((sum, e) => sum + Number(e.dureeHeures || 0), 0);
+  const heuresValidees = Number(stagiaire.heuresEffectuees || 0) + heuresAbsenceSansJustif;
+  const heuresRestantes = Math.max(0, Number(stagiaire.heuresPrevues || 0) - heuresValidees);
+
+  // Critère : toutes les heures prévues couvertes (même si certaines en absence non justifiée).
+  // Tolérance 0.1h pour les arrondis.
+  const canAdvanceToTestFinal =
+    Number(stagiaire.heuresPrevues || 0) > 0
+    && heuresValidees + 0.1 >= Number(stagiaire.heuresPrevues);
+
+  const handleAdvance = async () => {
+    setAdvancing(true);
+    setAdvanceErr('');
+    try {
+      const res = await fetch(`/api/admin/stagiaires-formation/${stagiaireId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statut: 'test_final' }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Erreur' }));
+        setAdvanceErr(err.error || 'Impossible de passer au test final');
+        return;
+      }
+      onSaved();
+    } catch {
+      setAdvanceErr('Erreur réseau');
+    } finally {
+      setAdvancing(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 flex items-center gap-2">
+        <CheckCircle2 className="h-4 w-4" />
+        Documents du programme envoyés au stagiaire. Vous pouvez désormais suivre les émargements.
+      </div>
+
+      <EmargementSection
+        stagiaireId={stagiaireId}
+        stagiaire={stagiaire}
+        emargements={emargements}
+        onRefresh={onSaved}
+      />
+
+      {/* Panneau passage au test final */}
+      <div
+        className={`rounded-xl border-2 p-5 ${
+          canAdvanceToTestFinal
+            ? 'border-emerald-200 bg-emerald-50'
+            : 'border-slate-200 bg-slate-50'
+        }`}
+      >
+        <h3
+          className={`text-sm font-semibold mb-2 ${
+            canAdvanceToTestFinal ? 'text-emerald-900' : 'text-slate-700'
+          }`}
+        >
+          Fin de la phase formation
+        </h3>
+
+        <div className="grid grid-cols-3 gap-3 mb-3 text-xs">
+          <div className="bg-white rounded-lg p-2 border border-slate-200">
+            <p className="text-slate-500 uppercase tracking-wide">Présences</p>
+            <p className="text-base font-bold text-slate-900">
+              {stagiaire.heuresEffectuees}h
+            </p>
+          </div>
+          <div className="bg-white rounded-lg p-2 border border-slate-200">
+            <p className="text-slate-500 uppercase tracking-wide">Abs. non justifiées</p>
+            <p className="text-base font-bold text-slate-900">
+              {Math.round(heuresAbsenceSansJustif * 10) / 10}h
+            </p>
+          </div>
+          <div className="bg-white rounded-lg p-2 border border-slate-200">
+            <p className="text-slate-500 uppercase tracking-wide">Restant</p>
+            <p className="text-base font-bold text-slate-900">
+              {Math.round(heuresRestantes * 10) / 10}h
+            </p>
+          </div>
+        </div>
+
+        <p
+          className={`text-xs mb-4 ${
+            canAdvanceToTestFinal ? 'text-emerald-800' : 'text-slate-600'
+          }`}
+        >
+          {canAdvanceToTestFinal
+            ? 'Toutes les heures prévues sont couvertes (présences + absences non justifiées). Vous pouvez démarrer le test final.'
+            : `Le test final pourra être lancé quand toutes les heures prévues seront couvertes : présences validées et/ou absences sans justificatif. Il reste ${Math.round(heuresRestantes * 10) / 10}h à couvrir.`}
+        </p>
+
+        {advanceErr && (
+          <div className="mb-3 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">
+            {advanceErr}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={handleAdvance}
+          disabled={advancing || !canAdvanceToTestFinal}
+          className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+            canAdvanceToTestFinal
+              ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+              : 'bg-slate-200 text-slate-500'
+          }`}
+        >
+          {advancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+          Lancer le test final
         </button>
       </div>
     </div>
