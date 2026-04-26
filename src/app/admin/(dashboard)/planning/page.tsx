@@ -363,14 +363,19 @@ export default function PlanningPage() {
               const examenMax = slot?.maxPlaces ?? 15;
               const isFull = isExamDay && examenCount >= examenMax;
 
-              // Stagiaires en formation du jour, dédupliqué par personne (email)
-              const formationEmails = new Set<string>();
+              // Stagiaires en formation du jour, dédupliqué par identité métier
+              // (un même stagiaire peut avoir plusieurs créneaux le même jour).
+              // On utilise stagiaireId pour les sessions (keySuffix présent),
+              // sinon rowIndex de l'inscription. L'email n'est pas fiable car
+              // plusieurs personnes peuvent partager une adresse en données réelles.
+              const formationKeys = new Set<string>();
               events.forEach((e) => {
                 if (e.date === dateStr && e.type === 'formation') {
-                  formationEmails.add((e.email || `id-${e.id}`).toLowerCase());
+                  const key = e.keySuffix ? `stag-${e.id}` : `ins-${e.id}`;
+                  formationKeys.add(key);
                 }
               });
-              const formationCount = formationEmails.size;
+              const formationCount = formationKeys.size;
 
               return (
                 <div
