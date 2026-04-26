@@ -819,6 +819,59 @@ export async function getFormationStats(): Promise<FormationStats> {
 // ABSENCES — Stagiaires absents non relancés
 // ============================================================
 
+// Sessions de cours sur une plage de dates avec les stagiaires inscrits
+// (utilisé par le planning admin pour afficher les journées de formation)
+export interface PlanningFormationEntry {
+  sessionId: number;
+  stagiaireId: number;
+  inscriptionId: number | null;
+  date: string;        // YYYY-MM-DD
+  horaire: string;     // ex "09:30-12:30"
+  agence: string;
+  nom: string;
+  prenom: string;
+  email: string;
+  formatriceNom: string | null;
+}
+
+export async function getCoursSessionsForPlanning(
+  startDate: string,
+  endDate: string,
+): Promise<PlanningFormationEntry[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('emargements')
+    .select(`
+      cours_session_id,
+      stagiaire_id,
+      cours_sessions!inner(date_cours, horaire, agence, formatrice_nom),
+      stagiaires_formation!inner(nom, prenom, email, inscription_id)
+    `)
+    .gte('cours_sessions.date_cours', startDate)
+    .lte('cours_sessions.date_cours', endDate);
+
+  if (error) throw new Error(error.message);
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  return (data || []).map((row: any) => {
+    const session = Array.isArray(row.cours_sessions) ? row.cours_sessions[0] : row.cours_sessions;
+    const stagiaire = Array.isArray(row.stagiaires_formation) ? row.stagiaires_formation[0] : row.stagiaires_formation;
+    return {
+      sessionId: row.cours_session_id,
+      stagiaireId: row.stagiaire_id,
+      inscriptionId: stagiaire?.inscription_id ?? null,
+      date: session?.date_cours || '',
+      horaire: session?.horaire || '',
+      agence: session?.agence || '',
+      nom: stagiaire?.nom || '',
+      prenom: stagiaire?.prenom || '',
+      email: stagiaire?.email || '',
+      formatriceNom: session?.formatrice_nom ?? null,
+    };
+  });
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+}
+
 export async function getAbsencesNonRelancees(): Promise<
   (Emargement & { stagiaireEmail?: string })[]
 > {

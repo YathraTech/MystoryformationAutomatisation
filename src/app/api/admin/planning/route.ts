@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getInscriptionsForPlanning, getAllInscriptions } from '@/lib/data/inscriptions';
 import { getExamensForPlanning } from '@/lib/data/examens';
 import { getAllExamTypes } from '@/lib/data/exam-types';
+import { getCoursSessionsForPlanning } from '@/lib/data/stagiaires-formation';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,11 +17,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const [formations, examens, allInscriptions, examTypes] = await Promise.all([
+    const [formations, examens, allInscriptions, examTypes, formationSessions] = await Promise.all([
       getInscriptionsForPlanning(startDate, endDate),
       getExamensForPlanning(startDate, endDate),
       getAllInscriptions(),
       getAllExamTypes(),
+      getCoursSessionsForPlanning(startDate, endDate),
     ]);
 
     // Créer une map email -> inscription ID pour les liens
@@ -40,9 +42,27 @@ export async function GET(request: NextRequest) {
       isPartenaireCandidat: ex.partenaireId !== null,
     }));
 
+    // Compléter inscriptionId via email si absent (stagiaires créés sans inscription_id)
+    const formationSessionsEnriched = formationSessions.map((s) => ({
+      ...s,
+      inscriptionId: s.inscriptionId ?? emailToInscriptionId.get(s.email.toLowerCase()) ?? null,
+    }));
+
+    // Inscriptions déjà couvertes par une session de cours sur la plage : éviter le doublon
+    // (la date_formation legacy ne doit plus apparaître si un planning multi-créneaux existe)
+    const coveredInscriptionIds = new Set<number>(
+      formationSessionsEnriched
+        .map((s) => s.inscriptionId)
+        .filter((id): id is number => id != null),
+    );
+    const formationsFiltered = formations.filter(
+      (ins) => !coveredInscriptionIds.has(ins.rowIndex),
+    );
+
     return NextResponse.json({
-      formations,
+      formations: formationsFiltered,
       examens: examensWithInscriptionId,
+      formationSessions: formationSessionsEnriched,
       examTypes: examTypes.map(t => ({ code: t.code, label: t.label, color: t.color })),
     });
   } catch (error) {

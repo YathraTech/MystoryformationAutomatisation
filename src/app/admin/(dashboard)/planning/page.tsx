@@ -20,6 +20,22 @@ interface PlanningEvent {
   diplome: string | null;
   inscriptionId: number | null;
   isPartenaireCandidat: boolean;
+  // Cas session de cours générée (multi-créneaux) : on encode session+stagiaire
+  // dans la clé pour éviter les collisions React.
+  keySuffix?: string;
+}
+
+interface FormationSessionDTO {
+  sessionId: number;
+  stagiaireId: number;
+  inscriptionId: number | null;
+  date: string;
+  horaire: string;
+  agence: string;
+  nom: string;
+  prenom: string;
+  email: string;
+  formatriceNom: string | null;
 }
 
 const FORMATION_COLOR: PlanningColorSet = { bg: 'bg-emerald-50', border: 'border-emerald-200', icon: 'text-emerald-600', legendBg: 'bg-emerald-100', legendBorder: 'border-emerald-300' };
@@ -130,7 +146,7 @@ export default function PlanningPage() {
 
       const planningEvents: PlanningEvent[] = [];
 
-      // Map formations (inscriptions with date_formation)
+      // Map formations (inscriptions with date_formation, sans planning multi-créneaux généré)
       (data.formations as Inscription[]).forEach((ins) => {
         if (ins.dateFormation) {
           planningEvents.push({
@@ -148,6 +164,29 @@ export default function PlanningPage() {
             isPartenaireCandidat: false,
           });
         }
+      });
+
+      // Map formation sessions (cours_sessions générés par stagiaire)
+      ((data.formationSessions || []) as FormationSessionDTO[]).forEach((s) => {
+        const heureDebut = s.horaire.match(/(\d{1,2})[h:](\d{2})?/);
+        const heure = heureDebut
+          ? `${heureDebut[1].padStart(2, '0')}:${heureDebut[2] || '00'}`
+          : null;
+        planningEvents.push({
+          id: s.stagiaireId,
+          type: 'formation',
+          nom: s.nom,
+          prenom: s.prenom,
+          email: s.email,
+          telephone: '',
+          date: s.date,
+          heure,
+          details: s.horaire,
+          diplome: null,
+          inscriptionId: s.inscriptionId,
+          isPartenaireCandidat: false,
+          keySuffix: `s${s.sessionId}`,
+        });
       });
 
       // Map examens (enrichis avec inscriptionId par l'API)
@@ -314,7 +353,7 @@ export default function PlanningPage() {
 
                       return (
                       <div
-                        key={`${event.type}-${event.id}`}
+                        key={`${event.type}-${event.id}-${event.keySuffix || ''}`}
                         className={`rounded-md px-2 py-1.5 text-xs flex items-center gap-1.5 border ${colors.bg} ${colors.border}`}
                       >
                         {event.type === 'formation' ? (
