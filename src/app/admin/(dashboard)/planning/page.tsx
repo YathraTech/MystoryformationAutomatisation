@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, GraduationCap, ClipboardCheck, AlertCircle, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, GraduationCap, ClipboardCheck, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import type { Inscription } from '@/types/admin';
 import type { Examen } from '@/lib/data/examens';
@@ -354,7 +354,23 @@ export default function PlanningPage() {
             {weekDates.map((date, i) => {
               const slot = getSlotForDate(date);
               const isExamDay = slot !== undefined;
-              const isFull = slot && slot.count >= slot.maxPlaces;
+              const dateStr = formatDateISO(date);
+
+              // Examens du jour : recompté à partir des events affichés (mise à jour live)
+              const examenCount = events.filter(
+                (e) => e.date === dateStr && (e.type === 'tef' || e.type === 'civique'),
+              ).length;
+              const examenMax = slot?.maxPlaces ?? 15;
+              const isFull = isExamDay && examenCount >= examenMax;
+
+              // Stagiaires en formation du jour, dédupliqué par personne (email)
+              const formationEmails = new Set<string>();
+              events.forEach((e) => {
+                if (e.date === dateStr && e.type === 'formation') {
+                  formationEmails.add((e.email || `id-${e.id}`).toLowerCase());
+                }
+              });
+              const formationCount = formationEmails.size;
 
               return (
                 <div
@@ -369,15 +385,31 @@ export default function PlanningPage() {
                   <div className={`text-lg font-semibold mt-0.5 ${isToday(date) ? 'text-blue-700' : 'text-slate-800'}`}>
                     {date.getDate()}
                   </div>
-                  {/* Afficher le compteur pour les jours d'examen (lundi/vendredi) */}
-                  {isExamDay && (
-                    <div className={`mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 ${
-                      isFull ? 'text-red-700' : 'text-amber-700'
-                    }`}>
-                      <Users className="h-3 w-3" />
-                      {slot.count}/{slot.maxPlaces}
-                    </div>
-                  )}
+
+                  <div className="mt-1 flex flex-wrap items-center justify-center gap-1">
+                    {/* Examens : visible les jours d'examens (lundi/vendredi) */}
+                    {isExamDay && (
+                      <div
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 ${
+                          isFull ? 'text-red-700' : 'text-amber-700'
+                        }`}
+                        title="Examens planifiés ce jour"
+                      >
+                        <ClipboardCheck className="h-3 w-3" />
+                        {examenCount}/{examenMax}
+                      </div>
+                    )}
+                    {/* Stagiaires en formation : visible si au moins 1 */}
+                    {formationCount > 0 && (
+                      <div
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700"
+                        title="Stagiaires en formation ce jour"
+                      >
+                        <GraduationCap className="h-3 w-3" />
+                        {formationCount}
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}

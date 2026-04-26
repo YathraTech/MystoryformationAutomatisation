@@ -200,7 +200,9 @@ export default function PartenairePlanningPage() {
             {weekDates.map((date, i) => {
               const slot = getSlotForDate(date);
               const isExamDay = slot !== undefined;
-              const totalInscrits = slot?.count ?? 0;
+              const dateStr = formatDateISO(date);
+              // Recompte live depuis les examens reçus (mise à jour immédiate)
+              const totalInscrits = examens.filter((e) => e.date === dateStr).length;
               const maxPlaces = slot?.maxPlaces ?? 15;
               const isFull = totalInscrits >= maxPlaces;
               const placesRestantes = Math.max(0, maxPlaces - totalInscrits);
