@@ -60,6 +60,19 @@ function getEventColor(event: PlanningEvent, examTypes: ExamTypeInfo[]): Plannin
   return getPlanningColorForExamType('blue');
 }
 
+// Catégorie d'un événement utilisée par les filtres et la légende.
+// Aligné sur getEventColor : partenaire écrase tout, sinon formation, sinon code examen.
+const FORMATION_CATEGORY = 'formation';
+const PARTENAIRE_CATEGORY = 'partenaire';
+
+function getEventCategory(event: PlanningEvent): string {
+  if (event.isPartenaireCandidat) return PARTENAIRE_CATEGORY;
+  if (event.type === 'formation') return FORMATION_CATEGORY;
+  const diplome = event.diplome || '';
+  const prefix = diplome.split(':')[0];
+  return prefix || 'autre';
+}
+
 interface ExamenSlot {
   date: string;
   count: number;
@@ -107,6 +120,8 @@ export default function PlanningPage() {
   const [examenSlots, setExamenSlots] = useState<ExamenSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // Filtres : null = aucun filtre initialisé (tout visible). Sinon, set des catégories actives.
+  const [activeFilters, setActiveFilters] = useState<Set<string> | null>(null);
 
   const weekDates = getWeekDates(currentDate);
 
@@ -246,8 +261,40 @@ export default function PlanningPage() {
 
   const getEventsForDate = (date: Date) => {
     const dateStr = formatDateISO(date);
-    return events.filter((e) => e.date === dateStr);
+    return events.filter((e) => {
+      if (e.date !== dateStr) return false;
+      if (activeFilters && !activeFilters.has(getEventCategory(e))) return false;
+      return true;
+    });
   };
+
+  // Liste des catégories disponibles pour la légende/filtres :
+  // examTypes (dynamiques) + Formation + Partenaire
+  const filterCategories: { key: string; label: string; colors: PlanningColorSet }[] = [
+    ...examTypes.map((t) => ({
+      key: t.code,
+      label: t.label,
+      colors: getPlanningColorForExamType(t.color),
+    })),
+    { key: FORMATION_CATEGORY, label: 'Formation', colors: FORMATION_COLOR },
+    { key: PARTENAIRE_CATEGORY, label: 'Partenaire', colors: PARTENAIRE_COLOR },
+  ];
+
+  const isCategoryActive = (key: string): boolean =>
+    activeFilters === null || activeFilters.has(key);
+
+  const toggleCategory = (key: string) => {
+    setActiveFilters((prev) => {
+      const base = prev ?? new Set(filterCategories.map((c) => c.key));
+      const next = new Set(base);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const showAll = () => setActiveFilters(null);
+  const showOnly = (key: string) => setActiveFilters(new Set([key]));
 
   const isToday = (date: Date) => {
     const today = new Date();
@@ -394,25 +441,42 @@ export default function PlanningPage() {
         </div>
       )}
 
-      {/* Legend */}
-      <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
-        {examTypes.map((type) => {
-          const colors = getPlanningColorForExamType(type.color);
+      {/* Filtres / Légende — clique pour activer/désactiver, double-clic pour isoler */}
+      <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+        <span className="text-xs uppercase tracking-wide text-slate-500 mr-1">Filtrer :</span>
+        {filterCategories.map((cat) => {
+          const active = isCategoryActive(cat.key);
           return (
-            <div key={type.code} className="flex items-center gap-2">
-              <div className={`w-4 h-4 rounded ${colors.legendBg} border ${colors.legendBorder}`} />
-              <span>{type.label}</span>
-            </div>
+            <button
+              key={cat.key}
+              type="button"
+              onClick={() => toggleCategory(cat.key)}
+              onDoubleClick={() => showOnly(cat.key)}
+              title={`Cliquer pour ${active ? 'masquer' : 'afficher'} • Double-clic pour isoler`}
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 transition-all ${
+                active
+                  ? `${cat.colors.legendBg} ${cat.colors.legendBorder} text-slate-800 hover:brightness-95`
+                  : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-500'
+              }`}
+            >
+              <span
+                className={`w-3 h-3 rounded ${
+                  active ? `${cat.colors.legendBg} border ${cat.colors.legendBorder}` : 'bg-slate-200 border border-slate-300'
+                }`}
+              />
+              {cat.label}
+            </button>
           );
         })}
-        <div className="flex items-center gap-2">
-          <div className={`w-4 h-4 rounded ${FORMATION_COLOR.legendBg} border ${FORMATION_COLOR.legendBorder}`} />
-          <span>Formation</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className={`w-4 h-4 rounded ${PARTENAIRE_COLOR.legendBg} border ${PARTENAIRE_COLOR.legendBorder}`} />
-          <span>Partenaire</span>
-        </div>
+        {activeFilters !== null && (
+          <button
+            type="button"
+            onClick={showAll}
+            className="ml-2 text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
+          >
+            Tout afficher
+          </button>
+        )}
       </div>
     </div>
   );

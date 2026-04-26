@@ -9,7 +9,7 @@ import {
   getSatisfactionChaudByStagiaire,
   getSatisfactionFroid,
 } from '@/lib/data/stagiaires-formation';
-import { getInscriptionById } from '@/lib/data/inscriptions';
+import { getInscriptionById, updateInscriptionFields } from '@/lib/data/inscriptions';
 
 export async function GET(
   _request: NextRequest,
@@ -136,6 +136,36 @@ export async function PATCH(
     }
 
     await updateStagiaireFormation(stagiaireId, dbFields);
+
+    // Propagation des champs partagés vers l'inscription liée (suivi → client).
+    // Direction unique : on n'écrase pas les saisies stagiaire dans l'autre sens.
+    const stagiaire = await getStagiaireFormationById(stagiaireId);
+    if (stagiaire?.inscriptionId) {
+      const propagated: Record<string, string> = {};
+      const setIfPresent = (bodyKey: string, inscriptionKey: string) => {
+        if (Object.prototype.hasOwnProperty.call(body, bodyKey) && body[bodyKey] != null) {
+          propagated[inscriptionKey] = String(body[bodyKey]);
+        }
+      };
+      setIfPresent('civilite', 'civilite');
+      setIfPresent('nom', 'nom');
+      setIfPresent('prenom', 'prenom');
+      setIfPresent('email', 'email');
+      setIfPresent('telephone', 'telephone');
+      setIfPresent('dateNaissance', 'dateNaissance');
+      setIfPresent('numeroDossierCpf', 'numeroDossierCPF');
+      setIfPresent('dateDebutFormation', 'dateFormation');
+
+      if (Object.keys(propagated).length > 0) {
+        try {
+          await updateInscriptionFields(stagiaire.inscriptionId, propagated);
+        } catch (err) {
+          // Ne pas faire échouer le PATCH stagiaire si la propagation rate
+          console.error('[PATCH stagiaire-formation/:id] Propagation inscription failed', err);
+        }
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('[PATCH stagiaire-formation/:id]', error);
