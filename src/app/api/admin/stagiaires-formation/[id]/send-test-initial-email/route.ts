@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStagiaireFormationById } from '@/lib/data/stagiaires-formation';
-import { buildTestInitialEmail } from '@/lib/utils/email-templates';
+import {
+  buildTestInitialEmail,
+  buildTestInitialCopieCentreEmail,
+} from '@/lib/utils/email-templates';
 
 export async function POST(
   request: NextRequest,
@@ -66,6 +69,35 @@ export async function POST(
         { error: 'Échec de l\'envoi du mail' },
         { status: 502 }
       );
+    }
+
+    // Copie au centre (MyStory Formation) — non bloquant : si l'envoi échoue,
+    // le mail du stagiaire reste considéré comme un succès.
+    const centreEmail = process.env.CENTRE_EMAIL || 'contact@mystoryformation.fr';
+    try {
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'test_initial_formation',
+          timestamp: new Date().toISOString(),
+          candidat: {
+            email: centreEmail,
+            prenom: stagiaire.prenom,
+            nom: stagiaire.nom,
+          },
+          email_subject: `MYSTORYFormation - Copie test initial : ${stagiaire.prenom} ${stagiaire.nom}`,
+          email_html: buildTestInitialCopieCentreEmail(
+            stagiaire.prenom,
+            stagiaire.nom,
+            stagiaire.email,
+            testUrl,
+          ),
+          test_url: testUrl,
+        }),
+      });
+    } catch (copieErr) {
+      console.error('[send-test-initial-email] copie centre échouée:', copieErr);
     }
 
     return NextResponse.json({ success: true, testUrl });

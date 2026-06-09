@@ -43,10 +43,12 @@ export async function GET(
       });
     }
 
-    // Récupérer les questions actives
+    // Récupérer les questions actives (sujet_id permet de regrouper par sujet partagé)
+    const questionCols =
+      'id, type_competence, type_test, niveau, question, choix, choix_multiple, reponses_correctes, media_url, sujet_id, points';
     const { data: questionsCe } = await supabase
       .from('qcm_questions')
-      .select('id, type_competence, type_test, niveau, question, choix, choix_multiple, reponses_correctes, media_url, points')
+      .select(questionCols)
       .eq('type_competence', 'CE')
       .eq('type_test', 'initial')
       .eq('actif', true)
@@ -54,7 +56,25 @@ export async function GET(
 
     const { data: questionsCo } = await supabase
       .from('qcm_questions')
-      .select('id, type_competence, type_test, niveau, question, choix, choix_multiple, reponses_correctes, media_url, points')
+      .select(questionCols)
+      .eq('type_competence', 'CO')
+      .eq('type_test', 'initial')
+      .eq('actif', true)
+      .order('ordre', { ascending: true });
+
+    // Sujets partagés actifs (texte CE / audio CO)
+    const sujetCols = 'id, type_competence, type_test, niveau, titre, contenu, media_url, ordre';
+    const { data: sujetsCe } = await supabase
+      .from('qcm_sujets')
+      .select(sujetCols)
+      .eq('type_competence', 'CE')
+      .eq('type_test', 'initial')
+      .eq('actif', true)
+      .order('ordre', { ascending: true });
+
+    const { data: sujetsCo } = await supabase
+      .from('qcm_sujets')
+      .select(sujetCols)
       .eq('type_competence', 'CO')
       .eq('type_test', 'initial')
       .eq('actif', true)
@@ -69,6 +89,8 @@ export async function GET(
       },
       questionsCe: questionsCe || [],
       questionsCo: questionsCo || [],
+      sujetsCe: sujetsCe || [],
+      sujetsCo: sujetsCo || [],
     });
   } catch (error) {
     console.error('[GET test]', error);
@@ -174,8 +196,9 @@ export async function POST(
       .update({ statut: 'test_initial' })
       .eq('id', stagiaireId);
 
-    const scoreGlobal = scoreCe + scoreCo + (scoreEe || 0) + (scoreEo || 0);
-    const niveau = scoreGlobal >= 19 ? 'B2' : scoreGlobal >= 15 ? 'B1' : scoreGlobal >= 10 ? 'A2' : scoreGlobal >= 5 ? 'A1' : 'A0';
+    // Score global = moyenne des 4 épreuves sur /20 (0-5 A1, 5-10 A2, 10-15 B1, 15-20 B2)
+    const scoreGlobal = Math.round(((scoreCe + scoreCo + (scoreEe || 0) + (scoreEo || 0)) / 4) * 10) / 10;
+    const niveau = scoreGlobal >= 15 ? 'B2' : scoreGlobal >= 10 ? 'B1' : scoreGlobal >= 5 ? 'A2' : 'A1';
 
     return NextResponse.json({
       success: true,

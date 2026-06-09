@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { formatHeure } from '@/lib/utils/format';
 import { useStats } from '@/hooks/useStats';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import StatusBadge from '@/components/admin/StatusBadge';
@@ -377,7 +378,7 @@ function FeuilleAppelSection({ feuilleAppel, isAdmin, onValidated }: { feuilleAp
               )}
               <p className="text-xs text-slate-500">
                 {examen.diplome || 'Diplôme non choisi'}
-                {examen.heureExamen && ` — ${examen.heureExamen}`}
+                {examen.heureExamen && ` — ${formatHeure(examen.heureExamen)}`}
               </p>
             </div>
 

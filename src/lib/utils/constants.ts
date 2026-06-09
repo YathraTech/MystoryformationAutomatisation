@@ -15,12 +15,9 @@ export const MODES_FINANCEMENT = [
 ] as const;
 
 // === LANGUES ===
+// Centre de formation français : seul le français est enseigné.
 export const LANGUES = [
   { value: 'Francais', label: 'Français' },
-  { value: 'Anglais', label: 'Anglais' },
-  { value: 'Espagnol', label: 'Espagnol' },
-  { value: 'Allemand', label: 'Allemand' },
-  { value: 'Italien', label: 'Italien' },
 ] as const;
 
 // === NIVEAUX ===
@@ -59,7 +56,6 @@ export const CRENEAUX_HORAIRES = [
 // === ÉTAPES DU FORMULAIRE ===
 export const FORM_STEPS = [
   { number: 1, title: 'Informations personnelles', shortTitle: 'Identité' },
-  { number: 2, title: 'Informations CPF', shortTitle: 'CPF' },
-  { number: 3, title: 'Choix de formation', shortTitle: 'Formation' },
-  { number: 4, title: 'Récapitulatif', shortTitle: 'Validation' },
+  { number: 2, title: 'Choix de formation', shortTitle: 'Formation' },
+  { number: 3, title: 'Récapitulatif', shortTitle: 'Validation' },
 ] as const;

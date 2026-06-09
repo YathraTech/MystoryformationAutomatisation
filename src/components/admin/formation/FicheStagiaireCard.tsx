@@ -136,10 +136,9 @@ export default function FicheStagiaireCard({ stagiaireId, stagiaire, onSaved }: 
         // Commercial(e) en charge
         commercialeId: form.commercialeId || null,
         commercialeNom: selectedAgent ? `${selectedAgent.prenom} ${selectedAgent.nom}`.trim() : null,
-        // Formation
+        // Formation (les dates de début/fin sont gérées par l'attribution / le planning,
+        // pas modifiables depuis la fiche identité)
         heuresPrevues: Number.isFinite(form.heuresPrevues) ? form.heuresPrevues : 0,
-        dateDebutFormation: form.dateDebutFormation || null,
-        dateFinFormation: form.dateFinFormation || null,
         // Paiement
         montantTotal: Number.isFinite(form.montantTotal) ? form.montantTotal : null,
         modePaiement: form.modePaiement || null,
@@ -481,24 +480,8 @@ export default function FicheStagiaireCard({ stagiaireId, stagiaire, onSaved }: 
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
               />
             </Field>
-
-            <Field label="Date de début">
-              <input
-                type="date"
-                value={form.dateDebutFormation}
-                onChange={(e) => setForm({ ...form, dateDebutFormation: e.target.value })}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-              />
-            </Field>
-
-            <Field label="Date de fin">
-              <input
-                type="date"
-                value={form.dateFinFormation}
-                onChange={(e) => setForm({ ...form, dateFinFormation: e.target.value })}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-              />
-            </Field>
+            {/* Les dates de début/fin ne sont pas modifiables ici : elles sont définies
+                par l'attribution de formation et la génération du planning. */}
           </div>
         </div>
 
@@ -574,8 +557,6 @@ interface FicheForm {
   typePrestation: string;
   commercialeId: string;
   heuresPrevues: number;
-  dateDebutFormation: string;
-  dateFinFormation: string;
   montantTotal: number;
   modePaiement: string;
   statutPaiement: string;
@@ -600,8 +581,6 @@ function makeForm(s: StagiaireFormation): FicheForm {
     typePrestation: s.typePrestation || 'Formation TEF IRN',
     commercialeId: s.commercialeId || '',
     heuresPrevues: s.heuresPrevues || 0,
-    dateDebutFormation: toDateInputValue(s.dateDebutFormation),
-    dateFinFormation: toDateInputValue(s.dateFinFormation),
     montantTotal: s.montantTotal ?? 0,
     modePaiement: s.modePaiement || '',
     statutPaiement: s.statutPaiement || 'En attente',

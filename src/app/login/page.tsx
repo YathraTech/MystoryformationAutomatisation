@@ -10,6 +10,8 @@ export default function LoginPage() {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    // Marqueur d'hydratation client (rendu différé du bandeau cookies) — setState volontaire au montage
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHydrated(true);
   }, []);
 

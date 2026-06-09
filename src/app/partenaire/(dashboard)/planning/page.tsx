@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, ClipboardCheck, AlertCircle, Users } from 'lucide-react';
 import { getPlanningColorForExamType } from '@/lib/utils/exam-colors';
+import { formatHeure } from '@/lib/utils/format';
 
 interface PlanningExamen {
   id: number;
@@ -77,18 +78,6 @@ export default function PartenairePlanningPage() {
 
   const weekDates = getWeekDates(currentDate);
 
-  const fetchExamenSlots = useCallback(async () => {
-    try {
-      const res = await fetch('/api/admin/examens/slots');
-      if (res.ok) {
-        const data = await res.json();
-        setExamenSlots(data.slots || []);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
   const getSlotForDate = (date: Date): ExamenSlot | undefined => {
     const dateStr = formatDateISO(date);
     return examenSlots.find(s => s.date === dateStr);
@@ -108,6 +97,7 @@ export default function PartenairePlanningPage() {
       const data = await res.json();
       setExamens(data.examens || []);
       setExamTypes(data.examTypes || []);
+      setExamenSlots(data.slots || []);
     } catch {
       setError('Impossible de charger le planning');
     } finally {
@@ -117,7 +107,6 @@ export default function PartenairePlanningPage() {
 
   useEffect(() => {
     fetchPlanning();
-    fetchExamenSlots();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDate]);
 
@@ -261,7 +250,7 @@ export default function PartenairePlanningPage() {
                         >
                           <ClipboardCheck className={`h-3 w-3 ${colors.icon} shrink-0`} />
                           {ex.heure && (
-                            <span className="text-slate-500 shrink-0">{ex.heure.slice(0, 5)}</span>
+                            <span className="text-slate-500 shrink-0">{formatHeure(ex.heure)}</span>
                           )}
                           <span className="font-medium text-slate-800 truncate">
                             {ex.prenom} {ex.nom}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { buildLienExamenEmail } from '@/lib/utils/email-templates';
 
 export async function POST(
   request: NextRequest,
@@ -38,21 +39,57 @@ export async function POST(
     }
 
     // Générer l'URL du lien client
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
     const clientUrl = `${baseUrl}/examen/${examen.token}`;
 
-    // TODO: Envoyer l'email au client
-    // Pour l'instant, on retourne juste le lien pour le copier manuellement
-    // Vous pouvez intégrer un service d'email comme Resend, SendGrid, etc.
+    // Envoyer le lien au candidat par email (via webhook Make), si configuré et email présent
+    let emailSent = false;
+    const webhookUrl = process.env.MAKE_ATTESTATION_WEBHOOK_URL;
+    if (webhookUrl && examen.email) {
+      try {
+        const emailHtml = buildLienExamenEmail(
+          examen.prenom || '',
+          examen.nom || '',
+          clientUrl,
+          resetChoice,
+        );
+        const webhookRes = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'lien_examen',
+            timestamp: new Date().toISOString(),
+            candidat: {
+              email: examen.email,
+              prenom: examen.prenom || '',
+              nom: examen.nom || '',
+            },
+            email_subject: "MYSTORYFormation - Votre lien d'inscription à l'examen",
+            email_html: emailHtml,
+            examen_url: clientUrl,
+          }),
+        });
+        emailSent = webhookRes.ok;
+        if (!webhookRes.ok) {
+          console.error('[resend-link] webhook failed:', webhookRes.status);
+        }
+      } catch (e) {
+        console.error('[resend-link] envoi email échoué:', e);
+      }
+    }
 
+    const baseMessage = resetChoice
+      ? 'Choix de diplôme réinitialisé.'
+      : 'Lien généré.';
     return NextResponse.json({
       success: true,
       clientUrl,
       email: examen.email,
       resetChoice,
-      message: resetChoice
-        ? 'Choix de diplôme réinitialisé. Le client peut maintenant choisir à nouveau.'
-        : 'Lien généré avec succès.',
+      emailSent,
+      message: emailSent
+        ? `${baseMessage} Le lien a été envoyé par email au candidat.`
+        : `${baseMessage} Email non envoyé (copiez le lien ci-dessous pour le transmettre).`,
     });
   } catch (error) {
     console.error('[Resend Link Error]', error);

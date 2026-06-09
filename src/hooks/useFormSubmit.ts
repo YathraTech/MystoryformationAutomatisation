@@ -3,8 +3,15 @@
 import { useState, useCallback } from 'react';
 import type { InscriptionCompleteData } from '@/types';
 
+export interface InscriptionSubmitResult {
+  success: boolean;
+  uploadToken?: string;
+  stagiaireId?: number;
+  [key: string]: unknown;
+}
+
 interface UseFormSubmitReturn {
-  submit: (data: InscriptionCompleteData, lieu?: string) => Promise<void>;
+  submit: (data: InscriptionCompleteData, lieu?: string) => Promise<InscriptionSubmitResult | null>;
   isSubmitting: boolean;
   isSuccess: boolean;
   isError: boolean;
@@ -18,7 +25,7 @@ export function useFormSubmit(): UseFormSubmitReturn {
   const [isError, setIsError] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const submit = useCallback(async (data: InscriptionCompleteData, lieu?: string) => {
+  const submit = useCallback(async (data: InscriptionCompleteData, lieu?: string): Promise<InscriptionSubmitResult | null> => {
     setIsSubmitting(true);
     setIsError(false);
     setError(null);
@@ -38,11 +45,13 @@ export function useFormSubmit(): UseFormSubmitReturn {
       }
 
       setIsSuccess(true);
+      return result as InscriptionSubmitResult;
     } catch (err) {
       setIsError(true);
       setError(
         err instanceof Error ? err.message : 'Une erreur inattendue est survenue'
       );
+      return null;
     } finally {
       setIsSubmitting(false);
     }

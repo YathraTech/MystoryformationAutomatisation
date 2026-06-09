@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
-import { ArrowLeft, ClipboardCheck, Trash2, Loader2, Send, Mail, RefreshCw, Check } from 'lucide-react';
+import { ArrowLeft, ClipboardCheck, Trash2, Loader2, Send, Mail, RefreshCw, Check, Upload, Download } from 'lucide-react';
+import { formatHeure } from '@/lib/utils/format';
 import type { FeuilleAppelExamen, FeuilleAppelSummary } from '@/types/admin';
 
 function CentreBadge({ lieu }: { lieu: string | null | undefined }) {
@@ -52,6 +53,9 @@ export default function FeuilleAppelDetailPage() {
   const [validated, setValidated] = useState(false);
   const [resendingId, setResendingId] = useState<number | null>(null);
   const [resendResult, setResendResult] = useState<{ id: number; success: boolean } | null>(null);
+  const [uploadingId, setUploadingId] = useState<number | null>(null);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   useEffect(() => {
     async function fetchData() {
@@ -136,6 +140,49 @@ export default function FeuilleAppelDetailPage() {
       setTimeout(() => setResendResult(null), 3000);
     }
   }, [dateExamen]);
+
+  const handleUploadResultat = useCallback(async (examenId: number, file: File) => {
+    setUploadingId(examenId);
+    try {
+      // 1. Obtenir une URL d'upload signée
+      const urlRes = await fetch(`/api/admin/examens/${examenId}/upload-pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docType: 'attestation_reussite', fileName: file.name }),
+      });
+      if (!urlRes.ok) return;
+      const { signedUrl, path } = await urlRes.json();
+
+      // 2. Uploader le fichier directement vers Supabase Storage
+      await fetch(signedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type, 'x-upsert': 'true' },
+        body: file,
+      });
+
+      // 3. Refléter localement le chemin enregistré côté serveur
+      setExamens((prev) => prev.map((e) => e.id === examenId ? { ...e, pdfAttestationReussite: path } : e));
+    } catch {
+      // échec silencieux
+    } finally {
+      setUploadingId(null);
+    }
+  }, []);
+
+  const handleDownloadResultat = useCallback(async (examenId: number, path: string) => {
+    setDownloadingId(examenId);
+    try {
+      const res = await fetch(`/api/admin/examens/${examenId}/download-pdf?path=${encodeURIComponent(path)}`);
+      if (res.ok) {
+        const { url } = await res.json();
+        window.open(url, '_blank');
+      }
+    } catch {
+      // échec silencieux
+    } finally {
+      setDownloadingId(null);
+    }
+  }, []);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -263,11 +310,69 @@ export default function FeuilleAppelDetailPage() {
                 )}
                 <p className="text-xs text-slate-500">
                   {examen.diplome || 'Diplôme non choisi'}
-                  {examen.heureExamen && ` — ${examen.heureExamen}`}
+                  {examen.heureExamen && ` — ${formatHeure(examen.heureExamen)}`}
                 </p>
               </div>
 
               {isAdmin && examen.lieu && <CentreBadge lieu={examen.lieu} />}
+
+              {/* Upload / téléchargement du PDF de résultat (réussi uniquement) */}
+              {examen.resultat === 'reussi' && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {examen.pdfAttestationReussite ? (
+                    <button
+                      onClick={() => handleDownloadResultat(examen.id, examen.pdfAttestationReussite!)}
+                      disabled={downloadingId === examen.id}
+                      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                      title="Télécharger le PDF de résultat"
+                    >
+                      {downloadingId === examen.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Download className="h-3 w-3" />
+                      )}
+                      Résultat
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => fileInputRefs.current[examen.id]?.click()}
+                      disabled={uploadingId === examen.id}
+                      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors disabled:opacity-50"
+                      title="Uploader le PDF de résultat"
+                    >
+                      {uploadingId === examen.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Upload className="h-3 w-3" />
+                      )}
+                      Résultat
+                    </button>
+                  )}
+                  {examen.pdfAttestationReussite && (
+                    <button
+                      onClick={() => fileInputRefs.current[examen.id]?.click()}
+                      disabled={uploadingId === examen.id}
+                      className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-50"
+                      title="Remplacer le PDF de résultat"
+                    >
+                      {uploadingId === examen.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                    </button>
+                  )}
+                  <input
+                    ref={(el) => { fileInputRefs.current[examen.id] = el; }}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleUploadResultat(examen.id, file);
+                        e.target.value = '';
+                      }
+                    }}
+                  />
+                </div>
+              )}
 
               {/* Bouton envoi individuel / indicateur email */}
               {examen.resultat !== 'a_venir' && (

@@ -51,6 +51,8 @@ export function usePartenaireAuth() {
   }, []);
 
   useEffect(() => {
+    // Vérification d'auth asynchrone au montage (setState après await, non synchrone)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     checkAuth();
   }, [checkAuth]);
 

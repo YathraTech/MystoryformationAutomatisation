@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import type { Inscription } from '@/types/admin';
 import type { Examen } from '@/lib/data/examens';
+import { formatHeure, addToHeure } from '@/lib/utils/format';
 
 // Logo en base64 (sera chargé dynamiquement)
 let logoBase64: string | null = null;
@@ -89,7 +90,7 @@ function formatDateSlash(date: string | null | undefined): string {
 }
 
 // Cache pour l'image Google Maps
-let mapsImageCache: Record<string, string> = {};
+const mapsImageCache: Record<string, string> = {};
 
 async function loadGoogleMapsImage(lat: number, lng: number): Promise<string | null> {
   const cacheKey = `${lat},${lng}`;
@@ -422,7 +423,7 @@ export async function generateAttestationPaiement(
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(20, 20, 20);
   doc.text(examen.dateExamen ? formatDateSlash(examen.dateExamen) : '—', margin, y);
-  doc.text(examen.heureExamen || '—', margin + col3, y);
+  doc.text(formatHeure(examen.heureExamen) || '—', margin + col3, y);
   doc.text(examen.lieu || '—', margin + col3 * 2, y);
   y += 10;
 
@@ -946,7 +947,7 @@ export async function generateFicheInscription(
 
   const thirdWidth = contentWidth / 3;
   drawField('Date d\'examen', examen.dateExamen ? formatDateSlash(examen.dateExamen) : '', margin, thirdWidth);
-  drawField('Heure', examen.heureExamen || '', margin + thirdWidth, thirdWidth);
+  drawField('Heure', formatHeure(examen.heureExamen), margin + thirdWidth, thirdWidth);
   drawField('Agence', examen.lieu || '', margin + thirdWidth * 2, thirdWidth);
   y += 10;
 
@@ -1141,22 +1142,8 @@ export async function generateConvocationTefIrn(
   const mentionTef = optionLabels[diplomeOption] || diplomeOption;
 
   // Calculer heure fin (heure_debut + 3h pour TEF IRN : CO 40min + CE 60min + EE 60min + EO 15min ≈ 3h)
-  const heureDebut = examen.heureExamen || '—';
-  let heureFin = '—';
-  if (examen.heureExamen) {
-    const match = examen.heureExamen.match(/^(\d{1,2})[h:](\d{2})$/);
-    if (match) {
-      const h = parseInt(match[1], 10) + 3;
-      const m = match[2];
-      heureFin = `${h}h${m}`;
-    } else {
-      const parts = examen.heureExamen.split(':');
-      if (parts.length === 2) {
-        const h = parseInt(parts[0], 10) + 3;
-        heureFin = `${h}:${parts[1]}`;
-      }
-    }
-  }
+  const heureDebut = formatHeure(examen.heureExamen) || '—';
+  const heureFin = addToHeure(examen.heureExamen, 180) || '—';
 
   // ===== HELPERS =====
   const drawPageHeader = (title: string): number => {
@@ -1556,23 +1543,8 @@ export async function generateConvocationCivique(
   const mentionCivique = optionLabels[diplomeOption] || diplomeOption;
 
   // Calculer heure fin (heure_debut + 1h)
-  const heureDebut = examen.heureExamen || '—';
-  let heureFin = '—';
-  if (examen.heureExamen) {
-    const match = examen.heureExamen.match(/^(\d{1,2})[h:](\d{2})$/);
-    if (match) {
-      const h = parseInt(match[1], 10) + 1;
-      const m = match[2];
-      heureFin = `${h}h${m}`;
-    } else {
-      // Essayer format "HH:MM"
-      const parts = examen.heureExamen.split(':');
-      if (parts.length === 2) {
-        const h = parseInt(parts[0], 10) + 1;
-        heureFin = `${h}:${parts[1]}`;
-      }
-    }
-  }
+  const heureDebut = formatHeure(examen.heureExamen) || '—';
+  const heureFin = addToHeure(examen.heureExamen, 60) || '—';
 
   // ===== HELPERS =====
   const drawPageHeader = (title: string): number => {
@@ -2116,7 +2088,7 @@ export async function generateConvocation(
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...darkText);
   doc.text(examen.dateExamen ? formatDateLong(examen.dateExamen) : '—', margin, y, { maxWidth: col3 - 5 });
-  doc.text(examen.heureExamen || '—', margin + col3, y);
+  doc.text(formatHeure(examen.heureExamen) || '—', margin + col3, y);
   doc.text(examen.lieu || '—', margin + col3 * 2, y);
   y += 8;
 

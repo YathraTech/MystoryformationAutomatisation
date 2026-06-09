@@ -5,6 +5,12 @@ import { useFormContext, useWatch } from 'react-hook-form';
 import { Mail, Phone, Loader2, MapPin, Upload, X, FileText } from 'lucide-react';
 import { Input, Select, DatePicker, Combobox } from '@/components/ui';
 import { CIVILITES } from '@/lib/utils/constants';
+import {
+  NATIONALITES_LIST,
+  LANGUES_LIST,
+  PAYS_LIST,
+  VILLES_NAISSANCE_LIST,
+} from '@/lib/utils/identite-options';
 import type { ExamenFormData } from './index';
 import { SOURCES_CONNAISSANCE, AGENCES, SERVICES_SOUHAITES, NIVEAUX } from './index';
 
@@ -17,24 +23,6 @@ interface AddressSuggestion {
     context: string;
   };
 }
-
-// Liste des pays (principales nationalités)
-const NATIONALITES_LIST = [
-  'Française', 'Algérienne', 'Marocaine', 'Tunisienne', 'Sénégalaise', 'Malienne',
-  'Ivoirienne', 'Camerounaise', 'Congolaise', 'Guinéenne', 'Turque', 'Portugaise',
-  'Espagnole', 'Italienne', 'Roumaine', 'Polonaise', 'Britannique', 'Allemande',
-  'Belge', 'Suisse', 'Américaine', 'Canadienne', 'Brésilienne', 'Chinoise',
-  'Indienne', 'Pakistanaise', 'Sri Lankaise', 'Bangladaise', 'Afghane', 'Syrienne',
-  'Libanaise', 'Égyptienne',
-];
-
-// Langues courantes (suggestions pour autocomplete)
-const LANGUES_LIST = [
-  'Français', 'Arabe', 'Berbère', 'Anglais', 'Espagnol', 'Portugais', 'Italien',
-  'Allemand', 'Turc', 'Wolof', 'Bambara', 'Peul', 'Soninké', 'Mandingue',
-  'Lingala', 'Swahili', 'Chinois (Mandarin)', 'Hindi', 'Ourdou', 'Bengali',
-  'Tamoul', 'Roumain', 'Polonais', 'Russe', 'Ukrainien',
-];
 
 interface Agent {
   id: string;
@@ -126,21 +114,6 @@ export function StepPersonalInfo({ hideAgence, hideAgentSelector, pendingFiles, 
     }
   }, []);
 
-  // Liste des pays
-  const PAYS_LIST = [
-    'France', 'Algérie', 'Maroc', 'Tunisie', 'Sénégal', 'Mali', 'Côte d\'Ivoire', 'Cameroun',
-    'République Démocratique du Congo', 'Congo', 'Guinée', 'Burkina Faso', 'Niger', 'Bénin',
-    'Togo', 'Mauritanie', 'Gabon', 'Comores', 'Madagascar', 'Maurice', 'Haïti',
-    'Turquie', 'Portugal', 'Espagne', 'Italie', 'Roumanie', 'Pologne', 'Royaume-Uni',
-    'Allemagne', 'Belgique', 'Suisse', 'Pays-Bas', 'Autriche', 'Grèce', 'Bulgarie',
-    'États-Unis', 'Canada', 'Brésil', 'Mexique', 'Argentine', 'Colombie', 'Pérou', 'Chili',
-    'Chine', 'Inde', 'Pakistan', 'Bangladesh', 'Sri Lanka', 'Vietnam', 'Philippines',
-    'Japon', 'Corée du Sud', 'Thaïlande', 'Indonésie', 'Malaisie',
-    'Afghanistan', 'Iran', 'Irak', 'Syrie', 'Liban', 'Jordanie', 'Palestine', 'Israël',
-    'Arabie Saoudite', 'Émirats Arabes Unis', 'Qatar', 'Koweït', 'Égypte', 'Libye',
-    'Russie', 'Ukraine', 'Biélorussie', 'Moldavie', 'Géorgie', 'Arménie', 'Azerbaïdjan',
-  ];
-
   // Handlers combobox
   const handleComboboxChange = useCallback(
     (field: keyof ExamenFormData, setter: (v: string) => void) => (value: string) => {
@@ -149,23 +122,6 @@ export function StepPersonalInfo({ hideAgence, hideAgentSelector, pendingFiles, 
     },
     [setValue]
   );
-
-  // Liste des villes de naissance (suggestions)
-  const VILLES_NAISSANCE_LIST = [
-    'Paris', 'Marseille', 'Lyon', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Montpellier',
-    'Bordeaux', 'Lille', 'Rennes', 'Reims', 'Saint-Étienne', 'Toulon', 'Le Havre',
-    'Alger', 'Oran', 'Constantine', 'Annaba', 'Blida', 'Batna', 'Sétif', 'Tlemcen', 'Béjaïa',
-    'Casablanca', 'Rabat', 'Fès', 'Marrakech', 'Tanger', 'Meknès', 'Agadir', 'Oujda', 'Nador',
-    'Tunis', 'Sfax', 'Sousse', 'Gabès', 'Bizerte', 'Kairouan',
-    'Dakar', 'Bamako', 'Abidjan', 'Douala', 'Yaoundé', 'Kinshasa', 'Brazzaville',
-    'Conakry', 'Ouagadougou', 'Niamey', 'Cotonou', 'Lomé', 'Nouakchott',
-    'Istanbul', 'Ankara', 'Lisbonne', 'Madrid', 'Rome', 'Bucarest',
-    'Londres', 'Berlin', 'Bruxelles', 'Genève',
-    'Beyrouth', 'Damas', 'Bagdad', 'Le Caire', 'Amman',
-    'Pékin', 'New Delhi', 'Karachi', 'Lahore', 'Dacca', 'Colombo',
-    'Port-au-Prince', 'Antananarivo', 'Moroni',
-  ];
-
 
   const handleAdresseChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;

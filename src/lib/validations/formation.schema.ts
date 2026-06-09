@@ -126,9 +126,11 @@ export const analyseBesoinSchema = z.object({
   typeCertificationVisee: z
     .array(z.string())
     .min(1, 'Sélectionnez au moins une certification'),
-  modeFinancement: z.enum(['CPF', 'Fonds propres', 'Mixte'], {
+  modeFinancement: z.enum(['CPF', 'Fonds propres', 'Entreprise'], {
     message: 'Veuillez sélectionner un mode de financement',
   }),
+  fondsPropresCarte: z.number().min(0).optional().nullable(),
+  fondsPropresEspeces: z.number().min(0).optional().nullable(),
   commentaires: z.string().max(1000).optional().or(z.literal('')),
 });
 

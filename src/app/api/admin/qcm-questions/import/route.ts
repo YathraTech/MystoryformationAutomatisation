@@ -59,6 +59,10 @@ export async function POST(request: NextRequest) {
       const choixMultipleStr = getCol(row, 'choix_multiple').toLowerCase();
       const pointsStr = getCol(row, 'points');
       const audioUrl = getCol(row, 'audio_url');
+      // Sujet partagé (optionnel) : les lignes au même sujet_titre sont regroupées
+      const sujetTitre = getCol(row, 'sujet_titre');
+      const sujetContenu = getCol(row, 'sujet_contenu');
+      const sujetAudioUrl = getCol(row, 'sujet_audio_url');
 
       // Validation
       if (!competence || !['CE', 'CO'].includes(competence)) {
@@ -103,14 +107,80 @@ export async function POST(request: NextRequest) {
         niveau,
         question,
         choix,
-        reponse_correcte: choixMultiple ? reponseLettres[0] : reponseLettres[0],
+        reponse_correcte: reponseLettres[0],
         choix_multiple: choixMultiple,
         reponses_correctes: choixMultiple ? reponseLettres : [],
         media_url: audioUrl || null,
         points,
         actif: true,
         ordre: i,
+        // Champs transitoires (retirés avant insertion) pour le regroupement par sujet
+        __sujetKey: sujetTitre ? `${competence}|${typeTest}|${sujetTitre.toLowerCase()}` : '',
+        __sujetTitre: sujetTitre,
+        __sujetContenu: sujetContenu,
+        __sujetAudioUrl: sujetAudioUrl,
       });
+    }
+
+    // ---- Sujets partagés : créer (ou réutiliser) un qcm_sujets par sujet_titre ----
+    const sujetDefs = new Map<string, Record<string, unknown>>();
+    for (const q of questionsToInsert) {
+      const key = q.__sujetKey as string;
+      if (!key) continue;
+      if (!sujetDefs.has(key)) {
+        sujetDefs.set(key, {
+          type_competence: q.type_competence,
+          type_test: q.type_test,
+          niveau: q.niveau,
+          titre: q.__sujetTitre,
+          contenu: (q.__sujetContenu as string) || null,
+          media_url: (q.__sujetAudioUrl as string) || null,
+          actif: true,
+          ordre: 0,
+        });
+      } else {
+        const def = sujetDefs.get(key)!;
+        if (!def.contenu && q.__sujetContenu) def.contenu = q.__sujetContenu;
+        if (!def.media_url && q.__sujetAudioUrl) def.media_url = q.__sujetAudioUrl;
+      }
+    }
+
+    const keyToSujetId = new Map<string, number>();
+    for (const [key, def] of sujetDefs) {
+      // Réutiliser un sujet identique existant (titre + compétence + test)
+      const { data: existing } = await supabase
+        .from('qcm_sujets')
+        .select('id')
+        .eq('type_competence', def.type_competence as string)
+        .eq('type_test', def.type_test as string)
+        .eq('titre', def.titre as string)
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        keyToSujetId.set(key, existing.id);
+      } else {
+        const { data: created, error: sujetErr } = await supabase
+          .from('qcm_sujets')
+          .insert(def)
+          .select('id')
+          .single();
+        if (sujetErr || !created) {
+          errors.push(`Sujet "${def.titre}" : ${sujetErr?.message || 'échec de création'}`);
+          continue;
+        }
+        keyToSujetId.set(key, created.id);
+      }
+    }
+
+    // Affecter sujet_id et retirer les champs transitoires avant insertion
+    for (const q of questionsToInsert) {
+      const key = q.__sujetKey as string;
+      q.sujet_id = key ? keyToSujetId.get(key) ?? null : null;
+      delete q.__sujetKey;
+      delete q.__sujetTitre;
+      delete q.__sujetContenu;
+      delete q.__sujetAudioUrl;
     }
 
     // Insérer en batch

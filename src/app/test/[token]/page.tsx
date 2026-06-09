@@ -25,7 +25,16 @@ interface Question {
   choix_multiple: boolean;
   reponses_correctes: string[];
   media_url: string | null;
+  sujet_id: number | null;
   points: number;
+}
+
+interface Sujet {
+  id: number;
+  type_competence: 'CE' | 'CO';
+  titre: string;
+  contenu: string | null;
+  media_url: string | null;
 }
 
 interface Reponse {
@@ -46,6 +55,8 @@ export default function TestClientPage() {
   const [stagiaire, setStagiaire] = useState<{ nom: string; prenom: string; civilite: string } | null>(null);
   const [questionsCe, setQuestionsCe] = useState<Question[]>([]);
   const [questionsCo, setQuestionsCo] = useState<Question[]>([]);
+  const [sujetsCe, setSujetsCe] = useState<Sujet[]>([]);
+  const [sujetsCo, setSujetsCo] = useState<Sujet[]>([]);
 
   // Navigation
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -90,6 +101,8 @@ export default function TestClientPage() {
         setStagiaire(data.stagiaire);
         setQuestionsCe(data.questionsCe || []);
         setQuestionsCo(data.questionsCo || []);
+        setSujetsCe(data.sujetsCe || []);
+        setSujetsCo(data.sujetsCo || []);
         setPhase('intro');
       } catch {
         setErrorMsg('Impossible de charger le test');
@@ -122,6 +135,19 @@ export default function TestClientPage() {
   const currentReponses = phase === 'test_ce' ? reponsesCe : reponsesCo;
   const setCurrentReponses = phase === 'test_ce' ? setReponsesCe : setReponsesCo;
   const currentQuestion = currentQuestions[currentIndex] || null;
+  const currentSujets = phase === 'test_ce' ? sujetsCe : sujetsCo;
+  const currentSujet = currentQuestion?.sujet_id
+    ? currentSujets.find((s) => s.id === currentQuestion.sujet_id) || null
+    : null;
+  // Audio courant : audio du sujet (CO) sinon audio propre à la question
+  const currentAudioUrl = currentSujet?.media_url || currentQuestion?.media_url || null;
+  // URL audio pour une question donnée (sert à ne couper l'audio qu'au changement de sujet)
+  const audioUrlForIndex = (i: number): string | null => {
+    const q = currentQuestions[i];
+    if (!q) return null;
+    const suj = q.sujet_id ? currentSujets.find((s) => s.id === q.sujet_id) : null;
+    return suj?.media_url || q.media_url || null;
+  };
 
   const getReponse = (qId: number) => currentReponses.find((r) => r.questionId === qId)?.reponse || null;
   const getReponsesArray = (qId: number): string[] => {
@@ -156,14 +182,20 @@ export default function TestClientPage() {
     });
   };
 
-  const goNext = () => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; setAudioPlaying(false); setAudioProgress(0); }
-    if (currentIndex < currentQuestions.length - 1) setCurrentIndex(currentIndex + 1);
+  // Naviguer vers une question : ne réinitialise l'audio que si le sujet/audio change
+  // (on garde l'audio en cours pour toutes les questions d'un même sujet).
+  const navigateTo = (i: number) => {
+    if (i < 0 || i >= currentQuestions.length) return;
+    if (audioUrlForIndex(i) !== currentAudioUrl && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setAudioPlaying(false);
+      setAudioProgress(0);
+    }
+    setCurrentIndex(i);
   };
-  const goPrev = () => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; setAudioPlaying(false); setAudioProgress(0); }
-    if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
-  };
+  const goNext = () => navigateTo(currentIndex + 1);
+  const goPrev = () => navigateTo(currentIndex - 1);
 
   const startCe = () => { setCurrentIndex(0); setPhase('test_ce'); };
   const finishCe = () => {
@@ -277,7 +309,7 @@ export default function TestClientPage() {
 
           <div className="bg-amber-50 rounded-xl p-4 mb-6 text-left">
             <p className="text-xs text-amber-700">
-              Les scores d'Expression Écrite (EE) et Expression Orale (EO) seront évalués séparément par votre formatrice.
+              Les scores d&apos;Expression Écrite (EE) et Expression Orale (EO) seront évalués séparément par votre formatrice.
             </p>
           </div>
 
@@ -379,10 +411,7 @@ export default function TestClientPage() {
           {currentQuestions.map((q, i) => {
             const answered = getReponse(q.id) !== null;
             return (
-              <button key={q.id} onClick={() => {
-                if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; setAudioPlaying(false); setAudioProgress(0); }
-                setCurrentIndex(i);
-              }}
+              <button key={q.id} onClick={() => navigateTo(i)}
                 className={`w-8 h-8 rounded-lg text-xs font-medium border transition-colors ${
                   i === currentIndex ? `bg-${phaseColor}-600 text-white border-${phaseColor}-600`
                     : answered ? 'bg-green-100 text-green-700 border-green-200'
@@ -399,10 +428,29 @@ export default function TestClientPage() {
               Niveau {currentQuestion.niveau}
             </span>
 
-            {/* Audio player CO */}
-            {currentQuestion.type_competence === 'CO' && currentQuestion.media_url && (
+            {/* Sujet partagé — texte à lire (CE), reste affiché pour toutes ses questions */}
+            {phase === 'test_ce' && currentSujet && currentSujet.contenu && (
+              <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="h-4 w-4 text-blue-500" />
+                  <span className="text-xs font-semibold text-blue-800">{currentSujet.titre}</span>
+                </div>
+                <div className="max-h-64 overflow-y-auto text-sm text-slate-700 whitespace-pre-line leading-relaxed pr-1">
+                  {currentSujet.contenu}
+                </div>
+              </div>
+            )}
+
+            {/* Audio player CO — audio du sujet (partagé) ou de la question */}
+            {phase === 'test_co' && currentAudioUrl && (
               <div className="mt-4 bg-purple-50 rounded-xl p-4">
-                <audio ref={audioRef} src={currentQuestion.media_url} preload="auto" />
+                {currentSujet && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <Volume2 className="h-4 w-4 text-purple-500" />
+                    <span className="text-xs font-semibold text-purple-800">{currentSujet.titre}</span>
+                  </div>
+                )}
+                <audio ref={audioRef} src={currentAudioUrl} preload="auto" />
                 <div className="flex items-center gap-3">
                   <button onClick={() => {
                     if (!audioRef.current) return;
@@ -422,7 +470,12 @@ export default function TestClientPage() {
                     <RotateCcw className="h-4 w-4" />
                   </button>
                 </div>
-                <p className="text-xs text-purple-600 mt-2 text-center">Écoutez puis répondez</p>
+                {currentSujet?.contenu && (
+                  <p className="text-xs text-purple-700 mt-2 whitespace-pre-line">{currentSujet.contenu}</p>
+                )}
+                <p className="text-xs text-purple-600 mt-2 text-center">
+                  Écoutez puis répondez{currentSujet ? ' — vous pouvez réécouter pour toutes les questions de ce sujet' : ''}
+                </p>
               </div>
             )}
 

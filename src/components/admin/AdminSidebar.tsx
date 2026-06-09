@@ -18,6 +18,7 @@ import {
   GraduationCap,
   FileQuestion,
   CheckSquare,
+  BookOpen,
 } from 'lucide-react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { useFeuilleAppelBadge } from '@/hooks/useFeuilleAppelBadge';
@@ -34,6 +35,7 @@ const mainNavItems = [
 ];
 
 const secondaryNavItems = [
+  { href: '/admin/formations', label: 'Catalogue formations', icon: BookOpen, adminOnly: false },
   { href: '/admin/staff', label: 'Équipe', icon: UsersRound, adminOnly: true },
   { href: '/admin/archives', label: 'Archives', icon: Archive, adminOnly: true },
   { href: '/admin/suivi-formation/parametres', label: 'Paramètres formation', icon: Settings, adminOnly: true },

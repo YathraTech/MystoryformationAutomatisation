@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { formatHeure } from '@/lib/utils/format';
 import { AlertCircle, Users } from 'lucide-react';
 
 interface Candidat {
@@ -108,7 +109,7 @@ export default function PartenaireCandidatsPage() {
                       {c.dateExamen
                         ? new Date(c.dateExamen).toLocaleDateString('fr-FR')
                         : 'Non planifié'}
-                      {c.heureExamen && ` ${c.heureExamen.slice(0, 5)}`}
+                      {c.heureExamen && ` ${formatHeure(c.heureExamen)}`}
                     </td>
                     <td className="px-5 py-3.5 text-slate-600">{c.lieu || '-'}</td>
                     <td className="px-5 py-3.5">

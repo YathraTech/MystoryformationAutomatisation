@@ -90,7 +90,7 @@ export default function InscriptionPaiementForm({ stagiaireId, stagiaire, onSave
         </div>
         {form.paiementPlusieursFois && (
           <div>
-            <label className="block text-xs text-slate-500 mb-1">Nombre d'échéances</label>
+            <label className="block text-xs text-slate-500 mb-1">Nombre d&apos;échéances</label>
             <select
               value={form.nombreEcheances}
               onChange={(e) => setForm({ ...form, nombreEcheances: parseInt(e.target.value) })}

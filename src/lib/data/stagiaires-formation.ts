@@ -88,6 +88,7 @@ function dbToTest(row: any): TestFormation {
     reponsesCe: row.reponses_ce,
     reponsesCo: row.reponses_co,
     pdfRapport: row.pdf_rapport,
+    scanUrl: row.scan_url ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -107,7 +108,10 @@ function dbToAnalyse(row: any): AnalyseBesoin {
     dureeEstimeeFormation: row.duree_estimee_formation || '',
     niveauVise: row.niveau_vise,
     typeCertificationVisee: row.type_certification_visee || [],
+    certificationViseePrecisions: row.certification_visee_precisions ?? null,
     modeFinancement: row.mode_financement,
+    fondsPropresCarte: row.fonds_propres_carte != null ? Number(row.fonds_propres_carte) : null,
+    fondsPropresEspeces: row.fonds_propres_especes != null ? Number(row.fonds_propres_especes) : null,
     commentaires: row.commentaires,
     dateRemplissage: row.date_remplissage,
     commercialeNom: row.commerciale_nom,
@@ -255,17 +259,22 @@ function dbToQcmQuestion(row: any): QcmQuestion {
   return {
     id: row.id,
     typeCompetence: row.type_competence,
+    typeTest: row.type_test || 'initial',
     niveau: row.niveau,
     question: row.question,
     choix: row.choix || [],
     reponseCorrecte: row.reponse_correcte,
+    choixMultiple: row.choix_multiple ?? false,
+    reponsesCorrectes: row.reponses_correctes || [],
     mediaUrl: row.media_url,
+    sujetId: row.sujet_id ?? null,
     points: Number(row.points),
     actif: row.actif,
     ordre: row.ordre,
     createdAt: row.created_at,
   };
 }
+
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ============================================================
@@ -759,12 +768,12 @@ export function calculerScoreQcm(
   return { score: scoreNormalise, total: 20, details };
 }
 
-export function calculerNiveau(scoreGlobal: number): string {
-  if (scoreGlobal >= 19) return 'B2';
-  if (scoreGlobal >= 15) return 'B1';
-  if (scoreGlobal >= 10) return 'A2';
-  if (scoreGlobal >= 5) return 'A1';
-  return 'A0';
+// Niveau estimé à partir de la moyenne /20 (0-5 A1, 5-10 A2, 10-15 B1, 15-20 B2)
+export function calculerNiveau(scoreGlobalSur20: number): string {
+  if (scoreGlobalSur20 >= 15) return 'B2';
+  if (scoreGlobalSur20 >= 10) return 'B1';
+  if (scoreGlobalSur20 >= 5) return 'A2';
+  return 'A1';
 }
 
 // ============================================================
@@ -1034,7 +1043,13 @@ export async function recalculerHeuresEffectuees(stagiaireId: number): Promise<n
 
   if (error) throw new Error(error.message);
 
-  const heures = (data || []).reduce((sum, row: any) => {
+  type EmargementRow = {
+    cours_sessions:
+      | { duree_heures: number | null }
+      | { duree_heures: number | null }[]
+      | null;
+  };
+  const heures = ((data as EmargementRow[] | null) || []).reduce((sum, row) => {
     const session = row.cours_sessions;
     const duree = Array.isArray(session) ? session[0]?.duree_heures : session?.duree_heures;
     return sum + (duree ? Number(duree) : 0);

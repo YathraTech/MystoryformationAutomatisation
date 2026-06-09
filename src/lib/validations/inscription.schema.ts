@@ -54,9 +54,25 @@ export const personalInfoSchema = z.object({
     .string()
     .min(2, 'La ville doit contenir au moins 2 caractères')
     .max(100, 'La ville ne peut pas dépasser 100 caractères'),
+  // === Identité étendue (parité avec le formulaire examen) ===
+  nationalite: z.string().min(2, 'Nationalité requise'),
+  villeNaissance: z.string().optional(),
+  paysNaissance: z.string().min(2, 'Pays de naissance requis'),
+  langueMaternelle: z.string().min(2, 'Langue maternelle requise'),
+  // === Pièce d'identité ===
+  typePieceIdentite: z.enum(['passeport', 'cni'], {
+    message: 'Veuillez choisir un type de pièce d\'identité',
+  }),
+  numeroPasseport: z.string().optional(),
+  numeroCni: z.string().optional(),
+  // Clé d'erreur dédiée à l'upload de fichier(s) (les fichiers sont gérés hors RHF)
+  pieceIdentite: z.string().optional(),
 });
 
-// === ÉTAPE 2 : Informations CPF ===
+// === Informations CPF (champs conservés mais retirés du formulaire) ===
+// La partie CPF n'est plus affichée dans le formulaire d'inscription.
+// Les champs restent optionnels dans le schéma pour ne pas casser l'API/les
+// types en aval (ils sont simplement transmis vides).
 export const cpfInfoSchema = z.object({
   numeroCPF: z
     .string()
@@ -72,10 +88,9 @@ export const cpfInfoSchema = z.object({
       (val) => !val || secuRegex.test(val.replace(/\s/g, '')),
       'Numéro de sécurité sociale invalide (15 chiffres)'
     ),
-  modeFinancement: z.enum(
-    ['CPF', 'Personnel', 'Entreprise', 'PoleEmploi', 'Autre'],
-    { message: 'Veuillez sélectionner un mode de financement' }
-  ),
+  modeFinancement: z
+    .enum(['CPF', 'Personnel', 'Entreprise', 'PoleEmploi', 'Autre'])
+    .or(z.literal('')),
 });
 
 // === ÉTAPE 3 : Choix Formation ===
@@ -133,10 +148,9 @@ export type DisponibilitesData = z.infer<typeof commentairesSchema>;
 export type ConsentementData = z.infer<typeof consentementSchema>;
 export type InscriptionCompleteData = z.infer<typeof inscriptionCompleteSchema>;
 
-// Schémas par étape pour validation progressive
+// Schémas par étape pour validation progressive (partie CPF retirée du formulaire)
 export const stepSchemas = [
   personalInfoSchema,
-  cpfInfoSchema,
   formationChoiceSchema.merge(commentairesSchema),
   consentementSchema,
 ] as const;

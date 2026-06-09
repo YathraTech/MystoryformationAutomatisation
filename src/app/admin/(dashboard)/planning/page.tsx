@@ -6,6 +6,7 @@ import Link from 'next/link';
 import type { Inscription } from '@/types/admin';
 import type { Examen } from '@/lib/data/examens';
 import { getPlanningColorForExamType, type PlanningColorSet } from '@/lib/utils/exam-colors';
+import { formatHeure } from '@/lib/utils/format';
 
 interface PlanningEvent {
   id: number;
@@ -447,7 +448,7 @@ export default function PlanningPage() {
                         )}
 
                         {event.heure && (
-                          <span className="text-slate-500 shrink-0">{event.heure.slice(0, 5)}</span>
+                          <span className="text-slate-500 shrink-0">{formatHeure(event.heure)}</span>
                         )}
 
                         {event.inscriptionId ? (

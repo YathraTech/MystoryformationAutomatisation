@@ -11,11 +11,28 @@ import {
 } from '@/lib/utils/email-templates';
 import type { Examen } from '@/lib/data/examens';
 
-async function generateAndUploadAttestation(
+async function getAttestationSignedUrl(
   examen: Examen,
   diplomeLabel: string,
 ): Promise<string | null> {
   try {
+    const supabaseExisting = createAdminClient();
+
+    // Si un PDF de résultat a déjà été uploadé manuellement, on le réutilise
+    // tel quel (il remplace l'attestation auto-générée).
+    if (examen.pdfAttestationReussite) {
+      const { data: signedData, error: signedError } = await supabaseExisting.storage
+        .from('documents')
+        .createSignedUrl(examen.pdfAttestationReussite, 604800);
+
+      if (signedError || !signedData?.signedUrl) {
+        console.error(`[send-resultats] Signed URL error (uploaded) for examen ${examen.id}:`, signedError);
+        return null;
+      }
+      return signedData.signedUrl;
+    }
+
+    // Sinon, repli : génération automatique de l'attestation de réussite
     const { blob, fileName } = await generateAttestationReussite(examen, diplomeLabel);
 
     const supabase = createAdminClient();
@@ -105,7 +122,7 @@ export async function POST(
           let documentUrl: string | undefined;
 
           if (candidat.resultat === 'reussi') {
-            const signedUrl = await generateAndUploadAttestation(candidat, diplomeLabel);
+            const signedUrl = await getAttestationSignedUrl(candidat, diplomeLabel);
             emailHtml = buildResultatReussiEmail(
               candidat.prenom,
               candidat.nom,

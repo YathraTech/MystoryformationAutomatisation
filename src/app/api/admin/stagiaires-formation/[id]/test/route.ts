@@ -57,6 +57,10 @@ export async function POST(
       ? await getTestInitial(stagiaireId)
       : await getTestFinal(stagiaireId);
 
+    // Scan/photo du test papier (optionnel) : '' efface, undefined laisse inchangé
+    const scanUrl: string | null | undefined =
+      typeof body.scanUrl === 'string' ? (body.scanUrl || null) : undefined;
+
     if (existing) {
       // Mettre à jour
       await updateTest(existing.id, {
@@ -68,6 +72,7 @@ export async function POST(
         profil_pedagogique: d.profilPedagogique,
         reponses_ce: reponsesCeDetail,
         reponses_co: reponsesCoDetail,
+        ...(scanUrl !== undefined ? { scan_url: scanUrl } : {}),
       });
       return NextResponse.json({ success: true, updated: true, id: existing.id });
     }
@@ -84,6 +89,7 @@ export async function POST(
       profil_pedagogique: d.profilPedagogique,
       reponses_ce: reponsesCeDetail,
       reponses_co: reponsesCoDetail,
+      ...(scanUrl !== undefined ? { scan_url: scanUrl } : {}),
     });
 
     // Mettre à jour le statut du stagiaire

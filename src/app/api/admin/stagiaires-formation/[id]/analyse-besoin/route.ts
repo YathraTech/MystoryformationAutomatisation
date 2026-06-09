@@ -52,7 +52,11 @@ export async function POST(
       duree_estimee_formation: d.dureeEstimeeFormation,
       niveau_vise: d.niveauVise,
       type_certification_visee: d.typeCertificationVisee,
+      certification_visee_precisions: body.certificationViseePrecisions || null,
       mode_financement: d.modeFinancement,
+      // Détail du règlement uniquement pertinent pour « Fonds propres »
+      fonds_propres_carte: d.modeFinancement === 'Fonds propres' ? (d.fondsPropresCarte ?? null) : null,
+      fonds_propres_especes: d.modeFinancement === 'Fonds propres' ? (d.fondsPropresEspeces ?? null) : null,
       commentaires: d.commentaires || null,
       commerciale_nom: body.commercialeNom || null,
     };

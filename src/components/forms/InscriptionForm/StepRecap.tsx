@@ -6,7 +6,6 @@ import { Pencil } from 'lucide-react';
 import { Button, Checkbox } from '@/components/ui';
 import {
   CIVILITES,
-  MODES_FINANCEMENT,
   LANGUES,
   NIVEAUX,
   OBJECTIFS,
@@ -115,19 +114,7 @@ export function StepRecap({ onGoToStep }: StepRecapProps) {
           <RecapRow label="Ville" value={data.ville} />
         </RecapSection>
 
-        <RecapSection title="Informations CPF" step={2} onEdit={onGoToStep}>
-          <RecapRow label="N° CPF" value={data.numeroCPF || 'Non renseigné'} />
-          <RecapRow
-            label="N° Sécurité Sociale"
-            value={data.numeroSecuriteSociale || 'Non renseigné'}
-          />
-          <RecapRow
-            label="Financement"
-            value={getLabel(MODES_FINANCEMENT, data.modeFinancement)}
-          />
-        </RecapSection>
-
-        <RecapSection title="Formation choisie" step={3} onEdit={onGoToStep}>
+        <RecapSection title="Formation choisie" step={2} onEdit={onGoToStep}>
           <RecapRow label="Langue" value={getLabel(LANGUES, data.langue)} />
           <RecapRow label="Niveau" value={getLabel(NIVEAUX, data.niveauActuel)} />
           <RecapRow label="Objectif" value={getLabel(OBJECTIFS, data.objectif)} />
@@ -141,7 +128,7 @@ export function StepRecap({ onGoToStep }: StepRecapProps) {
         </RecapSection>
 
         {data.commentaires && (
-          <RecapSection title="Commentaires" step={3} onEdit={onGoToStep}>
+          <RecapSection title="Commentaires" step={2} onEdit={onGoToStep}>
             <RecapRow label="Commentaires" value={data.commentaires} />
           </RecapSection>
         )}

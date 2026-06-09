@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CheckCircle2, Save, Sparkles, UserCheck, ArrowRight, Loader2 } from 'lucide-react';
 import type { AnalyseBesoin, TestFormation, StagiaireFormation, Inscription } from '@/types/admin';
 
@@ -37,7 +37,7 @@ interface Props {
 function mapModeFinancementFromInscription(m: string | undefined | null): string {
   if (!m) return '';
   if (m === 'CPF') return 'CPF';
-  if (m === 'Entreprise' || m === 'PoleEmploi') return 'Mixte';
+  if (m === 'Entreprise' || m === 'PoleEmploi') return 'Entreprise';
   // Personnel, Autre, autres valeurs → fonds propres
   return 'Fonds propres';
 }
@@ -79,13 +79,37 @@ export default function AnalyseBesoinForm({
     dureeEstimeeFormation: existingAnalyse?.dureeEstimeeFormation ?? '',
     niveauVise: existingAnalyse?.niveauVise ?? '',
     typeCertificationVisee: existingAnalyse?.typeCertificationVisee ?? [],
+    certificationViseePrecisions: existingAnalyse?.certificationViseePrecisions ?? '',
     modeFinancement:
       existingAnalyse?.modeFinancement ?? inscriptionModeFinancement ?? '',
+    fondsPropresCarte: existingAnalyse?.fondsPropresCarte ?? 0,
+    fondsPropresEspeces: existingAnalyse?.fondsPropresEspeces ?? 0,
     commentaires: existingAnalyse?.commentaires ?? '',
   });
 
-  const toggleArray = (arr: string[], value: string) =>
-    arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
+  // Offres du catalogue (pour proposer des durées d'heures)
+  const [offres, setOffres] = useState<{ id: string; nom: string; dureeHeures: number }[]>([]);
+  const [offreSelectionnee, setOffreSelectionnee] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/public/formations')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('réseau'))))
+      .then((d) => {
+        if (cancelled) return;
+        const list = Array.isArray(d.formations) ? d.formations : [];
+        setOffres(
+          list
+            .filter((f: { dureeHeures?: number }) => Number(f.dureeHeures) > 0)
+            .map((f: { id: string; nom: string; dureeHeures: number }) => ({
+              id: f.id,
+              nom: f.nom,
+              dureeHeures: Number(f.dureeHeures),
+            }))
+        );
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   // Champs requis → liste des champs manquants (affichés si vides)
   const missingFields: string[] = [];
@@ -170,12 +194,11 @@ export default function AnalyseBesoinForm({
           {OBJECTIFS.map((obj) => (
             <label key={obj} className="flex items-center gap-2 text-sm cursor-pointer">
               <input
-                type="checkbox"
+                type="radio"
+                name="objectifFormation"
                 checked={form.objectifFormation.includes(obj)}
-                onChange={() =>
-                  setForm({ ...form, objectifFormation: toggleArray(form.objectifFormation, obj) })
-                }
-                className="rounded border-slate-300"
+                onChange={() => setForm({ ...form, objectifFormation: [obj] })}
+                className="border-slate-300"
               />
               {obj}
             </label>
@@ -239,12 +262,11 @@ export default function AnalyseBesoinForm({
               {DISPONIBILITES.map((d) => (
                 <label key={d} className="flex items-center gap-2 text-sm cursor-pointer">
                   <input
-                    type="checkbox"
+                    type="radio"
+                    name="disponibilites"
                     checked={form.disponibilites.includes(d)}
-                    onChange={() =>
-                      setForm({ ...form, disponibilites: toggleArray(form.disponibilites, d) })
-                    }
-                    className="rounded border-slate-300"
+                    onChange={() => setForm({ ...form, disponibilites: [d] })}
+                    className="border-slate-300"
                   />
                   {d}
                 </label>
@@ -317,6 +339,32 @@ export default function AnalyseBesoinForm({
               );
             })()}
 
+            {/* Liste des formations proposées : la sélection remplit les heures */}
+            {offres.length > 0 && (
+              <div className="mt-2">
+                <label className="block text-[11px] text-slate-400 mb-1">
+                  Ou choisir une formation proposée (remplit les heures) :
+                </label>
+                <select
+                  value={offreSelectionnee}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setOffreSelectionnee(id);
+                    const o = offres.find((x) => x.id === id);
+                    if (o) setForm({ ...form, dureeEstimeeFormation: String(o.dureeHeures) });
+                  }}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
+                >
+                  <option value="">Sélectionner une formation…</option>
+                  {offres.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.nom} — {o.dureeHeures}h
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* Sélection faite par l'inscrit au moment de l'inscription */}
             {stagiaire.heuresPrevues && stagiaire.heuresPrevues > 0 && (
               <button
@@ -324,7 +372,7 @@ export default function AnalyseBesoinForm({
                 onClick={() =>
                   setForm({ ...form, dureeEstimeeFormation: String(stagiaire.heuresPrevues) })
                 }
-                className="mt-1 ml-0 inline-flex items-center gap-1.5 text-[11px] text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 rounded-md px-2 py-1 transition-colors"
+                className="mt-2 ml-0 inline-flex items-center gap-1.5 text-[11px] text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 rounded-md px-2 py-1 transition-colors"
                 title="Utiliser cette valeur"
               >
                 <UserCheck className="h-3 w-3" />
@@ -356,20 +404,23 @@ export default function AnalyseBesoinForm({
               {CERTIFICATIONS.map((c) => (
                 <label key={c} className="flex items-center gap-2 text-sm cursor-pointer">
                   <input
-                    type="checkbox"
+                    type="radio"
+                    name="typeCertificationVisee"
                     checked={form.typeCertificationVisee.includes(c)}
-                    onChange={() =>
-                      setForm({
-                        ...form,
-                        typeCertificationVisee: toggleArray(form.typeCertificationVisee, c),
-                      })
-                    }
-                    className="rounded border-slate-300"
+                    onChange={() => setForm({ ...form, typeCertificationVisee: [c] })}
+                    className="border-slate-300"
                   />
                   {c}
                 </label>
               ))}
             </div>
+            <textarea
+              value={form.certificationViseePrecisions}
+              onChange={(e) => setForm({ ...form, certificationViseePrecisions: e.target.value })}
+              rows={2}
+              placeholder="Précisions sur la certification (session visée, niveau ciblé, modalités…)"
+              className="mt-2 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+            />
           </div>
           <div>
             <label className="block text-xs text-slate-500 mb-1">
@@ -383,7 +434,7 @@ export default function AnalyseBesoinForm({
               <option value="">Sélectionner</option>
               <option value="CPF">CPF</option>
               <option value="Fonds propres">Fonds propres</option>
-              <option value="Mixte">Mixte</option>
+              <option value="Entreprise">Entreprise</option>
             </select>
             {inscription?.modeFinancement && (
               <p className="mt-1.5 text-[11px] text-slate-500">
@@ -395,6 +446,40 @@ export default function AnalyseBesoinForm({
             )}
           </div>
         </div>
+
+        {/* Détail du règlement en fonds propres */}
+        {form.modeFinancement === 'Fonds propres' && (
+          <div className="mt-3 grid grid-cols-2 gap-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="col-span-2 text-xs font-medium text-slate-600">
+              Règlement en fonds propres
+            </div>
+            <div>
+              <label className="block text-xs text-slate-500 mb-1">Montant en carte (€)</label>
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                value={form.fondsPropresCarte}
+                onChange={(e) => setForm({ ...form, fondsPropresCarte: parseFloat(e.target.value) || 0 })}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-500 mb-1">Montant en espèces (€)</label>
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                value={form.fondsPropresEspeces}
+                onChange={(e) => setForm({ ...form, fondsPropresEspeces: parseFloat(e.target.value) || 0 })}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white"
+              />
+            </div>
+            <p className="col-span-2 text-[11px] text-slate-400">
+              Total fonds propres : {(form.fondsPropresCarte + form.fondsPropresEspeces).toFixed(2)} €
+            </p>
+          </div>
+        )}
 
         <div className="mt-3">
           <label className="block text-xs text-slate-500 mb-1">Commentaires</label>

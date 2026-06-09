@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { formatHeure } from '@/lib/utils/format';
 import {
   Plus,
   Pencil,
@@ -810,7 +811,7 @@ export default function ParametresExamensPage() {
                   <div className="flex items-center gap-4">
                     <span className="font-medium text-slate-800">{slot.label}</span>
                     <span className="text-sm text-slate-500 capitalize">{slot.jour}</span>
-                    <span className="text-sm text-slate-500">{slot.heure}</span>
+                    <span className="text-sm text-slate-500">{formatHeure(slot.heure)}</span>
                     {!slot.actif && (
                       <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
                         Inactif

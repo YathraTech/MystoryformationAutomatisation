@@ -56,6 +56,7 @@ export async function GET(
       lieu: ex.lieu,
       inscriptionId: emailToInscriptionId.get(ex.email.toLowerCase()) || null,
       resultatEmailSent: ex.resultatEmailSent,
+      pdfAttestationReussite: ex.pdfAttestationReussite,
     }));
 
     // Summary

@@ -1,13 +1,10 @@
-type_test;competence;niveau;question;choix_A;choix_B;choix_C;choix_D;reponse;choix_multiple;points;audio_url
-initial;CE;A1;Quel est le mot pour "bonjour" en français ?;Hello;Bonjour;Gracias;Danke;B;non;1;
-initial;CE;A1;Quelle phrase est correcte ?;Je suis content;Je suis contente;Les deux sont correctes;Aucune;C;non;1;
-initial;CE;A2;Lisez le texte. Quels animaux sont mentionnés ?;Le chat;Le chien;Le chat et le chien;L'oiseau;A,C;oui;2;
-initial;CE;B1;Dans ce texte, quelles informations sont vraies ?;L'auteur habite à Paris;Il travaille le weekend;Il a deux enfants;Il est professeur;A,C;oui;2;
-initial;CO;A1;Écoutez. Quelle heure est-il ?;8h00;9h00;10h00;11h00;B;non;1;https://exemple.com/audio1.mp3
-initial;CO;A2;Écoutez le dialogue. Que commande la personne ?;Un café;Un thé;Un jus d'orange;Un café et un croissant;D;non;1;https://exemple.com/audio2.mp3
-initial;CO;B1;Écoutez. Quels sujets sont abordés ?;Le sport;La politique;La météo;La cuisine;A,C;oui;2;https://exemple.com/audio3.mp3
-final;CE;A1;Quel est le contraire de "grand" ?;Petit;Gros;Haut;Large;A;non;1;
-final;CE;A2;Quelle est la bonne conjugaison ?;Je suis allé;Je suis allée;Les deux sont possibles;Aucune;C;non;1;
-final;CE;B1;Quels documents sont nécessaires pour une carte de séjour ?;Passeport;Justificatif de domicile;Photo d'identité;Tous les précédents;A,B,C,D;oui;2;
-final;CO;A1;Écoutez. Où va la personne ?;Au marché;À la gare;À l'école;Au travail;A;non;1;https://exemple.com/audio4.mp3
-final;CO;A2;Écoutez. Quelles langues parle cette personne ?;Français;Anglais;Arabe;Français et arabe;A,C;oui;2;https://exemple.com/audio5.mp3
+type_test;competence;niveau;question;choix_A;choix_B;choix_C;choix_D;reponse;choix_multiple;points;audio_url;sujet_titre;sujet_contenu;sujet_audio_url
+initial;CE;A1;Quel est le mot pour "bonjour" en français ?;Hello;Bonjour;Gracias;Danke;B;non;1;;;;
+initial;CE;A1;Quelle phrase est correcte ?;Je suis content;Je suis contente;Les deux sont correctes;Aucune;C;non;1;;;;
+initial;CO;A1;Écoutez. Quelle heure est-il ?;8h00;9h00;10h00;11h00;B;non;1;https://exemple.com/audio1.mp3;;;
+final;CE;A1;Quel est le contraire de "grand" ?;Petit;Gros;Haut;Large;A;non;1;;;;
+final;CO;A1;Écoutez. Où va la personne ?;Au marché;À la gare;À l'école;Au travail;A;non;1;https://exemple.com/audio4.mp3;;;
+initial;CE;A2;Selon le texte, où habite Marie ?;À Paris;À Lyon;À Marseille;À Nice;A;non;1;;Texte - La famille de Marie;"Marie habite à Paris avec ses deux enfants. Elle travaille dans une école et adore cuisiner le week-end.";
+initial;CE;A2;Combien d'enfants a Marie ?;Un;Deux;Trois;Aucun;B;non;1;;Texte - La famille de Marie;"Marie habite à Paris avec ses deux enfants. Elle travaille dans une école et adore cuisiner le week-end.";
+initial;CO;A2;Écoutez le dialogue. Que commande le client ?;Un café;Un thé;Un jus;Une eau;A;non;1;;Audio - Au restaurant;;https://exemple.com/audio-restaurant.mp3
+initial;CO;A2;Écoutez le dialogue. Quels plats sont proposés ?;La soupe;La salade;Les deux;Aucun;C;oui;2;;Audio - Au restaurant;;https://exemple.com/audio-restaurant.mp3

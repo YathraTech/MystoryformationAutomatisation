@@ -18,6 +18,8 @@ export function CookieConsent({ onAccept }: CookieConsentProps) {
     if (consent === 'accepted') {
       onAccept();
     } else {
+      // Affichage du bandeau après lecture du consentement en localStorage — setState volontaire au montage
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVisible(true);
     }
   }, [onAccept]);
@@ -125,6 +127,8 @@ export function useCookieConsent() {
 
   useEffect(() => {
     const consent = window.localStorage.getItem(COOKIE_CONSENT_KEY);
+    // Lecture unique du consentement en localStorage au montage — setState volontaire
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAccepted(consent === 'accepted');
     setChecked(true);
   }, []);

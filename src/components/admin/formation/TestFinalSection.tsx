@@ -34,9 +34,10 @@ export default function TestFinalSection({ stagiaireId, testFinal, testInitial, 
   const ceAutoCompleted = reponsesCe !== null;
   const coAutoCompleted = reponsesCo !== null;
 
-  const scoreGlobal = scoreCe + scoreCo + scoreEe + scoreEo;
+  // Score global = moyenne des 4 épreuves sur /20
+  const scoreGlobal = Math.round(((scoreCe + scoreCo + scoreEe + scoreEo) / 4) * 10) / 10;
   const niveauEstime =
-    scoreGlobal >= 19 ? 'B2' : scoreGlobal >= 15 ? 'B1' : scoreGlobal >= 10 ? 'A2' : scoreGlobal >= 5 ? 'A1' : 'A0';
+    scoreGlobal >= 15 ? 'B2' : scoreGlobal >= 10 ? 'B1' : scoreGlobal >= 5 ? 'A2' : 'A1';
 
   const handleSubmit = async () => {
     setSaving(true);
@@ -197,12 +198,12 @@ export default function TestFinalSection({ stagiaireId, testFinal, testInitial, 
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center">
               <p className="text-xs text-slate-500">Test initial</p>
-              <p className="text-2xl font-bold text-slate-400">{testInitial.scoreGlobal}/80</p>
+              <p className="text-2xl font-bold text-slate-400">{testInitial.scoreGlobal}/20</p>
               <p className="text-sm text-slate-400">{testInitial.niveauEstime}</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-slate-500">Test final</p>
-              <p className="text-2xl font-bold text-slate-900">{scoreGlobal}/80</p>
+              <p className="text-2xl font-bold text-slate-900">{scoreGlobal}/20</p>
               <p className="text-sm font-medium text-blue-600">{niveauEstime}</p>
             </div>
           </div>

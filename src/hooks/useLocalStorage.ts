@@ -24,6 +24,8 @@ export function useLocalStorage<T>(
       if (item) {
         const parsed = JSON.parse(item) as T;
         currentValueRef.current = parsed;
+        // Hydratation unique depuis localStorage au montage — setState volontaire
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setStoredValue(parsed);
       }
     } catch (error) {

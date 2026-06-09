@@ -97,12 +97,14 @@ export async function POST(request: NextRequest) {
     });
 
     // Créer la fiche Suivi Formation (non bloquant en cas d'erreur)
+    // uploadToken : jeton (id stagiaire encodé) permettant l'upload différé des pièces d'identité.
+    let uploadToken: string | null = null;
     try {
       const adresseComplete = [data.adresse, data.codePostal, data.ville]
         .filter((v) => v && v.trim().length > 0)
         .join(', ');
 
-      await createStagiaireFormation({
+      const stagiaire = await createStagiaireFormation({
         inscription_id: inscription.rowIndex,
         client_id: (clientId as number | undefined) ?? null,
         civilite: data.civilite,
@@ -128,6 +130,7 @@ export async function POST(request: NextRequest) {
               : null,
         numero_dossier_cpf: data.numeroCPF || null,
       });
+      uploadToken = Buffer.from(String(stagiaire.id)).toString('base64');
     } catch (stagiaireError) {
       // Ne pas bloquer l'inscription si la création du stagiaire échoue
       console.error('[Inscription] Création stagiaire_formation échouée:', stagiaireError);
@@ -174,6 +177,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Inscription enregistrée avec succès',
+      uploadToken,
       data: {
         nom: data.nom,
         prenom: data.prenom,

@@ -50,7 +50,9 @@ export async function POST(
       return NextResponse.json({ error: 'Erreur lors de l\'upload' }, { status: 500 });
     }
 
-    return NextResponse.json({ path: storagePath });
+    const { data: urlData } = supabase.storage.from('documents').getPublicUrl(storagePath);
+
+    return NextResponse.json({ path: storagePath, url: urlData?.publicUrl ?? null });
   } catch (error) {
     console.error('[POST upload]', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });

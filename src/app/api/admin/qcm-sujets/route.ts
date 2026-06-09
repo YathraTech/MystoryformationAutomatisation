@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+// Sujets partagés des QCM : un texte (CE) ou un audio (CO) commun à plusieurs questions.
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -10,7 +12,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient();
     let query = supabase
-      .from('qcm_questions')
+      .from('qcm_sujets')
       .select('*')
       .order('ordre', { ascending: true });
 
@@ -23,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data || []);
   } catch (error) {
-    console.error('[GET qcm-questions]', error);
+    console.error('[GET qcm-sujets]', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
@@ -34,19 +36,14 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-      .from('qcm_questions')
+      .from('qcm_sujets')
       .insert({
         type_competence: body.typeCompetence,
         type_test: body.typeTest || 'initial',
-        niveau: body.niveau,
-        question: body.question,
-        choix: body.choix,
-        reponse_correcte: body.reponseCorrecte,
-        choix_multiple: body.choixMultiple || false,
-        reponses_correctes: body.reponsesCorrectes || [],
+        niveau: body.niveau || null,
+        titre: body.titre,
+        contenu: body.contenu || null,
         media_url: body.mediaUrl || null,
-        sujet_id: body.sujetId ?? null,
-        points: body.points || 1,
         actif: body.actif !== false,
         ordre: body.ordre || 0,
       })
@@ -56,7 +53,7 @@ export async function POST(request: NextRequest) {
     if (error) throw new Error(error.message);
     return NextResponse.json(data, { status: 201 });
   } catch (error) {
-    console.error('[POST qcm-questions]', error);
+    console.error('[POST qcm-sujets]', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
@@ -76,26 +73,21 @@ export async function PATCH(request: NextRequest) {
     if (fields.typeCompetence !== undefined) dbFields.type_competence = fields.typeCompetence;
     if (fields.typeTest !== undefined) dbFields.type_test = fields.typeTest;
     if (fields.niveau !== undefined) dbFields.niveau = fields.niveau;
-    if (fields.question !== undefined) dbFields.question = fields.question;
-    if (fields.choix !== undefined) dbFields.choix = fields.choix;
-    if (fields.reponseCorrecte !== undefined) dbFields.reponse_correcte = fields.reponseCorrecte;
-    if (fields.choixMultiple !== undefined) dbFields.choix_multiple = fields.choixMultiple;
-    if (fields.reponsesCorrectes !== undefined) dbFields.reponses_correctes = fields.reponsesCorrectes;
+    if (fields.titre !== undefined) dbFields.titre = fields.titre;
+    if (fields.contenu !== undefined) dbFields.contenu = fields.contenu;
     if (fields.mediaUrl !== undefined) dbFields.media_url = fields.mediaUrl;
-    if (fields.sujetId !== undefined) dbFields.sujet_id = fields.sujetId;
-    if (fields.points !== undefined) dbFields.points = fields.points;
     if (fields.actif !== undefined) dbFields.actif = fields.actif;
     if (fields.ordre !== undefined) dbFields.ordre = fields.ordre;
 
     const { error } = await supabase
-      .from('qcm_questions')
+      .from('qcm_sujets')
       .update(dbFields)
       .eq('id', id);
 
     if (error) throw new Error(error.message);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('[PATCH qcm-questions]', error);
+    console.error('[PATCH qcm-sujets]', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
@@ -110,15 +102,17 @@ export async function DELETE(request: NextRequest) {
     }
 
     const supabase = await createClient();
+    // Les questions rattachées ne sont pas supprimées : la FK est ON DELETE SET NULL,
+    // elles redeviennent simplement autonomes.
     const { error } = await supabase
-      .from('qcm_questions')
+      .from('qcm_sujets')
       .delete()
       .eq('id', parseInt(id));
 
     if (error) throw new Error(error.message);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('[DELETE qcm-questions]', error);
+    console.error('[DELETE qcm-sujets]', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

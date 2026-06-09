@@ -291,6 +291,32 @@ export function buildTestInitialEmail(
   return emailLayout('Tests initiaux de positionnement', body);
 }
 
+// Copie interne envoyée au centre (MyStory Formation) lorsqu'un lien de test
+// initial est transmis à un stagiaire — sert de trace de suivi.
+export function buildTestInitialCopieCentreEmail(
+  prenom: string,
+  nom: string,
+  email: string,
+  testUrl: string,
+): string {
+  const body = `
+    <p style="margin:0 0 20px;font-size:16px;color:#1e1e1e;"><strong>Copie interne — Tests initiaux de positionnement</strong></p>
+    <p style="margin:0 0 20px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      Le lien des tests initiaux (CE / CO) vient d'être envoyé au stagiaire suivant :
+    </p>
+    ${recapTable(
+      recapRow('Stagiaire', `${prenom} ${nom}`, true) +
+      recapRow('Email', email, false) +
+      recapRow('Tests', 'Compréhension écrite (CE) et compréhension orale (CO)', false)
+    )}
+    ${ctaButton(testUrl, 'Ouvrir le lien de test')}
+    <p style="margin:24px 0 0;font-size:14px;color:#71717a;line-height:1.5;">
+      Vous recevez cette copie à titre de suivi. Les résultats seront enregistrés
+      automatiquement dès que le stagiaire aura terminé ses tests.
+    </p>`;
+  return emailLayout('Copie — Tests initiaux de positionnement', body);
+}
+
 export function buildPreinscriptionFormationEmail(
   prenom: string,
   nom: string,
@@ -388,6 +414,27 @@ export function buildPreinscriptionExamenEmail(data: PreinscriptionExamenData): 
       "Vous recevrez prochainement votre convocation avec la date, l'heure et le lieu de votre examen."
     )}`;
   return emailLayout("Confirmation de pré-inscription à l'examen", body);
+}
+
+// Email de (re)transmission du lien d'inscription examen (choix du diplôme par le candidat)
+export function buildLienExamenEmail(
+  prenom: string,
+  nom: string,
+  url: string,
+  resetChoice: boolean,
+): string {
+  const body = `
+    <p style="margin:0 0 20px;font-size:16px;color:#1e1e1e;">Bonjour <strong>${prenom} ${nom}</strong>,</p>
+    <p style="margin:0 0 24px;font-size:15px;color:#3f3f46;line-height:1.6;">
+      ${resetChoice
+        ? "Vous pouvez à nouveau choisir votre diplôme pour votre examen en cliquant sur le bouton ci-dessous."
+        : "Voici le lien pour compléter votre inscription à l'examen (choix de votre diplôme)."}
+    </p>
+    ${ctaButton(url, 'Accéder à mon inscription')}
+    <p style="margin:24px 0 0;font-size:13px;color:#71717a;line-height:1.5;">
+      Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br />${url}
+    </p>`;
+  return emailLayout("Votre lien d'inscription à l'examen", body);
 }
 
 export function buildAttestationEmail(

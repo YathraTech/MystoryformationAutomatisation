@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { formatHeure } from '@/lib/utils/format';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, Calendar } from 'lucide-react';
+import { AlertCircle, Calendar, Send, Mail, X, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import type { Examen, ExamenResultat } from '@/lib/data/examens';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
@@ -48,6 +49,9 @@ export default function ExamensPage() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<FilterType>('tous');
   const [staffMap, setStaffMap] = useState<Record<string, string>>({});
+  const [relanceOpen, setRelanceOpen] = useState(false);
+  const [relanceSending, setRelanceSending] = useState(false);
+  const [relanceMsg, setRelanceMsg] = useState('');
 
   const fetchExamens = useCallback(async () => {
     try {
@@ -132,6 +136,48 @@ export default function ExamensPage() {
     }).length;
   }, [examens]);
 
+  // Candidats ayant passé leur examen (réussi ou échoué), dédupliqués par email.
+  // Ce sont les destinataires de la relance "plateforme partenaire" (PrepCivique.fr).
+  const relanceTargets = useMemo(() => {
+    const map = new Map<string, ExamenWithInscription>();
+    for (const examen of examens) {
+      if (examen.resultat !== 'reussi' && examen.resultat !== 'echoue') continue;
+      if (!examen.email) continue;
+      const key = examen.email.toLowerCase();
+      if (!map.has(key)) map.set(key, examen);
+    }
+    return Array.from(map.values());
+  }, [examens]);
+
+  const handleRelance = useCallback(async () => {
+    setRelanceSending(true);
+    setRelanceMsg('');
+    try {
+      const res = await fetch('/api/admin/examens/relance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          candidats: relanceTargets.map((examen) => ({
+            email: examen.email,
+            prenom: examen.prenom,
+            nom: examen.nom,
+            resultat: examen.resultat,
+          })),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setRelanceMsg(data.message || `Relance envoyée à ${data.sent} candidat(s)`);
+        setRelanceOpen(false);
+      } else {
+        setRelanceMsg(data.error || "Erreur lors de l'envoi de la relance");
+      }
+    } catch {
+      setRelanceMsg("Erreur lors de l'envoi de la relance");
+    } finally {
+      setRelanceSending(false);
+    }
+  }, [relanceTargets]);
 
   if (loading) {
     return (
@@ -161,29 +207,51 @@ export default function ExamensPage() {
         </div>
       )}
 
-      {/* Filtres */}
-      <div className="flex flex-wrap items-center gap-2">
-        {FILTER_TABS.map((tab) => {
-          const count = getFilterCount(tab.value);
-          const isActive = filter === tab.value;
-          return (
-            <button
-              key={tab.value}
-              onClick={() => setFilter(tab.value)}
-              className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                isActive
-                  ? tab.color + ' ring-2 ring-offset-1 ring-slate-300'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              {tab.label}
-              <span className={`rounded-full px-2 py-0.5 text-xs ${isActive ? 'bg-white/50' : 'bg-slate-100'}`}>
-                {count}
-              </span>
-            </button>
-          );
-        })}
+      {/* Filtres + relance partenaire */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {FILTER_TABS.map((tab) => {
+            const count = getFilterCount(tab.value);
+            const isActive = filter === tab.value;
+            return (
+              <button
+                key={tab.value}
+                onClick={() => setFilter(tab.value)}
+                className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  isActive
+                    ? tab.color + ' ring-2 ring-offset-1 ring-slate-300'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {tab.label}
+                <span className={`rounded-full px-2 py-0.5 text-xs ${isActive ? 'bg-white/50' : 'bg-slate-100'}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          onClick={() => { setRelanceMsg(''); setRelanceOpen(true); }}
+          disabled={relanceTargets.length === 0}
+          title="Inviter les candidats ayant passé leur examen à rejoindre notre plateforme partenaire"
+          className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <Send className="h-4 w-4" />
+          Relance partenaire
+          <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">
+            {relanceTargets.length}
+          </span>
+        </button>
       </div>
+
+      {relanceMsg && (
+        <div className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-700">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          {relanceMsg}
+        </div>
+      )}
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         {/* Header */}
@@ -256,7 +324,7 @@ export default function ExamensPage() {
               </div>
 
               <div className="px-4 py-3.5 text-sm text-slate-600 flex items-center">
-                {examen.heureExamen || '-'}
+                {formatHeure(examen.heureExamen) || '-'}
               </div>
 
               <div className="px-4 py-3.5 flex items-center">
@@ -274,6 +342,57 @@ export default function ExamensPage() {
           )}
         </div>
       </div>
+
+      {/* Modale de confirmation de relance partenaire */}
+      {relanceOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <div className="flex items-center gap-2">
+                <Mail className="h-5 w-5 text-sky-600" />
+                <h2 className="text-base font-semibold text-slate-800">Relance plateforme partenaire</h2>
+              </div>
+              <button
+                onClick={() => setRelanceOpen(false)}
+                disabled={relanceSending}
+                className="text-slate-400 hover:text-slate-600 disabled:opacity-50"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="px-5 py-4 space-y-3 text-sm text-slate-600">
+              <p>
+                Un email d&apos;invitation à rejoindre notre plateforme partenaire{' '}
+                <strong>PrepCivique.fr</strong> va être envoyé à{' '}
+                <strong className="text-slate-800">{relanceTargets.length} candidat(s)</strong>{' '}
+                ayant passé leur examen (réussi ou échoué).
+              </p>
+              <p className="text-xs text-slate-400">
+                Les doublons d&apos;adresses email sont automatiquement ignorés.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">
+              <button
+                onClick={() => setRelanceOpen(false)}
+                disabled={relanceSending}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleRelance}
+                disabled={relanceSending || relanceTargets.length === 0}
+                className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50 transition-colors"
+              >
+                <Send className="h-4 w-4" />
+                {relanceSending ? 'Envoi en cours...' : 'Envoyer la relance'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

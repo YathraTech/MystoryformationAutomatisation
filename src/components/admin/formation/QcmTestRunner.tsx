@@ -22,7 +22,16 @@ interface QcmQuestion {
   choix: string[];
   reponse_correcte: string;
   media_url: string | null;
+  sujet_id: number | null;
   points: number;
+}
+
+interface QcmSujet {
+  id: number;
+  type_competence: 'CE' | 'CO';
+  titre: string;
+  contenu: string | null;
+  media_url: string | null;
 }
 
 interface QcmReponse {
@@ -41,6 +50,7 @@ const LETTRES = ['A', 'B', 'C', 'D'];
 
 export default function QcmTestRunner({ competence, typeTest = 'initial', onComplete, onCancel }: Props) {
   const [questions, setQuestions] = useState<QcmQuestion[]>([]);
+  const [sujets, setSujets] = useState<QcmSujet[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [reponses, setReponses] = useState<QcmReponse[]>([]);
@@ -64,21 +74,29 @@ export default function QcmTestRunner({ competence, typeTest = 'initial', onComp
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`/api/admin/qcm-questions?type=${competence}&typeTest=${typeTest}`);
-        const data = await res.json();
+        const [resQ, resS] = await Promise.all([
+          fetch(`/api/admin/qcm-questions?type=${competence}&typeTest=${typeTest}`),
+          fetch(`/api/admin/qcm-sujets?type=${competence}&typeTest=${typeTest}`),
+        ]);
+        const data = await resQ.json();
+        const dataS = await resS.json();
         // Ne garder que les questions actives
         const actives = (Array.isArray(data) ? data : []).filter(
           (q: QcmQuestion & { actif?: boolean }) => q.actif !== false
         );
         setQuestions(actives);
+        setSujets(
+          (Array.isArray(dataS) ? dataS : []).filter((s: QcmSujet & { actif?: boolean }) => s.actif !== false)
+        );
       } catch {
         setQuestions([]);
+        setSujets([]);
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, [competence]);
+  }, [competence, typeTest]);
 
   // Timer
   useEffect(() => {
@@ -112,6 +130,17 @@ export default function QcmTestRunner({ competence, typeTest = 'initial', onComp
   }, [currentIndex, questions]);
 
   const currentQuestion = questions[currentIndex] || null;
+  const currentSujet = currentQuestion?.sujet_id
+    ? sujets.find((s) => s.id === currentQuestion.sujet_id) || null
+    : null;
+  // Audio courant : audio du sujet (CO partagé) sinon audio propre à la question
+  const currentAudioUrl = currentSujet?.media_url || currentQuestion?.media_url || null;
+  const audioUrlForIndex = (i: number): string | null => {
+    const q = questions[i];
+    if (!q) return null;
+    const suj = q.sujet_id ? sujets.find((s) => s.id === q.sujet_id) : null;
+    return suj?.media_url || q.media_url || null;
+  };
 
   const getReponse = (questionId: number): string | null => {
     return reponses.find((r) => r.questionId === questionId)?.reponse || null;
@@ -145,30 +174,21 @@ export default function QcmTestRunner({ competence, typeTest = 'initial', onComp
     setAudioPlaying(true);
   };
 
-  const goNext = () => {
-    if (currentIndex < questions.length - 1) {
-      // Stop audio when moving
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-        setAudioPlaying(false);
-        setAudioProgress(0);
-      }
-      setCurrentIndex(currentIndex + 1);
+  // Ne coupe l'audio qu'au changement de sujet (on garde l'audio pour toutes
+  // les questions d'un même sujet partagé).
+  const navigateTo = (i: number) => {
+    if (i < 0 || i >= questions.length) return;
+    if (audioUrlForIndex(i) !== currentAudioUrl && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setAudioPlaying(false);
+      setAudioProgress(0);
     }
+    setCurrentIndex(i);
   };
 
-  const goPrev = () => {
-    if (currentIndex > 0) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-        setAudioPlaying(false);
-        setAudioProgress(0);
-      }
-      setCurrentIndex(currentIndex - 1);
-    }
-  };
+  const goNext = () => navigateTo(currentIndex + 1);
+  const goPrev = () => navigateTo(currentIndex - 1);
 
   const handleFinish = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -333,15 +353,7 @@ export default function QcmTestRunner({ competence, typeTest = 'initial', onComp
           return (
             <button
               key={q.id}
-              onClick={() => {
-                if (audioRef.current) {
-                  audioRef.current.pause();
-                  audioRef.current.currentTime = 0;
-                  setAudioPlaying(false);
-                  setAudioProgress(0);
-                }
-                setCurrentIndex(i);
-              }}
+              onClick={() => navigateTo(i)}
               className={`w-7 h-7 rounded text-[10px] font-medium border transition-colors ${
                 i === currentIndex
                   ? 'bg-blue-600 text-white border-blue-600'
@@ -364,10 +376,29 @@ export default function QcmTestRunner({ competence, typeTest = 'initial', onComp
             Niveau {currentQuestion.niveau}
           </span>
 
-          {/* Audio player pour CO */}
-          {currentQuestion.type_competence === 'CO' && currentQuestion.media_url && (
+          {/* Sujet partagé — texte à lire (CE), reste affiché pour toutes ses questions */}
+          {competence === 'CE' && currentSujet && currentSujet.contenu && (
+            <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="h-4 w-4 text-blue-500" />
+                <span className="text-xs font-semibold text-blue-800">{currentSujet.titre}</span>
+              </div>
+              <div className="max-h-56 overflow-y-auto text-sm text-slate-700 whitespace-pre-line leading-relaxed pr-1">
+                {currentSujet.contenu}
+              </div>
+            </div>
+          )}
+
+          {/* Audio player CO — audio du sujet (partagé) ou de la question */}
+          {competence === 'CO' && currentAudioUrl && (
             <div className="mt-3 bg-purple-50 rounded-lg p-4">
-              <audio ref={audioRef} src={currentQuestion.media_url} preload="auto" />
+              {currentSujet && (
+                <div className="flex items-center gap-2 mb-3">
+                  <Volume2 className="h-4 w-4 text-purple-500" />
+                  <span className="text-xs font-semibold text-purple-800">{currentSujet.titre}</span>
+                </div>
+              )}
+              <audio ref={audioRef} src={currentAudioUrl} preload="auto" />
               <div className="flex items-center gap-3">
                 <button
                   onClick={playAudio}
@@ -391,8 +422,11 @@ export default function QcmTestRunner({ competence, typeTest = 'initial', onComp
                   <RotateCcw className="h-4 w-4" />
                 </button>
               </div>
+              {currentSujet?.contenu && (
+                <p className="text-xs text-purple-700 mt-2 whitespace-pre-line">{currentSujet.contenu}</p>
+              )}
               <p className="text-xs text-purple-600 mt-2">
-                Écoutez l'enregistrement puis répondez à la question
+                Écoutez l&apos;enregistrement puis répondez{currentSujet ? ' — réécoutable pour toutes les questions de ce sujet' : ''}
               </p>
             </div>
           )}

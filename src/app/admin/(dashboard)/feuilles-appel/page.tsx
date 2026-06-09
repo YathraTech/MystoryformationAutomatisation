@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { formatHeure } from '@/lib/utils/format';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
 import { ClipboardCheck, Clock, ChevronRight, Loader2, CheckCircle2, Send, Mail, RefreshCw, Check } from 'lucide-react';
@@ -161,7 +162,7 @@ function FeuilleActuelle({
               )}
               <p className="text-xs text-slate-500">
                 {examen.diplome || 'Diplôme non choisi'}
-                {examen.heureExamen && ` — ${examen.heureExamen}`}
+                {examen.heureExamen && ` — ${formatHeure(examen.heureExamen)}`}
               </p>
             </div>
 

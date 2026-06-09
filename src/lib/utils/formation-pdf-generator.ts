@@ -149,7 +149,7 @@ export async function generateTestReportPdf(
   doc.rect(15, y, 180, 15, 'F');
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text(`Score global : ${test.scoreGlobal} / 80`, 20, y + 7);
+  doc.text(`Score global : ${test.scoreGlobal} / 20`, 20, y + 7);
   doc.text(`Niveau estimé : ${test.niveauEstime}`, 120, y + 7);
   y += 20;
 
@@ -786,7 +786,7 @@ export async function generateAttestationFinFormationPdf(
     doc.setFont('helvetica', 'bold');
     doc.text('Résultats :', 15, y); y += 6;
     doc.setFont('helvetica', 'normal');
-    doc.text(`Score global : ${testFinal.scoreGlobal} / 80`, 20, y); y += 5;
+    doc.text(`Score global : ${testFinal.scoreGlobal} / 20`, 20, y); y += 5;
     doc.text(`Niveau atteint : ${testFinal.niveauEstime}`, 20, y); y += 5;
   }
 

@@ -191,7 +191,7 @@ export default function NouveauStagiairePage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-slate-500 mb-1">Nom d'usage *</label>
+              <label className="block text-xs text-slate-500 mb-1">Nom d&apos;usage *</label>
               <input
                 type="text"
                 value={form.nom}
@@ -274,7 +274,7 @@ export default function NouveauStagiairePage() {
 
         {/* Pièce d'identité */}
         <div>
-          <h2 className="text-sm font-semibold text-slate-700 mb-3">Pièce d'identité</h2>
+          <h2 className="text-sm font-semibold text-slate-700 mb-3">Pièce d&apos;identité</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs text-slate-500 mb-1">Type de pièce *</label>
@@ -290,7 +290,7 @@ export default function NouveauStagiairePage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-slate-500 mb-1">N° pièce d'identité *</label>
+              <label className="block text-xs text-slate-500 mb-1">N° pièce d&apos;identité *</label>
               <input
                 type="text"
                 value={form.numeroPieceIdentite}
@@ -304,7 +304,7 @@ export default function NouveauStagiairePage() {
           {/* Upload Photo PI */}
           <div className="mt-4">
             <label className="block text-xs text-slate-500 mb-1">
-              Photo / Scan de la pièce d'identité *
+              Photo / Scan de la pièce d&apos;identité *
             </label>
             <div
               onClick={() => piInputRef.current?.click()}
@@ -359,14 +359,14 @@ export default function NouveauStagiairePage() {
 
         {/* Photo candidat */}
         <div>
-          <h2 className="text-sm font-semibold text-slate-700 mb-3">Photo d'identité du candidat</h2>
+          <h2 className="text-sm font-semibold text-slate-700 mb-3">Photo d&apos;identité du candidat</h2>
           <div
             onClick={() => candidatInputRef.current?.click()}
             className="border-2 border-dashed border-slate-200 rounded-lg p-4 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50/50 transition-colors"
           >
             <Upload className="h-6 w-6 text-slate-400 mx-auto mb-1" />
             <p className="text-xs text-slate-500">
-              Cliquez pour ajouter la photo d'identité (JPG, PNG - max 10 Mo)
+              Cliquez pour ajouter la photo d&apos;identité (JPG, PNG - max 10 Mo)
             </p>
             <input
               ref={candidatInputRef}

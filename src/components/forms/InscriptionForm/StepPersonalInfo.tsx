@@ -2,9 +2,15 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
-import { Mail, Phone, Loader2, MapPin } from 'lucide-react';
-import { Input, Select, DatePicker } from '@/components/ui';
+import { Mail, Phone, Loader2, MapPin, Upload, X, FileText } from 'lucide-react';
+import { Input, Select, DatePicker, Combobox } from '@/components/ui';
 import { CIVILITES } from '@/lib/utils/constants';
+import {
+  NATIONALITES_LIST,
+  LANGUES_LIST,
+  PAYS_LIST,
+  VILLES_NAISSANCE_LIST,
+} from '@/lib/utils/identite-options';
 import type { InscriptionCompleteData } from '@/types';
 
 interface AddressSuggestion {
@@ -17,16 +23,28 @@ interface AddressSuggestion {
   };
 }
 
-export function StepPersonalInfo() {
+interface StepPersonalInfoProps {
+  pendingFiles: File[];
+  onFilesChange: (files: File[]) => void;
+}
+
+export function StepPersonalInfo({ pendingFiles, onFilesChange }: StepPersonalInfoProps) {
   const {
     register,
     setValue,
+    watch,
+    clearErrors,
     formState: { errors },
   } = useFormContext<InscriptionCompleteData>();
 
   const codePostal = useWatch<InscriptionCompleteData, 'codePostal'>({ name: 'codePostal' });
   const [loadingVille, setLoadingVille] = useState(false);
   const prevCodePostal = useRef('');
+
+  // Upload multi-fichiers
+  const [fileError, setFileError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Autocomplétion adresse
   const [adresseInput, setAdresseInput] = useState('');
@@ -36,7 +54,13 @@ export function StepPersonalInfo() {
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fermer les suggestions quand on clique ailleurs
+  // Valeurs des combobox
+  const [nationaliteInput, setNationaliteInput] = useState('');
+  const [paysNaissanceInput, setPaysNaissanceInput] = useState('');
+  const [villeNaissanceInput, setVilleNaissanceInput] = useState('');
+  const [langueMaternelleInput, setLangueMaternelleInput] = useState('');
+
+  // Fermer les suggestions d'adresse quand on clique ailleurs
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
@@ -53,7 +77,6 @@ export function StepPersonalInfo() {
       setSuggestions([]);
       return;
     }
-
     setLoadingAdresse(true);
     try {
       const res = await fetch(
@@ -71,12 +94,20 @@ export function StepPersonalInfo() {
     }
   }, []);
 
+  // Handler générique combobox
+  const handleComboboxChange = useCallback(
+    (field: keyof InscriptionCompleteData, setter: (v: string) => void) => (value: string) => {
+      setter(value);
+      setValue(field, value, { shouldValidate: true });
+    },
+    [setValue]
+  );
+
   const handleAdresseChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setAdresseInput(value);
     setValue('adresse', value, { shouldValidate: true });
 
-    // Debounce la recherche
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
@@ -87,16 +118,45 @@ export function StepPersonalInfo() {
 
   const handleSelectSuggestion = (suggestion: AddressSuggestion) => {
     const { name, postcode, city } = suggestion.properties;
-
     setAdresseInput(name);
     setValue('adresse', name, { shouldValidate: true });
     setValue('codePostal', postcode, { shouldValidate: true });
     setValue('ville', city, { shouldValidate: true });
-    prevCodePostal.current = postcode; // Éviter la recherche auto de ville
-
+    prevCodePostal.current = postcode;
     setSuggestions([]);
     setShowSuggestions(false);
   };
+
+  // Ajout de fichiers avec validation
+  const handleAddFiles = useCallback((newFiles: File[]) => {
+    setFileError(null);
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    const maxSize = 10 * 1024 * 1024; // 10 Mo
+    const maxFiles = 5;
+
+    const validFiles: File[] = [];
+    for (const file of newFiles) {
+      if (!allowedTypes.includes(file.type)) {
+        setFileError(`"${file.name}" : format non autorisé. Formats acceptés : PDF, JPG, PNG`);
+        return;
+      }
+      if (file.size > maxSize) {
+        setFileError(`"${file.name}" : le fichier dépasse 10 Mo`);
+        return;
+      }
+      validFiles.push(file);
+    }
+
+    const total = pendingFiles.length + validFiles.length;
+    if (total > maxFiles) {
+      setFileError(`Maximum ${maxFiles} fichiers autorisés (${pendingFiles.length} déjà ajouté(s))`);
+      return;
+    }
+
+    const updated = [...pendingFiles, ...validFiles];
+    onFilesChange(updated);
+    clearErrors('pieceIdentite');
+  }, [pendingFiles, onFilesChange, clearErrors]);
 
   // Auto-complétion ville par code postal (fallback si pas d'adresse sélectionnée)
   useEffect(() => {
@@ -153,7 +213,7 @@ export function StepPersonalInfo() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
-            label="Email professionnel"
+            label="Email"
             type="email"
             placeholder="vous@exemple.fr"
             leftIcon={<Mail className="h-4 w-4" />}
@@ -170,11 +230,51 @@ export function StepPersonalInfo() {
           />
         </div>
 
-        <DatePicker
-          label="Date de naissance"
-          error={errors.dateNaissance?.message}
-          maxDate={new Date().toISOString().split('T')[0]}
-          {...register('dateNaissance')}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <DatePicker
+            label="Date de naissance"
+            error={errors.dateNaissance?.message}
+            maxDate={new Date().toISOString().split('T')[0]}
+            {...register('dateNaissance')}
+          />
+          <Combobox
+            label="Ville de naissance"
+            placeholder="Ex: Paris, Alger, Casablanca..."
+            leftIcon={<MapPin className="h-4 w-4" />}
+            options={VILLES_NAISSANCE_LIST}
+            value={villeNaissanceInput}
+            onChange={handleComboboxChange('villeNaissance', setVilleNaissanceInput)}
+            error={errors.villeNaissance?.message}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Combobox
+            label="Pays de naissance"
+            placeholder="Ex: France, Algérie, Maroc..."
+            leftIcon={<MapPin className="h-4 w-4" />}
+            options={PAYS_LIST}
+            value={paysNaissanceInput}
+            onChange={handleComboboxChange('paysNaissance', setPaysNaissanceInput)}
+            error={errors.paysNaissance?.message}
+          />
+          <Combobox
+            label="Nationalité"
+            placeholder="Saisissez ou sélectionnez..."
+            options={NATIONALITES_LIST}
+            value={nationaliteInput}
+            onChange={handleComboboxChange('nationalite', setNationaliteInput)}
+            error={errors.nationalite?.message}
+          />
+        </div>
+
+        <Combobox
+          label="Langue maternelle"
+          placeholder="Ex: Français, Arabe, Anglais..."
+          options={LANGUES_LIST}
+          value={langueMaternelleInput}
+          onChange={handleComboboxChange('langueMaternelle', setLangueMaternelleInput)}
+          error={errors.langueMaternelle?.message}
         />
 
         {/* Adresse avec autocomplétion */}
@@ -191,7 +291,6 @@ export function StepPersonalInfo() {
             autoComplete="off"
           />
 
-          {/* Liste des suggestions */}
           {showSuggestions && suggestions.length > 0 && (
             <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
               {suggestions.map((suggestion, index) => (
@@ -229,6 +328,161 @@ export function StepPersonalInfo() {
             {...register('ville')}
           />
         </div>
+
+        {/* Séparateur */}
+        <div className="border-t border-slate-200 pt-6 mt-6">
+          <h3 className="text-base font-semibold text-slate-800 mb-4">
+            Identification <span className="text-red-500">*</span>
+          </h3>
+        </div>
+
+        {/* Choix du type de pièce */}
+        <div className="flex gap-3 mb-4">
+          <button
+            type="button"
+            onClick={() => {
+              setValue('typePieceIdentite', 'passeport', { shouldValidate: true });
+              setValue('numeroCni', '', { shouldValidate: false });
+            }}
+            className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 text-sm font-semibold transition-all ${
+              watch('typePieceIdentite') === 'passeport'
+                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+            }`}
+          >
+            Passeport
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setValue('typePieceIdentite', 'cni', { shouldValidate: true });
+              setValue('numeroPasseport', '', { shouldValidate: false });
+            }}
+            className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 text-sm font-semibold transition-all ${
+              watch('typePieceIdentite') === 'cni'
+                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+            }`}
+          >
+            Carte d&apos;identité
+          </button>
+        </div>
+        {errors.typePieceIdentite?.message && (
+          <p className="text-xs text-red-600 -mt-2 mb-3">{errors.typePieceIdentite.message}</p>
+        )}
+
+        {/* Champ numéro conditionnel */}
+        {watch('typePieceIdentite') === 'passeport' && (
+          <Input
+            label="Numéro de passeport"
+            placeholder="Ex: 12AB34567"
+            error={errors.numeroPasseport?.message}
+            {...register('numeroPasseport')}
+          />
+        )}
+        {watch('typePieceIdentite') === 'cni' && (
+          <Input
+            label="Numéro de carte d'identité"
+            placeholder="Ex: 123456789012"
+            error={errors.numeroCni?.message}
+            {...register('numeroCni')}
+          />
+        )}
+
+        {/* Téléversement du document d'identité — visible après sélection du type */}
+        {watch('typePieceIdentite') && (
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              {watch('typePieceIdentite') === 'passeport'
+                ? 'Passeport (page d\'identité)'
+                : 'Carte d\'identité (recto/verso)'
+              } <span className="text-red-500">*</span>
+            </label>
+            <p className="text-xs text-slate-500 mb-2">
+              {watch('typePieceIdentite') === 'passeport'
+                ? 'Veuillez fournir une photo de la page d\'identité de votre passeport'
+                : 'Veuillez fournir une photo recto et verso de votre carte d\'identité'
+              }
+            </p>
+
+            {/* Liste des fichiers */}
+            {pendingFiles.length > 0 && (
+              <div className="space-y-2 mb-3">
+                {pendingFiles.map((file, index) => (
+                  <div key={`${file.name}-${index}`} className="flex items-center gap-3 p-2.5 bg-green-50 border border-green-200 rounded-lg">
+                    <FileText className="h-4 w-4 text-green-600 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-green-700 truncate">{file.name}</p>
+                      <p className="text-xs text-green-500">{(file.size / 1024 / 1024).toFixed(2)} Mo</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = pendingFiles.filter((_, i) => i !== index);
+                        onFilesChange(updated);
+                        if (updated.length > 0) {
+                          clearErrors('pieceIdentite');
+                        }
+                      }}
+                      className="p-1 hover:bg-green-100 rounded transition-colors"
+                    >
+                      <X className="h-4 w-4 text-green-600" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Zone de dépôt */}
+            {pendingFiles.length < 5 && (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  const droppedFiles = Array.from(e.dataTransfer.files);
+                  handleAddFiles(droppedFiles);
+                }}
+                className={`flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                  isDragging
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-slate-300 hover:border-blue-400 hover:bg-blue-50/50'
+                }`}
+              >
+                <Upload className="h-5 w-5 text-slate-400" />
+                <span className="text-sm text-slate-500 text-center">
+                  Cliquez ou glissez-déposez vos fichiers ici
+                </span>
+                <span className="text-xs text-slate-400">
+                  PDF, JPG, PNG — max 10 Mo par fichier, max 5 fichiers
+                </span>
+              </div>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files) {
+                  handleAddFiles(Array.from(e.target.files));
+                  e.target.value = '';
+                }
+              }}
+            />
+
+            {fileError && (
+              <p className="mt-1 text-xs text-red-600">{fileError}</p>
+            )}
+            {errors.pieceIdentite?.message && (
+              <p className="mt-1 text-xs text-red-600">{errors.pieceIdentite.message}</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

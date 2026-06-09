@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { formatHeure } from '@/lib/utils/format';
 import {
   ArrowLeft,
   User,
@@ -2000,7 +2001,7 @@ export default function InscriptionDetail({ id }: InscriptionDetailProps) {
                         {(examen.dateExamen || examen.prix) && (
                           <div className="grid grid-cols-2 gap-2 pt-3 border-t border-slate-200 text-xs">
                             {examen.dateExamen && (
-                              <div><span className="text-slate-500">Date:</span> <span className="font-medium">{new Date(examen.dateExamen).toLocaleDateString('fr-FR')} {examen.heureExamen || ''}</span></div>
+                              <div><span className="text-slate-500">Date:</span> <span className="font-medium">{new Date(examen.dateExamen).toLocaleDateString('fr-FR')} {formatHeure(examen.heureExamen)}</span></div>
                             )}
                             {examen.lieu && (
                               <div className="col-span-2"><span className="text-slate-500">Agence (CA):</span> <span className="font-medium">{examen.lieu}</span></div>

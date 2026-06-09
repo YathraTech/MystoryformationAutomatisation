@@ -3,9 +3,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
 import { Clock, BadgeEuro, BookOpen } from 'lucide-react';
-import { Select, RadioGroup, Card } from '@/components/ui';
+import { RadioGroup, Card } from '@/components/ui';
 import {
-  LANGUES,
   NIVEAUX,
   OBJECTIFS,
 } from '@/lib/utils/constants';
@@ -15,7 +14,6 @@ import type { Formation } from '@/types/admin';
 
 export function StepFormationChoice() {
   const {
-    register,
     control,
     watch,
     setValue,
@@ -28,6 +26,13 @@ export function StepFormationChoice() {
 
   const selectedFormationId = watch('formationId');
   const selectedLangue = watch('langue');
+
+  // Centre de formation français : la langue est toujours le français, fixée d'office.
+  useEffect(() => {
+    if (selectedLangue !== 'Francais') {
+      setValue('langue', 'Francais', { shouldValidate: true });
+    }
+  }, [selectedLangue, setValue]);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,14 +86,6 @@ export function StepFormationChoice() {
       </div>
 
       <div className="space-y-5">
-        <Select
-          label="Langue"
-          placeholder="Sélectionnez une langue"
-          options={LANGUES}
-          error={errors.langue?.message}
-          {...register('langue')}
-        />
-
         <Controller
           name="niveauActuel"
           control={control}
@@ -139,9 +136,7 @@ export function StepFormationChoice() {
                 <BookOpen className="h-8 w-8 text-slate-400" />
               </div>
               <p className="text-sm text-slate-600">
-                {selectedLangue
-                  ? "Aucune formation disponible pour cette langue."
-                  : "Aucune formation disponible pour le moment."}
+                Aucune formation disponible pour le moment.
               </p>
             </div>
           ) : (

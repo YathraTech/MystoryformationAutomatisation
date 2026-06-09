@@ -34,7 +34,20 @@ interface QcmQuestion {
   choix_multiple: boolean;
   reponses_correctes: string[];
   media_url: string | null;
+  sujet_id: number | null;
   points: number;
+  actif: boolean;
+  ordre: number;
+}
+
+interface QcmSujet {
+  id: number;
+  type_test: 'initial' | 'final';
+  type_competence: 'CE' | 'CO';
+  niveau: string | null;
+  titre: string;
+  contenu: string | null;
+  media_url: string | null;
   actif: boolean;
   ordre: number;
 }
@@ -73,6 +86,7 @@ export default function QcmAdminPage() {
     choixMultiple: false,
     reponsesCorrectes: [] as string[],
     mediaUrl: '',
+    sujetId: null as number | null,
     points: 1,
     actif: true,
     ordre: 0,
@@ -92,6 +106,23 @@ export default function QcmAdminPage() {
   const [playingAudioId, setPlayingAudioId] = useState<number | null>(null);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
 
+  // Sujets partagés (texte CE / audio CO)
+  const [sujets, setSujets] = useState<QcmSujet[]>([]);
+  const [showSujetForm, setShowSujetForm] = useState(false);
+  const [editingSujetId, setEditingSujetId] = useState<number | null>(null);
+  const [sujetForm, setSujetForm] = useState({
+    typeTest: 'initial' as 'initial' | 'final',
+    typeCompetence: 'CE' as 'CE' | 'CO',
+    niveau: '',
+    titre: '',
+    contenu: '',
+    mediaUrl: '',
+    actif: true,
+  });
+  const [savingSujet, setSavingSujet] = useState(false);
+  const [uploadingSujetAudio, setUploadingSujetAudio] = useState(false);
+  const sujetAudioInputRef = useRef<HTMLInputElement>(null);
+
   const fetchQuestions = useCallback(async () => {
     try {
       const params = new URLSearchParams();
@@ -105,7 +136,16 @@ export default function QcmAdminPage() {
     finally { setLoading(false); }
   }, [activeTab, filterType, filterNiveau]);
 
+  const fetchSujets = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/admin/qcm-sujets?typeTest=${activeTab}`);
+      const data = await res.json();
+      setSujets(Array.isArray(data) ? data : []);
+    } catch { setSujets([]); }
+  }, [activeTab]);
+
   useEffect(() => { fetchQuestions(); }, [fetchQuestions]);
+  useEffect(() => { fetchSujets(); }, [fetchSujets]);
 
   const resetForm = () => {
     setShowForm(false);
@@ -113,7 +153,7 @@ export default function QcmAdminPage() {
     setForm({
       typeTest: activeTab, typeCompetence: 'CE', niveau: 'A1', question: '', choix: ['', '', '', ''],
       reponseCorrecte: 'A', choixMultiple: false, reponsesCorrectes: [],
-      mediaUrl: '', points: 1, actif: true, ordre: 0,
+      mediaUrl: '', sujetId: null, points: 1, actif: true, ordre: 0,
     });
   };
 
@@ -135,6 +175,7 @@ export default function QcmAdminPage() {
       choixMultiple: q.choix_multiple || false,
       reponsesCorrectes: q.reponses_correctes || [],
       mediaUrl: q.media_url || '',
+      sujetId: q.sujet_id ?? null,
       points: q.points,
       actif: q.actif,
       ordre: q.ordre,
@@ -228,8 +269,97 @@ export default function QcmAdminPage() {
     setForm({ ...form, choix: newChoix });
   };
 
+  // ---- Sujets partagés ----
+  const uploadAudioFile = async (file: File): Promise<string | null> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/admin/qcm-questions/upload-audio', { method: 'POST', body: formData });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error || 'Erreur upload audio');
+      return null;
+    }
+    const d = await res.json();
+    return d.url as string;
+  };
+
+  const resetSujetForm = () => {
+    setShowSujetForm(false);
+    setEditingSujetId(null);
+    setSujetForm({ typeTest: activeTab, typeCompetence: 'CE', niveau: '', titre: '', contenu: '', mediaUrl: '', actif: true });
+  };
+
+  const openNewSujet = (type: 'CE' | 'CO') => {
+    resetSujetForm();
+    setSujetForm((f) => ({ ...f, typeTest: activeTab, typeCompetence: type }));
+    setShowSujetForm(true);
+  };
+
+  const openEditSujet = (s: QcmSujet) => {
+    setEditingSujetId(s.id);
+    setSujetForm({
+      typeTest: s.type_test || 'initial',
+      typeCompetence: s.type_competence,
+      niveau: s.niveau || '',
+      titre: s.titre,
+      contenu: s.contenu || '',
+      mediaUrl: s.media_url || '',
+      actif: s.actif,
+    });
+    setShowSujetForm(true);
+  };
+
+  const handleSaveSujet = async () => {
+    if (!sujetForm.titre.trim()) return;
+    setSavingSujet(true);
+    try {
+      const payload = { ...sujetForm, niveau: sujetForm.niveau || null };
+      if (editingSujetId) {
+        await fetch('/api/admin/qcm-sujets', {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingSujetId, ...payload }),
+        });
+      } else {
+        await fetch('/api/admin/qcm-sujets', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+      resetSujetForm();
+      fetchSujets();
+    } catch { setError('Erreur lors de la sauvegarde du sujet'); }
+    finally { setSavingSujet(false); }
+  };
+
+  const handleDeleteSujet = async (id: number) => {
+    if (!confirm('Supprimer ce sujet ? Les questions rattachées ne seront pas supprimées : elles redeviendront autonomes.')) return;
+    await fetch(`/api/admin/qcm-sujets?id=${id}`, { method: 'DELETE' });
+    fetchSujets();
+    fetchQuestions();
+  };
+
+  const toggleSujetActif = async (s: QcmSujet) => {
+    await fetch('/api/admin/qcm-sujets', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: s.id, actif: !s.actif }),
+    });
+    fetchSujets();
+  };
+
+  const handleUploadSujetAudio = async (file: File) => {
+    setUploadingSujetAudio(true);
+    const url = await uploadAudioFile(file);
+    if (url) setSujetForm((f) => ({ ...f, mediaUrl: url }));
+    setUploadingSujetAudio(false);
+  };
+
   const ceQuestions = questions.filter((q) => q.type_competence === 'CE');
   const coQuestions = questions.filter((q) => q.type_competence === 'CO');
+  const sujetsById = new Map(sujets.map((s) => [s.id, s]));
+  // Sujets proposés dans le formulaire question (même compétence + même test)
+  const sujetsForForm = sujets.filter(
+    (s) => s.type_competence === form.typeCompetence && s.type_test === form.typeTest
+  );
 
   if (loading) {
     return (
@@ -281,10 +411,15 @@ export default function QcmAdminPage() {
                 // Exporter TOUTES les questions (initial + final) en CSV
                 const exportAll = async () => {
                   try {
-                    const res = await fetch('/api/admin/qcm-questions');
-                    const allQ: QcmQuestion[] = await res.json();
+                    const [resQ, resS] = await Promise.all([
+                      fetch('/api/admin/qcm-questions'),
+                      fetch('/api/admin/qcm-sujets'),
+                    ]);
+                    const allQ: QcmQuestion[] = await resQ.json();
+                    const allS: QcmSujet[] = await resS.json();
                     if (!Array.isArray(allQ) || allQ.length === 0) { setError('Aucune question à exporter'); return; }
-                    const header = 'type_test;competence;niveau;question;choix_A;choix_B;choix_C;choix_D;reponse;choix_multiple;points;audio_url';
+                    const sujetMap = new Map((Array.isArray(allS) ? allS : []).map((s) => [s.id, s]));
+                    const header = 'type_test;competence;niveau;question;choix_A;choix_B;choix_C;choix_D;reponse;choix_multiple;points;audio_url;sujet_titre;sujet_contenu;sujet_audio_url';
                     const rows = allQ.map((q) => {
                       const choix = [...(q.choix || []), '', '', '', ''].slice(0, 4);
                       const reponse = q.choix_multiple && q.reponses_correctes?.length > 0
@@ -292,10 +427,12 @@ export default function QcmAdminPage() {
                         : q.reponse_correcte;
                       const esc = (s: string) => s.includes(';') || s.includes('"') || s.includes('\n')
                         ? `"${s.replace(/"/g, '""')}"` : s;
+                      const sujet = q.sujet_id ? sujetMap.get(q.sujet_id) : null;
                       return [
                         q.type_test || 'initial', q.type_competence, q.niveau,
                         esc(q.question), esc(choix[0]), esc(choix[1]), esc(choix[2]), esc(choix[3]),
                         reponse, q.choix_multiple ? 'oui' : 'non', q.points, q.media_url || '',
+                        esc(sujet?.titre || ''), esc(sujet?.contenu || ''), sujet?.media_url || '',
                       ].join(';');
                     });
                     const csv = '\uFEFF' + [header, ...rows].join('\n');
@@ -374,14 +511,16 @@ export default function QcmAdminPage() {
           <div className="mt-2 bg-slate-50 rounded-lg p-3 text-xs text-slate-600 space-y-1.5">
             <p><strong>Séparateur :</strong> point-virgule (;) ou virgule (,)</p>
             <p><strong>Colonnes obligatoires :</strong> type_test, competence, niveau, question, choix_a, choix_b, reponse</p>
-            <p><strong>Colonnes optionnelles :</strong> choix_c, choix_d, choix_multiple, points, audio_url</p>
+            <p><strong>Colonnes optionnelles :</strong> choix_c, choix_d, choix_multiple, points, audio_url, sujet_titre, sujet_contenu, sujet_audio_url</p>
             <div className="mt-2 border-t border-slate-200 pt-2 space-y-1">
-              <p><strong>type_test :</strong> <code className="bg-white px-1 rounded">initial</code> ou <code className="bg-white px-1 rounded">final</code> — c'est cette colonne qui détermine si la question est pour le test initial ou final</p>
+              <p><strong>type_test :</strong> <code className="bg-white px-1 rounded">initial</code> ou <code className="bg-white px-1 rounded">final</code> — c&apos;est cette colonne qui détermine si la question est pour le test initial ou final</p>
               <p><strong>competence :</strong> CE ou CO</p>
               <p><strong>niveau :</strong> A0, A1, A2, B1, B2</p>
               <p><strong>reponse :</strong> A, B, C, D (ou A,C pour choix multiple)</p>
               <p><strong>choix_multiple :</strong> oui / non</p>
               <p><strong>audio_url :</strong> URL du fichier audio (pour CO uniquement)</p>
+              <p><strong>sujet_titre :</strong> regroupe les questions partageant le même titre sous un sujet commun (texte CE / audio CO)</p>
+              <p><strong>sujet_contenu :</strong> texte du sujet (CE) ; <strong>sujet_audio_url :</strong> audio du sujet (CO)</p>
             </div>
           </div>
         </details>
@@ -441,7 +580,7 @@ export default function QcmAdminPage() {
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">Compétence *</label>
                 <select value={form.typeCompetence}
-                  onChange={(e) => setForm({ ...form, typeCompetence: e.target.value as 'CE' | 'CO' })}
+                  onChange={(e) => setForm({ ...form, typeCompetence: e.target.value as 'CE' | 'CO', sujetId: null })}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
                   <option value="CE">CE - Compréhension Écrite</option>
                   <option value="CO">CO - Compréhension Orale</option>
@@ -461,6 +600,35 @@ export default function QcmAdminPage() {
                   onChange={(e) => setForm({ ...form, points: parseFloat(e.target.value) || 1 })}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
               </div>
+            </div>
+
+            {/* Rattachement à un sujet partagé (optionnel) */}
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">
+                Sujet partagé (optionnel)
+                <span className="text-slate-400 font-normal ml-1">
+                  {form.typeCompetence === 'CE'
+                    ? '— texte commun à plusieurs questions'
+                    : '— audio commun à plusieurs questions'}
+                </span>
+              </label>
+              <select
+                value={form.sujetId ?? ''}
+                onChange={(e) => setForm({ ...form, sujetId: e.target.value ? parseInt(e.target.value) : null })}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              >
+                <option value="">Aucun (question autonome)</option>
+                {sujetsForForm.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.titre}{s.niveau ? ` (${s.niveau})` : ''}{!s.actif ? ' — inactif' : ''}
+                  </option>
+                ))}
+              </select>
+              {sujetsForForm.length === 0 && (
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Aucun sujet {form.typeCompetence} pour ce test. Créez-en un dans la section « Sujets partagés » ci-dessous.
+                </p>
+              )}
             </div>
 
             {/* Upload audio pour CO */}
@@ -617,6 +785,188 @@ export default function QcmAdminPage() {
         </div>
       )}
 
+      {/* ==================== SECTION SUJETS PARTAGÉS ==================== */}
+      <section className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FileQuestion className="h-5 w-5 text-amber-500" />
+            <h2 className="font-semibold text-slate-800">Sujets partagés</h2>
+            <span className="text-xs text-slate-400">({sujets.length})</span>
+            <span className="hidden sm:inline text-xs text-slate-400 ml-2">
+              Un texte (CE) ou un audio (CO) commun à plusieurs questions — affiché en permanence pendant le test.
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => openNewSujet('CE')}
+              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+              <Plus className="h-4 w-4" /> Sujet CE
+            </button>
+            <button onClick={() => openNewSujet('CO')}
+              className="flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-purple-700 transition-colors">
+              <Plus className="h-4 w-4" /> Sujet CO
+            </button>
+          </div>
+        </div>
+
+        {/* Formulaire sujet */}
+        {showSujetForm && (
+          <div className="px-5 py-4 bg-amber-50/50 border-b border-amber-100 space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-amber-800">
+                {editingSujetId ? 'Modifier le sujet' : `Nouveau sujet ${sujetForm.typeCompetence}`}
+              </span>
+              <button onClick={resetSujetForm}><X className="h-4 w-4 text-slate-400" /></button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Compétence *</label>
+                <select value={sujetForm.typeCompetence}
+                  onChange={(e) => setSujetForm({ ...sujetForm, typeCompetence: e.target.value as 'CE' | 'CO' })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                  <option value="CE">CE - Compréhension Écrite</option>
+                  <option value="CO">CO - Compréhension Orale</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Niveau</label>
+                <select value={sujetForm.niveau}
+                  onChange={(e) => setSujetForm({ ...sujetForm, niveau: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                  <option value="">Tous niveaux</option>
+                  {NIVEAUX.map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Titre *</label>
+                <input type="text" value={sujetForm.titre}
+                  onChange={(e) => setSujetForm({ ...sujetForm, titre: e.target.value })}
+                  placeholder="Ex: Texte - La famille de Marie"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+              </div>
+            </div>
+
+            {/* Audio pour sujet CO */}
+            {sujetForm.typeCompetence === 'CO' && (
+              <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
+                <label className="block text-xs font-medium text-purple-700 mb-2">
+                  Audio du sujet (MP3, WAV, OGG - max 20 Mo) *
+                </label>
+                {sujetForm.mediaUrl ? (
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => { const a = new Audio(sujetForm.mediaUrl); a.play().catch(() => setError('Impossible de lire l\'audio')); }}
+                      className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white text-xs rounded-lg hover:bg-purple-700">
+                      <Play className="h-3 w-3" /> Écouter
+                    </button>
+                    <span className="text-xs text-purple-600 truncate flex-1">{sujetForm.mediaUrl.split('/').pop()}</span>
+                    <button onClick={() => setSujetForm({ ...sujetForm, mediaUrl: '' })}
+                      className="text-xs text-red-500 hover:text-red-700">Supprimer</button>
+                  </div>
+                ) : (
+                  <div onClick={() => sujetAudioInputRef.current?.click()}
+                    className="border-2 border-dashed border-purple-200 rounded-lg p-4 text-center cursor-pointer hover:border-purple-400 hover:bg-purple-100/50 transition-colors">
+                    {uploadingSujetAudio ? (
+                      <div className="animate-spin h-6 w-6 border-2 border-purple-200 border-t-purple-600 rounded-full mx-auto" />
+                    ) : (
+                      <>
+                        <Upload className="h-6 w-6 text-purple-400 mx-auto mb-1" />
+                        <p className="text-xs text-purple-600">Cliquez pour importer l&apos;audio du sujet</p>
+                      </>
+                    )}
+                    <input ref={sujetAudioInputRef} type="file" accept=".mp3,.wav,.ogg,.webm,.m4a" className="hidden"
+                      onChange={(e) => { if (e.target.files?.[0]) handleUploadSujetAudio(e.target.files[0]); e.target.value = ''; }} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Texte / consigne du sujet */}
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">
+                {sujetForm.typeCompetence === 'CE' ? 'Texte à lire *' : 'Consigne / transcription (optionnel)'}
+              </label>
+              <textarea value={sujetForm.contenu}
+                onChange={(e) => setSujetForm({ ...sujetForm, contenu: e.target.value })}
+                rows={sujetForm.typeCompetence === 'CE' ? 6 : 3}
+                placeholder={sujetForm.typeCompetence === 'CE'
+                  ? 'Collez ici le texte que le stagiaire devra lire pour répondre aux questions.'
+                  : 'Consigne éventuelle affichée avec l\'audio.'}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-600">
+                <input type="checkbox" checked={sujetForm.actif}
+                  onChange={(e) => setSujetForm({ ...sujetForm, actif: e.target.checked })}
+                  className="rounded border-slate-300" /> Sujet actif
+              </label>
+              <div className="flex items-center gap-2">
+                <button onClick={resetSujetForm}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100">Annuler</button>
+                <button onClick={handleSaveSujet} disabled={savingSujet || !sujetForm.titre.trim()}
+                  className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50">
+                  <Check className="h-4 w-4" />
+                  {savingSujet ? 'Enregistrement...' : editingSujetId ? 'Mettre à jour' : 'Créer le sujet'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Liste des sujets */}
+        <div className="divide-y divide-slate-100">
+          {sujets.length === 0 ? (
+            <div className="px-5 py-8 text-center text-sm text-slate-400">
+              Aucun sujet partagé. Créez un sujet CE (texte) ou CO (audio) pour regrouper plusieurs questions.
+            </div>
+          ) : sujets.map((s) => {
+            const nbQuestions = questions.filter((q) => q.sujet_id === s.id).length;
+            return (
+              <div key={s.id} className={`px-5 py-3 hover:bg-slate-50 transition-colors ${!s.actif ? 'opacity-50' : ''}`}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                        s.type_competence === 'CE' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                      }`}>{s.type_competence}</span>
+                      {s.niveau && <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium">{s.niveau}</span>}
+                      <span className="text-[10px] text-slate-400">{nbQuestions} question{nbQuestions > 1 ? 's' : ''}</span>
+                      {s.type_competence === 'CO' && s.media_url && (
+                        <button onClick={() => playPreview(s.media_url!, -s.id)}
+                          className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                            playingAudioId === -s.id ? 'bg-purple-200 text-purple-800' : 'bg-purple-50 text-purple-600 hover:bg-purple-100'
+                          }`}>
+                          {playingAudioId === -s.id ? <Pause className="h-2.5 w-2.5" /> : <Play className="h-2.5 w-2.5" />}
+                          Audio
+                        </button>
+                      )}
+                      {s.type_competence === 'CO' && !s.media_url && (
+                        <span className="text-[10px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">Audio manquant</span>
+                      )}
+                    </div>
+                    <p className="text-sm font-medium text-slate-800">{s.titre}</p>
+                    {s.contenu && <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{s.contenu}</p>}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => toggleSujetActif(s)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                      title={s.actif ? 'Désactiver' : 'Activer'}>
+                      {s.actif ? <Eye className="h-4 w-4 text-green-500" /> : <EyeOff className="h-4 w-4 text-slate-300" />}
+                    </button>
+                    <button onClick={() => openEditSujet(s)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                      <Pencil className="h-4 w-4 text-slate-400" />
+                    </button>
+                    <button onClick={() => handleDeleteSujet(s.id)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors">
+                      <Trash2 className="h-4 w-4 text-red-400" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
       {/* ==================== SECTION CE ==================== */}
       <section className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
@@ -638,7 +988,8 @@ export default function QcmAdminPage() {
               <div className="px-5 py-8 text-center text-sm text-slate-400">Aucune question CE</div>
             ) : ceQuestions.map((q) => (
               <QuestionRow key={q.id} q={q} onEdit={openEdit} onDelete={handleDelete}
-                onToggle={toggleActif} onPlayAudio={playPreview} playingId={playingAudioId} />
+                onToggle={toggleActif} onPlayAudio={playPreview} playingId={playingAudioId}
+                sujetTitre={q.sujet_id ? sujetsById.get(q.sujet_id)?.titre ?? null : null} />
             ))}
           </div>
         )}
@@ -667,7 +1018,8 @@ export default function QcmAdminPage() {
               </div>
             ) : coQuestions.map((q) => (
               <QuestionRow key={q.id} q={q} onEdit={openEdit} onDelete={handleDelete}
-                onToggle={toggleActif} onPlayAudio={playPreview} playingId={playingAudioId} />
+                onToggle={toggleActif} onPlayAudio={playPreview} playingId={playingAudioId}
+                sujetTitre={q.sujet_id ? sujetsById.get(q.sujet_id)?.titre ?? null : null} />
             ))}
           </div>
         )}
@@ -677,13 +1029,14 @@ export default function QcmAdminPage() {
 }
 
 // Composant ligne de question
-function QuestionRow({ q, onEdit, onDelete, onToggle, onPlayAudio, playingId }: {
+function QuestionRow({ q, onEdit, onDelete, onToggle, onPlayAudio, playingId, sujetTitre }: {
   q: QcmQuestion;
   onEdit: (q: QcmQuestion) => void;
   onDelete: (id: number) => void;
   onToggle: (q: QcmQuestion) => void;
   onPlayAudio: (url: string, id: number) => void;
   playingId: number | null;
+  sujetTitre?: string | null;
 }) {
   return (
     <div className={`px-5 py-3 hover:bg-slate-50 transition-colors ${!q.actif ? 'opacity-50' : ''}`}>
@@ -707,8 +1060,13 @@ function QuestionRow({ q, onEdit, onDelete, onToggle, onPlayAudio, playingId }: 
                 Audio
               </button>
             )}
-            {q.type_competence === 'CO' && !q.media_url && (
+            {q.type_competence === 'CO' && !q.media_url && !sujetTitre && (
               <span className="text-[10px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">Audio manquant</span>
+            )}
+            {sujetTitre && (
+              <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-medium inline-flex items-center gap-1">
+                <FileQuestion className="h-2.5 w-2.5" /> {sujetTitre}
+              </span>
             )}
           </div>
           <p className="text-sm text-slate-800">{q.question}</p>

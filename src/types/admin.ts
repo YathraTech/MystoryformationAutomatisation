@@ -114,6 +114,7 @@ export interface FeuilleAppelExamen {
   lieu: string | null;
   inscriptionId: number | null;
   resultatEmailSent: boolean;
+  pdfAttestationReussite: string | null;
 }
 
 export interface FeuilleAppelData {
@@ -331,6 +332,7 @@ export interface TestFormation {
   reponsesCo: QcmReponse[] | null;
 
   pdfRapport: string | null;
+  scanUrl: string | null; // Scan/photo du test papier (saisie manuelle)
 
   createdAt: string;
   updatedAt: string;
@@ -358,7 +360,10 @@ export interface AnalyseBesoin {
   dureeEstimeeFormation: string;
   niveauVise: NiveauLangue;
   typeCertificationVisee: string[];
+  certificationViseePrecisions: string | null; // Détails libres sur la certification
   modeFinancement: string | null;
+  fondsPropresCarte: number | null; // Montant réglé en carte (si Fonds propres)
+  fondsPropresEspeces: number | null; // Montant réglé en espèces (si Fonds propres)
   commentaires: string | null;
 
   dateRemplissage: string;
@@ -515,14 +520,32 @@ export interface Reclamation {
 export interface QcmQuestion {
   id: number;
   typeCompetence: 'CE' | 'CO';
+  typeTest: 'initial' | 'final';
   niveau: NiveauLangue;
   question: string;
   choix: string[];
   reponseCorrecte: string;
+  choixMultiple: boolean;
+  reponsesCorrectes: string[];
   mediaUrl: string | null;
+  sujetId: number | null; // Rattachement à un sujet partagé (qcm_sujets), null = autonome
   points: number;
   actif: boolean;
   ordre: number;
+  createdAt: string;
+}
+
+// Sujet partagé d'un QCM : un texte (CE) ou un audio (CO) commun à plusieurs questions.
+export interface QcmSujet {
+  id: number;
+  typeCompetence: 'CE' | 'CO';
+  typeTest: 'initial' | 'final';
+  niveau: NiveauLangue | null;
+  titre: string;
+  contenu: string | null; // texte à lire (CE) ou consigne/transcription (CO)
+  mediaUrl: string | null; // audio partagé (CO)
+  ordre: number;
+  actif: boolean;
   createdAt: string;
 }
 

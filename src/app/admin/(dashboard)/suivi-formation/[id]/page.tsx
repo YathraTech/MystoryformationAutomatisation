@@ -18,6 +18,7 @@ import {
   Link2,
   Send,
   Loader2,
+  RefreshCw,
 } from 'lucide-react';
 import type {
   StagiaireFormation,
@@ -82,6 +83,8 @@ export default function StagiaireDetailPage() {
 
   const [data, setData] = useState<StagiaireData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [sendingDocs, setSendingDocs] = useState(false);
   const [activeStep, setActiveStep] = useState<StagiaireStatut>('inscription');
 
   const fetchData = useCallback(async () => {
@@ -101,6 +104,34 @@ export default function StagiaireDetailPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  };
+
+  const handleSendDocs = async () => {
+    setSendingDocs(true);
+    try {
+      const res = await fetch(`/api/admin/stagiaires-formation/${stagiaireId}/send-program-docs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'Échec de l\'envoi des documents');
+        return;
+      }
+      alert('Documents envoyés par mail au stagiaire.');
+      await fetchData();
+    } catch {
+      alert('Erreur réseau lors de l\'envoi');
+    } finally {
+      setSendingDocs(false);
+    }
+  };
 
   if (loading || !data) {
     return (
@@ -132,6 +163,16 @@ export default function StagiaireDetailPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Actualiser : recharge les données (ex: après que le stagiaire a fini son test en ligne) */}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title="Recharger les données (utile après que le stagiaire a terminé son test en ligne)"
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Actualiser
+          </button>
           {/* Lien test QCM pour le client */}
           {(stagiaire.statut === 'inscription' || stagiaire.statut === 'test_initial') && (
             <button
@@ -160,14 +201,12 @@ export default function StagiaireDetailPage() {
           )}
           {!stagiaire.mailInscriptionEnvoye && stagiaire.statut !== 'inscription' && (
             <button
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
-              onClick={async () => {
-                // TODO: Envoyer les docs par mail
-                alert('Envoi des documents par mail...');
-              }}
+              disabled={sendingDocs}
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+              onClick={handleSendDocs}
             >
-              <Mail className="h-4 w-4" />
-              Envoyer docs
+              {sendingDocs ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+              {sendingDocs ? 'Envoi...' : 'Envoyer docs'}
             </button>
           )}
         </div>

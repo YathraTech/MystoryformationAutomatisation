@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { CheckCircle2, FileText, Play, Pencil, Settings, ArrowRight, Mail, Loader2 } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { CheckCircle2, FileText, Play, Pencil, Settings, ArrowRight, Mail, Loader2, Upload, Paperclip, X } from 'lucide-react';
 import Link from 'next/link';
 import type { TestFormation } from '@/types/admin';
 import QcmTestRunner from './QcmTestRunner';
@@ -36,6 +36,11 @@ export default function TestInitialForm({ stagiaireId, existingTest, onSaved }: 
     existingTest?.dateTest ?? new Date().toISOString().split('T')[0]
   );
 
+  // Scan / photo du test papier (saisie manuelle)
+  const [scanUrl, setScanUrl] = useState(existingTest?.scanUrl ?? '');
+  const [uploadingScan, setUploadingScan] = useState(false);
+  const scanInputRef = useRef<HTMLInputElement>(null);
+
   // Résultats QCM détaillés
   const [reponsesCe, setReponsesCe] = useState<{ question: number; reponse: string; correct: boolean }[] | null>(
     existingTest?.reponsesCe ?? null
@@ -48,9 +53,10 @@ export default function TestInitialForm({ stagiaireId, existingTest, onSaved }: 
   const ceAutoCompleted = reponsesCe !== null;
   const coAutoCompleted = reponsesCo !== null;
 
-  const scoreGlobal = scoreCe + scoreCo + scoreEe + scoreEo;
+  // Score global = moyenne des 4 épreuves sur /20
+  const scoreGlobal = Math.round(((scoreCe + scoreCo + scoreEe + scoreEo) / 4) * 10) / 10;
   const niveauEstime =
-    scoreGlobal >= 19 ? 'B2' : scoreGlobal >= 15 ? 'B1' : scoreGlobal >= 10 ? 'A2' : scoreGlobal >= 5 ? 'A1' : 'A0';
+    scoreGlobal >= 15 ? 'B2' : scoreGlobal >= 10 ? 'B1' : scoreGlobal >= 5 ? 'A2' : 'A1';
 
   const handleCeComplete = (score: number, details: { question: number; reponse: string; correct: boolean }[]) => {
     setScoreCe(score);
@@ -81,6 +87,7 @@ export default function TestInitialForm({ stagiaireId, existingTest, onSaved }: 
           profilPedagogique,
           reponsesCe: reponsesCe || undefined,
           reponsesCo: reponsesCo || undefined,
+          scanUrl,
         }),
       });
       if (!res.ok) {
@@ -147,6 +154,31 @@ export default function TestInitialForm({ stagiaireId, existingTest, onSaved }: 
       setFeedback({ type: 'error', message: 'Erreur réseau' });
     } finally {
       setResending(false);
+    }
+  };
+
+  const handleUploadScan = async (file: File) => {
+    setUploadingScan(true);
+    setFeedback(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('folder', 'tests-scan');
+      const res = await fetch(`/api/admin/stagiaires-formation/${stagiaireId}/upload`, {
+        method: 'POST',
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        setFeedback({ type: 'error', message: data.error || 'Échec de l\'envoi du fichier' });
+        return;
+      }
+      setScanUrl(data.url);
+      setFeedback({ type: 'success', message: 'Fichier joint. Pensez à enregistrer le test.' });
+    } catch {
+      setFeedback({ type: 'error', message: 'Erreur réseau lors de l\'envoi' });
+    } finally {
+      setUploadingScan(false);
     }
   };
 
@@ -383,11 +415,61 @@ export default function TestInitialForm({ stagiaireId, existingTest, onSaved }: 
         </div>
       </div>
 
+      {/* Test imprimé — scan / photo (utile pour une saisie manuelle des scores) */}
+      <div className="mt-6">
+        <h3 className="text-sm font-medium text-slate-700 mb-1">Test imprimé (scan / photo)</h3>
+        <p className="text-xs text-slate-400 mb-3">
+          Joignez une photo ou un scan du test papier (PNG, JPG ou PDF, max 10 Mo), puis saisissez les scores ci-dessus à la main.
+        </p>
+        {scanUrl ? (
+          <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            {/\.(png|jpe?g|webp)(\?|$)/i.test(scanUrl) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={scanUrl} alt="Aperçu du test" className="h-16 w-16 rounded object-cover border border-slate-200" />
+            ) : (
+              <div className="h-16 w-16 rounded border border-slate-200 bg-white flex items-center justify-center">
+                <FileText className="h-6 w-6 text-slate-400" />
+              </div>
+            )}
+            <a href={scanUrl} target="_blank" rel="noopener noreferrer"
+              className="flex-1 inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 truncate">
+              <Paperclip className="h-4 w-4 shrink-0" />
+              Voir le fichier joint
+            </a>
+            <button type="button" onClick={() => setScanUrl('')}
+              className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700">
+              <X className="h-3.5 w-3.5" /> Retirer
+            </button>
+          </div>
+        ) : (
+          <div
+            onClick={() => scanInputRef.current?.click()}
+            className="border-2 border-dashed border-slate-200 rounded-lg p-4 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 transition-colors"
+          >
+            {uploadingScan ? (
+              <div className="animate-spin h-6 w-6 border-2 border-blue-200 border-t-blue-600 rounded-full mx-auto" />
+            ) : (
+              <>
+                <Upload className="h-6 w-6 text-slate-400 mx-auto mb-1" />
+                <p className="text-xs text-slate-500">Cliquez pour joindre le test papier</p>
+              </>
+            )}
+            <input
+              ref={scanInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,application/pdf"
+              className="hidden"
+              onChange={(e) => { if (e.target.files?.[0]) handleUploadScan(e.target.files[0]); e.target.value = ''; }}
+            />
+          </div>
+        )}
+      </div>
+
       {/* Résultat global */}
       <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 flex items-center justify-between">
         <div>
           <p className="text-sm text-blue-700 font-medium">Score global</p>
-          <p className="text-4xl font-bold text-blue-900">{scoreGlobal}<span className="text-xl text-blue-400">/80</span></p>
+          <p className="text-4xl font-bold text-blue-900">{scoreGlobal}<span className="text-xl text-blue-400">/20</span></p>
           <div className="flex gap-4 mt-1 text-xs text-blue-500">
             <span>CE: {scoreCe}</span>
             <span>CO: {scoreCo}</span>
