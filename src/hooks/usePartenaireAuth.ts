@@ -57,7 +57,7 @@ export function usePartenaireAuth() {
   }, [checkAuth]);
 
   const logout = useCallback(async () => {
-    await fetch('/api/admin/auth/logout', { method: 'POST' });
+    await fetch('/api/partenaire/auth/logout', { method: 'POST' });
     setAuth({ authenticated: false, id: null, email: null, role: null, organisation: null, nom: null, prenom: null, loading: false });
     router.push('/partenaire/login');
   }, [router]);
