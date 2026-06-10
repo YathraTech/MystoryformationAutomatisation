@@ -39,6 +39,35 @@ export function formatHeure(value: string | null | undefined): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
+/** Formate une heure simple en style français : "9h", "9h30". Renvoie '' si invalide. */
+export function formatHeureFr(value: string | null | undefined): string {
+  const total = parseHeureToMinutes(value);
+  if (total === null) return '';
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, '0')}`;
+}
+
+/**
+ * Formate une plage horaire (issue des créneaux admin) en style français.
+ * Gère un horaire simple, une plage "09:30-12:30" et plusieurs créneaux "09:30-12:30 / 14:00-17:00".
+ * Ex : "09:30-12:30 / 14:00-17:00" -> "9h30 - 12h30 / 14h - 17h".
+ */
+export function formatHoraire(value: string | null | undefined): string {
+  if (!value) return '';
+  return value
+    .split(/\s*\/\s*/)
+    .map((slot) =>
+      slot
+        .split('-')
+        .map((part) => formatHeureFr(part))
+        .filter(Boolean)
+        .join(' - ')
+    )
+    .filter(Boolean)
+    .join(' / ');
+}
+
 /** Ajoute des minutes à une heure et formate en "HH:MM". Renvoie '' si invalide. */
 export function addToHeure(value: string | null | undefined, minutesToAdd: number): string {
   const total = parseHeureToMinutes(value);

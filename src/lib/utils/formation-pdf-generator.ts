@@ -6,6 +6,7 @@ import type {
   Evaluation,
   Emargement,
 } from '@/types/admin';
+import { formatHoraire } from '@/lib/utils/format';
 
 // ============================================================
 // CONSTANTES
@@ -705,7 +706,7 @@ export async function generateConvocationPdf(
 
   const details = [
     { label: 'Date', value: formatDateLong(stagiaire.dateDebutFormation) },
-    { label: 'Horaire', value: stagiaire.horairesFormation || '-' },
+    { label: 'Horaire', value: formatHoraire(stagiaire.horairesFormation) || '-' },
     { label: 'Lieu', value: `${stagiaire.agence} - ${agenceInfo.address}` },
     { label: 'Formatrice', value: stagiaire.formatriceNom || '-' },
   ];
@@ -820,7 +821,7 @@ export async function generateEmargementPdf(
   doc.text(`Date : ${formatDateLong(dateCours)}`, 15, y); y += 5;
   doc.text(`Agence : ${agence}`, 15, y);
   doc.text(`Formatrice : ${formatrice}`, 100, y); y += 5;
-  doc.text(`Horaire : ${horaire}`, 15, y); y += 10;
+  doc.text(`Horaire : ${formatHoraire(horaire) || horaire}`, 15, y); y += 10;
 
   // Tableau
   doc.setFillColor(241, 245, 249);
@@ -1009,7 +1010,7 @@ export async function generateEmploiDuTempsPdf(
   );
   y = kv(
     'Rythme :',
-    (stagiaire.joursFormation || []).join(', ') + (stagiaire.horairesFormation ? ` · ${stagiaire.horairesFormation}` : ''),
+    (stagiaire.joursFormation || []).join(', ') + (stagiaire.horairesFormation ? ` · ${formatHoraire(stagiaire.horairesFormation)}` : ''),
     y,
     22,
   );
@@ -1061,7 +1062,7 @@ export async function generateEmploiDuTempsPdf(
       totalHeures += dureeH;
       doc.text(String(i + 1), cols[0].x + 2, y + 5);
       doc.text(formatDateLong(e.dateCours || ''), cols[1].x + 2, y + 5);
-      doc.text(e.horaire || '—', cols[2].x + 2, y + 5);
+      doc.text(formatHoraire(e.horaire) || '—', cols[2].x + 2, y + 5);
       doc.text(dureeH ? `${dureeH}h` : '—', cols[3].x + 2, y + 5);
       doc.setDrawColor(220);
       cols.forEach((c) => doc.rect(c.x, y, c.w, rowH));
